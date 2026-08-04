@@ -14,7 +14,7 @@
 |------|------|
 | [`norms/`](norms/) | 条款格式 + process profile 种子 + 空产品树骨架 |
 | [`workflow/AGENTS.md`](workflow/AGENTS.md) | 真实项目指挥工作流（跨运行时默认入口） |
-| [`governance/`](governance/) | GOVERNANCE + 工具取得说明 + 日常命令卡 |
+| [`governance/`](governance/) | GOVERNANCE + **`tools/` 审核脚本**（`ndf_*.py`）+ 日常命令卡 |
 | [`skill/`](skill/) | init / adopt / govern / sync（**运行时无关**正文） |
 
 P1：[`adapters/`](adapters/) 把同一 `skill/` 挂到各运行时。
@@ -35,10 +35,7 @@ P1：[`adapters/`](adapters/) 把同一 `skill/` 挂到各运行时。
 - 不自动 apply advise 沙盒、不静默改 git  
 - 不把某一运行时（如 Cursor）当作唯一入口  
 
-## 本维护仓中的实现源
+## 工具脚本
 
-审核工具 Python 实现以维护仓 `spec/meta/tools/*.py` 为唯一源；本包见 [`governance/tools/VENDOR.md`](governance/tools/VENDOR.md)。
-
-## Published repository
-
-Canonical public tree for this package: https://github.com/xuefenghao5121/NDF-Harness
+审核工具已包含在 [`governance/tools/`](governance/tools/)（`ndf_index` / `graphcheck` / `bindcheck` / `advise` / `close`）。  
+安装到目标仓时复制到 `spec/meta/tools/`，见 [`governance/tools/VENDOR.md`](governance/tools/VENDOR.md)。

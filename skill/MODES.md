@@ -9,7 +9,7 @@
 - [ ] Create empty product-tree dirs under spec/
 - [ ] Install workflow/AGENTS.md → repo root   ★ required unless linter-only
 - [ ] Install governance docs → spec/meta/tools/ (README + GOVERNANCE pointer)
-- [ ] Obtain tools per VENDOR.md
+- [ ] Copy `governance/tools/ndf_*.py` → `spec/meta/tools/`（见 VENDOR.md）
 - [ ] Optional: install one adapters/<runtime>/
 - [ ] dual-track: poc/README + example binder templates/
 - [ ] Status: Draft — wait for 「已确认生成」/「已确认」

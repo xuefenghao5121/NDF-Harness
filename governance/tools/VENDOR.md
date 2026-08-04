@@ -1,27 +1,29 @@
-# Tools VENDOR
+# Tools layout
 
-## Single implementation source (stage A)
+This package **ships** the review scripts under `governance/tools/`.
 
-Python review tools are **not** dual-copied into this package.
+## Install into a target project
 
-| Artifact | Source of truth |
-|----------|-----------------|
-| `ndf_index.py` | maintaining repo `spec/meta/tools/ndf_index.py` |
-| `ndf_graphcheck.py` | same directory |
-| `ndf_bindcheck.py` | same |
-| `ndf_advise.py` / `ndf_advise_bind.py` | same |
-| `ndf_close.py` | same |
-| Full GOVERNANCE | maintaining repo `spec/meta/tools/GOVERNANCE.md` |
+```bash
+mkdir -p spec/meta/tools
+cp -a governance/tools/ndf_*.py governance/tools/GOVERNANCE.md \
+  governance/tools/README.md \
+  spec/meta/tools/
+```
 
-## How to obtain
+Or copy the whole `governance/tools/` directory contents into `spec/meta/tools/`.
 
-1. Copy or submodule the `spec/meta/tools/*.py` (+ `README.md`, `GOVERNANCE.md`) into the target repo `spec/meta/tools/`.  
-2. Or pin a release tag / path of the maintaining repository.  
-3. Record the pin in the target repo（commit SHA or tag） under `spec/meta/tools/VENDOR-PIN.md`（create on install）.
+## Sync policy
 
-## Install check
+- **Published Harness repo** (`NDF-Harness`): tools live here for consumers.  
+- Optional: record upstream commit in target `spec/meta/tools/VENDOR-PIN.md` when you vendor from a specific tag.
+
+## Smoke
 
 ```bash
 python3 spec/meta/tools/ndf_index.py --help
 python3 spec/meta/tools/ndf_graphcheck.py --help
+python3 spec/meta/tools/ndf_bindcheck.py --help
+python3 spec/meta/tools/ndf_advise.py --help
+python3 spec/meta/tools/ndf_close.py --help
 ```
