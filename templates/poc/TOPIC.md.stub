@@ -1,0 +1,13 @@
+# TOPIC.md（template）
+
+```yaml
+topic_id: ⟨TBD⟩
+status: exploring  # exploring | blocked | promoted | rejected
+baseline_protocol: ⟨TBD⟩
+proposals: []
+draft_clauses: []
+active_hypothesis: ⟨TBD⟩
+next_gate: ⟨TBD⟩
+```
+
+Binder is **not** Trunk must. See [[BEH-025]] / [[DEF-022]].

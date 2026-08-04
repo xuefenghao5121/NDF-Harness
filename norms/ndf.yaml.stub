@@ -1,0 +1,47 @@
+project: ⟨TBD: project-name⟩
+id-prefixes: [CHR, DEF, ARCH, BEH, API, CON, VER, DEC, Q, CONFLICT, ADR, PROP]
+layers: {L0: intent, L1: contract, L2: mechanism, L3: executable}
+source: deduced
+description: |
+  ⟨TBD: one-line product description⟩.
+  Process profile lives under meta/ (product_behavior: false).
+  Product behavior contracts live under 00–50.
+
+archive:
+  path: archive/
+  role: cold-storage
+  sot: false
+  note: |
+    Closed proposals and historical validation artifacts.
+    Agent MUST NOT treat archive/ as current must.
+
+meta:
+  path: meta/
+  role: ndf-process-profile
+  sot: true
+  product_behavior: false
+  note: |
+    Dual-track / POC boundary / binders / hygiene.
+    Process proposals: meta/open/proposal-meta-*.md.
+    Review tools: meta/tools/.
+
+poc:
+  path: ../poc/
+  role: exploration
+  sot: false
+  note: |
+    Repo-root poc/<topic>/ with ndf/ binder (TOPIC.md + COMMITS.md).
+    Not Trunk must.
+
+models:
+  path: models/
+  role: L3-reference
+  sot: true
+  note: |
+    Executable reference models only; no production-path experiments.
+
+tooling:
+  ndf_index: spec/meta/tools/ndf_index.py
+  outputs: [INDEX.md, graph.json]
+  note: |
+    INDEX/graph are derived review surfaces, not must prose.

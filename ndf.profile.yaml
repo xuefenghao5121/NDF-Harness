@@ -1,0 +1,31 @@
+# NDF Harness profile selector (install-time config; not product SoT)
+default_profile: dual-track
+
+profiles:
+  dual-track:
+    requires_poc: true
+    requires_agents_md: true
+    install_norms: full
+    install_tools: full
+    description: Dual-track explore/promote + full process profile + AGENTS.md
+
+  minimal:
+    requires_poc: false
+    requires_agents_md: true
+    install_norms: slim
+    install_tools: [index, graphcheck]
+    description: Norms + AGENTS workflow; POC optional later
+
+  linter-only:
+    requires_poc: false
+    requires_agents_md: false
+    install_norms: false
+    install_tools: full
+    description: Governance CLI only; SHOULD still add AGENTS.md for command stability
+
+runtimes:
+  - generic
+  - openclaw
+  - claude-code
+  - opencode
+  - cursor
