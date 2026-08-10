@@ -763,7 +763,11 @@ def render_plan(
 def cmd_plan(args: argparse.Namespace) -> int:
     if getattr(args, "surface", "graph") == "bind":
         return bindadv.cmd_bind_plan(args)
-    by_id = ndx.load_graph(include_archive=args.archive, include_open=args.open)
+    by_id = ndx.load_graph(
+        include_archive=args.archive,
+        include_open=args.open,
+        meta_only=getattr(args, "meta", False),
+    )
     kinds = None
     if args.kinds:
         kinds = {k.strip() for k in args.kinds.split(",") if k.strip()}
@@ -799,7 +803,11 @@ def cmd_plan(args: argparse.Namespace) -> int:
 def cmd_simulate(args: argparse.Namespace) -> int:
     if getattr(args, "surface", "graph") == "bind":
         return bindadv.cmd_bind_simulate(args)
-    by_id = ndx.load_graph(include_archive=args.archive, include_open=args.open)
+    by_id = ndx.load_graph(
+        include_archive=args.archive,
+        include_open=args.open,
+        meta_only=getattr(args, "meta", False),
+    )
     kinds = None
     if getattr(args, "kinds", None):
         kinds = {k.strip() for k in args.kinds.split(",") if k.strip()}
@@ -944,6 +952,11 @@ def main() -> int:
         )
         p.add_argument("--archive", action="store_true")
         p.add_argument("--open", action="store_true")
+        p.add_argument(
+            "--meta",
+            action="store_true",
+            help="META-only graph (meta/ or scope=ndf-process)",
+        )
         p.add_argument(
             "--focus",
             default=None,

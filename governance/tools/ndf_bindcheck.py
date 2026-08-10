@@ -9,7 +9,7 @@ OBS-GRAIN, and optional ZOMBIE-SPEC / SPEC-DRIFT heuristics.
 Usage:
   python3 spec/meta/tools/ndf_bindcheck.py check --topic l4-cache-mgmt
   python3 spec/meta/tools/ndf_bindcheck.py check --all-topics \\
-      --checks bind,dual,grain,zombie,drift --report /tmp/bindcheck.md
+      --checks bind,dual,grain,zombie,drift --report tmp/ndf-bindcheck.md
 """
 
 from __future__ import annotations
@@ -29,10 +29,12 @@ if str(_TOOLS) not in sys.path:
 
 import ndf_close as ncl  # noqa: E402
 import ndf_index as ndx  # noqa: E402
+import ndf_report_io as rio  # noqa: E402
 
 ROOT = Path(__file__).resolve().parents[3]
 POC = ROOT / "poc"
 TOOL = "spec/meta/tools/ndf_bindcheck.py"
+DEFAULT_REPORT = "tmp/ndf-bindcheck.md"
 
 DEFAULT_CHECKS = ("bind", "dual", "grain")
 ALL_CHECKS = ("bind", "dual", "grain", "zombie", "drift")
@@ -329,6 +331,9 @@ def check_bind(topic: str, info: ncl.TopicInfo, since: str | None) -> list[Findi
                     break
             if in_ledger:
                 break
+        # Ledger SoT documents historical gap without rewriting git (advise O1).
+        if in_ledger:
+            continue
         findings.append(
             Finding(
                 "DEF-NDF-REPRO-BIND-GAP",
@@ -343,15 +348,16 @@ def check_bind(topic: str, info: ncl.TopicInfo, since: str | None) -> list[Findi
                     f"date: {commit_date(sha)}",
                     f"subject: {subj}",
                     f"missing: {', '.join(missing)}",
-                    f"in COMMITS.md ledger: {'yes' if in_ledger else 'no'}",
+                    "in COMMITS.md ledger: no",
                     "files touched:",
                     *([f"  - `{f}`" for f in files] if files else ["  - (none listed)"]),
                 ],
                 fix=(
-                    "Re-commit or `git commit --amend` (if not pushed) with trailers:\n"
+                    "Prefer append a COMMITS.md row documenting the SHA (no history rewrite),\n"
+                    "or re-commit / amend (if not pushed) with trailers:\n"
                     f"  Topic: {topic}\n"
                     "  Clauses: <IDs>\n"
-                    f"Then append a row to `{ledger_rel}`."
+                    f"Then ensure `{ledger_rel}` lists the SHA."
                 ),
                 diagram_nodes=[
                     (mid(short), f"{short} {subj[:40]}"),
@@ -360,12 +366,7 @@ def check_bind(topic: str, info: ncl.TopicInfo, since: str | None) -> list[Findi
                 ],
                 diagram_edges=[
                     (mid(short), "missing", "TRAILER", True),
-                    (
-                        mid(short),
-                        "in-ledger" if in_ledger else "not-in-ledger",
-                        "LEDGER",
-                        not in_ledger,
-                    ),
+                    (mid(short), "not-in-ledger", "LEDGER", True),
                 ],
             )
         )
@@ -909,10 +910,62 @@ def bipartite_mermaid(topic: str, pairs: list[tuple[str, str]]) -> str:
     return "\n".join(lines)
 
 
+def render_topic_figure(topic: str, findings: list[Finding]) -> str:
+    """Aggregate finding diagram edges for one topic into a single mermaid."""
+    nodes: dict[str, str] = {}
+    edges: list[tuple[str, str, str, bool]] = []
+    seen_e: set[tuple[str, str, str, bool]] = set()
+    for f in findings:
+        for nid, lab in f.diagram_nodes:
+            nodes.setdefault(nid, lab)
+        for e in f.diagram_edges:
+            if e not in seen_e:
+                seen_e.add(e)
+                edges.append(e)
+    if not nodes and not edges:
+        # fallback: kind → count nodes
+        counts: dict[str, int] = defaultdict(int)
+        for f in findings:
+            counts[f.kind] += 1
+        if not counts:
+            return f"### topic `{topic}`\n\n_(no findings)_\n"
+        lines = [
+            f"### topic `{topic}`",
+            "",
+            "```mermaid",
+            "flowchart LR",
+            f'  T["{topic}"]',
+        ]
+        for kind, n in sorted(counts.items()):
+            kid = mid(kind)
+            lines.append(f'  {kid}["{kind}×{n}"]')
+            lines.append(f"  T -->|finding|{kid}")
+        lines.append("```")
+        lines.append("")
+        return "\n".join(lines)
+
+    lines = [
+        f"### topic `{topic}`",
+        "",
+        "```mermaid",
+        "flowchart LR",
+    ]
+    for nid, lab in sorted(nodes.items()):
+        safe = lab.replace('"', "'")
+        lines.append(f'  {nid}["{safe}"]')
+    for src, rel, tgt, bad in edges:
+        arrow = "-.->|" if bad else "-->|"
+        lines.append(f"  {src} {arrow}{rel}|{tgt}")
+    lines.append("```")
+    lines.append("")
+    return "\n".join(lines)
+
+
 def build_report(
     results: list[TopicResult],
     checks: set[str],
     max_issues: int = 40,
+    detail: bool = False,
 ) -> str:
     now = datetime.now(timezone.utc).strftime("%Y-%m-%dT%H:%M:%SZ")
     all_f = [f for tr in results for f in tr.findings]
@@ -937,29 +990,42 @@ def build_report(
     counts: dict[tuple[str, str, str], int] = defaultdict(int)
     for f in all_f:
         counts[(f.kind, f.def_id, f.severity)] += 1
-    for (kind, def_id, sev), n in sorted(counts.items(), key=lambda x: (x[0][2], x[0][0])):
+    for (kind, def_id, sev), n in sorted(
+        counts.items(), key=lambda x: (x[0][2], x[0][0])
+    ):
         short_def = def_id.replace("DEF-NDF-", "")
         lines.append(f"| `{kind}` | {short_def} | {n} | {sev} |")
     lines.append("")
 
-    def emit(title: str, items: list[Finding]) -> None:
-        lines.append(f"## {title}")
+    lines.append("## Issue index")
+    lines.append("")
+    if not all_f:
+        lines.append("_(none)_")
         lines.append("")
-        if not items:
-            lines.append("_(none)_")
-            lines.append("")
-            return
-        for i, f in enumerate(items[:max_issues], 1):
-            lines.append(render_finding_block(f, i))
-            lines.append("")
-        if len(items) > max_issues:
-            lines.append(f"_… +{len(items) - max_issues} more omitted (`--max-issues`)_")
-            lines.append("")
+    else:
+        lines.append("| # | sev | kind | topic | message | loc |")
+        lines.append("|--:|-----|------|-------|---------|-----|")
+        for i, f in enumerate(all_f, 1):
+            msg = f.message.replace("|", "\\|")
+            loc = f.loc.replace("|", "\\|")
+            lines.append(
+                f"| {i} | {f.severity} | `{f.kind}` | `{f.topic}` | {msg} | `{loc}` |"
+            )
+        lines.append("")
 
-    emit("Hard errors", errors)
-    emit("Warnings", warnings)
+    lines.append("## Figures by topic")
+    lines.append("")
+    any_fig = False
+    for tr in results:
+        if not tr.findings:
+            continue
+        any_fig = True
+        lines.append(render_topic_figure(tr.topic, tr.findings))
+    if not any_fig:
+        lines.append("_(none)_")
+        lines.append("")
 
-    lines.append("## Ledger bipartite (clause↔sha)")
+    lines.append("## Appendix: ledger bipartite (clause↔sha)")
     lines.append("")
     for tr in results:
         lines.append(f"### topic `{tr.topic}`")
@@ -970,6 +1036,29 @@ def build_report(
             lines.append(f"- note: {s}")
         if tr.skipped:
             lines.append("")
+
+    if detail:
+        lines.append("## Appendix: per-finding detail")
+        lines.append("")
+
+        def emit(title: str, items: list[Finding]) -> None:
+            lines.append(f"### {title}")
+            lines.append("")
+            if not items:
+                lines.append("_(none)_")
+                lines.append("")
+                return
+            for i, f in enumerate(items[:max_issues], 1):
+                lines.append(render_finding_block(f, i))
+                lines.append("")
+            if len(items) > max_issues:
+                lines.append(
+                    f"_… +{len(items) - max_issues} more omitted (`--max-issues`)_"
+                )
+                lines.append("")
+
+        emit("Hard errors", errors)
+        emit("Warnings", warnings)
 
     return "\n".join(lines).rstrip() + "\n"
 
@@ -1002,6 +1091,12 @@ def cmd_check(args: argparse.Namespace) -> int:
         print("no checks selected", file=sys.stderr)
         return 2
 
+    try:
+        report_path = rio.resolve_report_path(args.report, DEFAULT_REPORT)
+    except rio.ReportPathError as e:
+        print(f"error: {e}", file=sys.stderr)
+        return 2
+
     if args.all_topics:
         topics = list_topics()
     elif args.topic:
@@ -1012,15 +1107,14 @@ def cmd_check(args: argparse.Namespace) -> int:
 
     by_id = ndx.load_graph(include_archive=False, include_open=False)
     results = [run_topic(t, checks, by_id, args.since) for t in topics]
-    report = build_report(results, checks, max_issues=args.max_issues)
+    report = build_report(
+        results, checks, max_issues=args.max_issues, detail=args.detail
+    )
 
-    if args.report:
-        Path(args.report).write_text(report, encoding="utf-8")
+    written = rio.write_report(report_path, report)
+    if written is not None:
         print(format_console_summary(results, checks))
-        print(f"wrote report: {args.report}")
-    else:
-        # no --report: print full report to stdout (reviewable)
-        print(report)
+        print(f"wrote report: {written}")
 
     hard = any(
         f.severity == "error" and f.def_id in HARD_DEFS
@@ -1049,12 +1143,22 @@ def main() -> int:
         help=f"comma list from {','.join(ALL_CHECKS)} (default: {','.join(DEFAULT_CHECKS)})",
     )
     p.add_argument("--since", default=None, help="git --since for bind/drift window")
-    p.add_argument("--report", default=None, help="write Markdown report to PATH")
+    p.add_argument(
+        "--report",
+        default=DEFAULT_REPORT,
+        help=f"Markdown report path (default: {DEFAULT_REPORT}); '-' = stdout only; "
+        "MUST NOT be under spec/",
+    )
     p.add_argument(
         "--max-issues",
         type=int,
         default=40,
-        help="max issues per severity section in report (default 40)",
+        help="max issues in --detail appendix (default 40)",
+    )
+    p.add_argument(
+        "--detail",
+        action="store_true",
+        help="include per-finding evidence/fix blocks in report appendix",
     )
     p.set_defaults(func=cmd_check)
 

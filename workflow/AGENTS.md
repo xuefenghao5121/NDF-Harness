@@ -9,7 +9,9 @@
 **CRITICAL**: Before each response, re-read:
 
 1. 本文件 `AGENTS.md`
-2. **流程 SoT**：`spec/meta/README.md` + `spec/meta/process.md`（[[CHR-008]]、[[BEH-018]]…[[BEH-020]]、[[BEH-025]]）
+2. **流程 SoT**：`spec/meta/README.md` + `spec/meta/language.md`（[[META-001]]…[[META-005]]）
+   + `spec/meta/process.md`（[[CHR-008]]、[[BEH-018]]…[[BEH-020]]、[[BEH-025]]、
+   [[META-006]]、[[META-007]]）
 3. 当前相关的**产品**契约：`spec/00–50`（及产品 `spec/open/` 提案）
 
 **角色（逻辑标签，可映射到具体运行时）**：
@@ -21,7 +23,7 @@
 | **审核面** | 跑治理 CLI、脚手架、规范卫生（可与指挥同一人或同一会话） |
 
 权威流程条款正文在 **`spec/meta/`**：[[CHR-008]]、[[ARCH-008]]、[[BEH-018]]、[[BEH-019]]、
-[[BEH-020]]、[[BEH-025]]、[[CON-POC-001]]。分层见 [[ADR-META-001]]。  
+[[BEH-020]]、[[BEH-025]]、[[CON-POC-001]]、[[META-006]]、[[META-007]]。分层见 [[ADR-META-001]]。  
 本文件不得与上述条款矛盾。
 
 ---
@@ -72,8 +74,9 @@
 
 | track | 已审核之后 |
 | :--- | :--- |
-| **poc** | 委派实现 Agent 改 **`poc/<topic>/` only**；不跑 Trunk SLA 验收 |
-| **promote** | 干净合入 Trunk 实现 → 功能验证 →（适用时）性能验证 |
+| **poc** | 委派实现 Agent 改 **`poc/<topic>/` only**（禁写 Trunk `src/`/`include/`/`tests/`）；
+  R0 后写 `PERF_BASELINE.md`；不跑 Trunk SLA 验收 |
+| **promote** | `ndf_close plan` → 干净合入 Trunk → 功能验证 →（适用时）性能/金标更新 [[META-006]] |
 | **process** | 仅 meta + thin 指针 + 本文件等；跳过实现委派与性能 |
 | **bug / refactor / rollback** | 通常同 promote；若仅文档则同 process |
 
@@ -105,9 +108,11 @@
 ## 4. 实现 Agent 边界（摘要）
 
 - **禁止**改 `spec/meta/`、L0/L1 条款（除非 process 且指挥已落地）
-- **poc**：只写 `poc/<topic>/`；MUST NOT 改 Trunk 生产默认路径
+- **poc**：只写 `poc/<topic>/`；MUST NOT 改 Trunk `src/**` `include/**` `tests/**`（先拷再改）；
+  比性能 MUST 读 TOPIC → `perf_baseline`（[[META-007]]）
 - **promote / bug / refactor**：可写实现主线、测试、`50-verification/`、L2/L3
 - **任何 track**：MUST NOT 把实验补丁塞进 `spec/models/` 冒充 L3
+- SHOULD：`ndf_poc_isolation.py check`；`ndf_perf_baseline.py check`（装订门禁）
 
 细节可映射到运行时文件（如 `CLAUDE.md`）；语义以本表 + meta 条款为准。
 
@@ -136,14 +141,19 @@
 ### 6.2a poc
 
 - draft / 装订器 / MUST NOT stable SLA
-- 先有 `poc/<topic>/ndf/TOPIC.md` 再实现
+- 先有 `poc/<topic>/ndf/TOPIC.md` 再实现；开题填 `explore_surface`
+- 禁写 Trunk `src/**` `include/**` `tests/**`（[[BEH-018]]）；先拷再改
+- R0 后：`baseline_trunk_sha` + `perf_baseline` → `PERF_BASELINE.md`（[[META-007]]）
+- 已 `rejected`/`promoted`：禁止同 topic 重开；平级新 topic + `depends_on_topics`（[[BEH-025]]）
 - commit trailers + `COMMITS.md`
 - 正结果 → promote 提案；负结果 → §6.2d
 
 ### 6.2b promote
 
 - draft→stable；干净合入；`Promotes: <topic>`
+- MUST：`ndf_close.py plan`（含语义核 / 基线 stale / 表面冲突）
 - 功能验证 +（适用）性能验证对照 stable SLA
+- 金标更新：产品验证树 configs/baselines + 索引（[[META-006]]）；禁止只刷 SLA 观测数字
 
 ### 6.2c process
 
@@ -151,12 +161,14 @@
 
 ### 6.2d 负结果
 
-对齐 [[BEH-020]]：产品 DEC（`Rejects:`）→ deprecated → 确认 Trunk 无 POC 表面 → 装订器归档。
+对齐 [[BEH-020]]：产品 DEC（`Rejects:`）→ deprecated → 确认 Trunk 无 POC 表面 → 装订器归档；
+关闭后重启见 [[BEH-025]] 平级新 topic。
 
 ### 场景5 / 6 / 7
 
 - **编译/功能验证**：Trunk 代码路径后触发；poc/process 默认不触发  
-- **性能验证**：对照 `status=stable` SLA；POC 数字不进 Trunk SLA（[[CON-POC-001]]）  
+- **性能验证**：对照 `status=stable` SLA + 产品金标矩阵（[[META-006]]）；
+  POC 数字不进 Trunk SLA（[[CON-POC-001]]）；Agent 读线见 [[META-007]]  
 - **失败闭环**：≤3 轮；产品冲突 → `spec/open/feedback-*`；流程冲突 → `spec/meta/open/feedback-*`
 
 ---
@@ -181,9 +193,11 @@
 ### 禁止行为
 
 * 提案前改 Trunk 实现  
-* 探索期直接改 Trunk 生产默认路径  
+* 探索期直接改 Trunk `src/`/`include/`/`tests/`  
 * 探索期写 stable must SLA，或 POC 默认开启合入 Trunk  
 * 实验补丁写入 `spec/models/`  
 * 元规范长文写回产品 `20-behavior/`  
-* poc/process 跳过验证却宣告「主线完成」；promote 跳过验证直接完成  
-* 主题未关闭却宣称 NDF/实现「回合完成」
+* 配置-only 调参刷 SLA 观测数字冒充新基线（[[META-007]]）  
+* poc/process 跳过验证却宣告「主线完成」；promote 跳过 `ndf_close plan`/验证直接完成  
+* 主题未关闭却宣称 NDF/实现「回合完成」  
+* 已关闭 topic 原地复活（须平级新 topic）

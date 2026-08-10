@@ -2,7 +2,7 @@
 
 > **role:** ndf-process-reference  
 > **product_behavior:** false  
-> **sot:** true（对本仓 **工具治理纪律** 的说明性参考）；**false**（对 DiskHNSW 产品行为）  
+> **sot:** true（对本仓 **工具治理纪律** 的说明性参考）；**false**（对消费仓产品行为）  
 > **scope:** ndf-process  
 > **depends-on:** [[BEH-026]], [[DEF-NDF-GRAPH]], [[CHR-008]], [[BEH-025]], [[DEF-023]]  
 > **实现:** [`README.md`](README.md) · [`ndf_*.py`](.)  

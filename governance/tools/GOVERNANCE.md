@@ -2,7 +2,7 @@
 
 > **role:** ndf-process-reference  
 > **product_behavior:** false  
-> **sot:** true（对本仓 **工具治理纪律** 的说明性参考）；**false**（对 DiskHNSW 产品行为）  
+> **sot:** true（对包内 **工具治理纪律** 的说明性参考）；**false**（对消费仓产品行为）  
 > **scope:** ndf-process  
 > **depends-on:** [[BEH-026]], [[DEF-NDF-GRAPH]], [[CHR-008]], [[BEH-025]], [[DEF-023]]  
 > **实现:** [`README.md`](README.md) · [`ndf_*.py`](.)  
@@ -56,6 +56,9 @@ flowchart TB
 | Product SoT | `spec/00–50`、产品 DEC | 产品行为 yes |
 | 探索 | `poc/<topic>/ndf/` | **no**（draft / 复现入口） |
 | 派生物 | `INDEX.md`、`graph.json`、检查报告 | **no** |
+
+检查报告（graphcheck / bindcheck / advise / close）MUST 写到仓库 `tmp/`（或 OS `/tmp/`），  
+审核后可删。**MUST NOT** 写入 `spec/open/`（提案入口）或其它 `spec/` 路径；工具路径门禁会拒绝。
 
 纯 process 新 ID（`DEF-NDF-*`、`BEH-026`）MUST NOT 写入产品树 adopted 表。
 
@@ -113,6 +116,19 @@ flowchart LR
 | 人工改完仍红 | 场景7：代码/规范/性能/环境分流（见 `AGENTS.md`） |
 | 探索方向证伪 | `ndf_close` reject + [[BEH-020]] 负结果闭环 |
 
+### Meta 自洽门禁（process-profile only）
+
+Meta 是 NDF 元设计核心，\(V_{\mathrm{meta}}\) MUST 逻辑闭环，**不得**被产品树 `stable_dep` 淹没。
+
+```bash
+python3 spec/meta/tools/ndf_index.py index --meta
+python3 spec/meta/tools/ndf_graphcheck.py --meta   # MUST hard_errors: 0
+```
+
+`--meta` 仅加载 `meta/` 或 `scope=ndf-process`。跨域 ndf 边在子图上呈悬空硬错误。  
+全仓 `graphcheck`（无 `--meta`）仍用于产品+meta 联检；**meta 卫生以 `--meta` 为准**。
+`bindcheck` / `close` 不加 `--meta`。
+
 ---
 
 ## 3. 旁路：POC 主题收口
@@ -122,13 +138,16 @@ flowchart LR
 ```text
 [A] poc/<topic>/ndf 装订器稳定
 [B] ndf_close plan --mode promote|reject|partial
-[C] 人工合入 Trunk（产品提案 / draft→stable）
-[D] TOPIC=promoted|rejected；COMMITS 记 src/spec commit
+    （promote/partial：§4b 语义核；§4c 基线 stale；§4d 表面冲突；reject：N/A）
+[C] 人工合入 Trunk（产品提案 / draft→stable；可选 models/ + model=）
+[D] TOPIC=promoted|rejected|exploring(partial)；COMMITS；兄弟 TOPIC baseline_status=stale
 [E] MUST：ndf_index index + ndf_graphcheck
 [F] 可选：ndf_bindcheck --topic <id>
 ```
 
 `ndf_close` **只读 plan**；无 `apply`。Promote 后图面再走 §2 主链清洗残留环 / stable_dep。
+缺 `model=` **不是** close/graphcheck 失败条件（造核为 MAY；决策为 MUST）。
+基线 stale / 表面冲突清单 **是** promote 收口 MUST 处理项（[[BEH-019]] §7 / [[BEH-025]]）。
 
 ---
 
@@ -222,7 +241,8 @@ python3 spec/meta/tools/ndf_advise.py simulate --surface graph \
 load 虚拟 TOPIC.md + COMMITS.md 文本
   → apply(BindPatch)   # 只改内存字符串
   → 判定 finding 意图是否被缓解
-  → PASS ≠ git 已有 trailer；历史债可用 banner + ledger + --since 管理
+  → PASS ≠ git 已有 trailer；历史债用 **ledger 登记 SHA**（已入账则免 `missing_trailer`）
+    + banner（`clause_unbound`）+ 可选 `--since` 管理
   → 永不写 poc/** 、永不 amend
 ```
 

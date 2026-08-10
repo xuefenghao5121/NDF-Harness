@@ -11,7 +11,7 @@
 
 | 角色 | 先读 |
 |------|------|
-| 指挥 | 仓库根 `AGENTS.md` → 本 README → `process.md` |
+| 指挥 | 仓库根 `AGENTS.md` → 本 README → [`language.md`](language.md) → [`process.md`](process.md) |
 | 产品契约 | `../00-charter/`…`50-verification/` + 产品 `../open/` |
 | 治理 | `tools/GOVERNANCE.md`（安装后）→ `tools/` |
 | 探索 | `poc/<topic>/ndf/` |
@@ -20,10 +20,11 @@
 
 | 文件 | 内容 |
 |------|------|
-| `process.md` | CHR-008, BEH-018…020, BEH-025, BEH-026 |
-| `architecture.md` | ARCH-008 |
-| `constraints.md` | CON-POC-001 |
-| `glossary.md` | DEF-020…023, DEF-NDF-* |
-| `decisions/` | meta ADR（如 ADR-META-001） |
-| `open/` | process 提案 `proposal-meta-*.md` |
+| [`language.md`](language.md) | META-001…005（语言 / 语义核 / trunk-ref） |
+| [`process.md`](process.md) | CHR-008, BEH-018…020, BEH-025/026, META-006/007 |
+| [`architecture.md`](architecture.md) | ARCH-008 |
+| [`constraints.md`](constraints.md) | CON-POC-001 |
+| [`glossary.md`](glossary.md) | DEF-020…023, DEF-META-ID-NS, DEF-NDF-* |
+| [`decisions/`](decisions/) | meta ADR（分层 / ID 命名空间 / 装订 / 卫生…） |
+| `open/` | process 提案 `proposal-meta-*.md`（消费仓创建） |
 | `tools/` | 审核 harness（从 VENDOR 取得实现） |

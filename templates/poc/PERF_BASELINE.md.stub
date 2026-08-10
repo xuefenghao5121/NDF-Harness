@@ -1,0 +1,25 @@
+# Perf baseline — ⟨topic⟩
+
+> trunk_sha: ⟨short or full⟩  
+> config_id: ⟨cfg-id or experimental⟩  
+> protocol: ⟨measurement protocol refs⟩  
+> status: current  
+> vs: ⟨bl-trunk-… or n/a⟩
+
+Copy to `poc/<topic>/ndf/PERF_BASELINE.md`. TOPIC MUST set `perf_baseline:` after R0 ([[META-007]]).
+
+## Config
+
+- Prefer a named config id under the product verification tree (`configs/cfg-*.md`)
+- If experimental: paste **full** measurement env / knobs here (MUST NOT “see NOTES”)
+
+## Numbers
+
+Either:
+
+1. **Reuse trunk golden**: state “reuse `baselines/<vs>.md`” and link it, or  
+2. **Topic R0 table**: matrix of scenarios × metrics (sole source for Δ% narrative)
+
+## Notes
+
+Measurement caveats only. Do not hide a second “real baseline” elsewhere.

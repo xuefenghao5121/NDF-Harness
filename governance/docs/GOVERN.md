@@ -14,6 +14,9 @@ python3 spec/meta/tools/ndf_advise.py plan --surface bind --low-hanging-fruit \
 python3 spec/meta/tools/ndf_advise.py simulate --surface graph --issue <id> --option O1 \
   --report tmp/ndf-advise-sim.md
 python3 spec/meta/tools/ndf_close.py plan --topic <topic> --mode promote|reject|partial
+python3 spec/meta/tools/ndf_poc_isolation.py check --all-topics
+python3 spec/meta/tools/ndf_perf_baseline.py check --all-exploring
 ```
 
+Reports: default `tmp/`；`--report -` = stdout；MUST NOT write under `spec/`.  
 **sandbox pass ≠ apply.** Edit SoT only via proposal + human confirm.

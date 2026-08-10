@@ -435,6 +435,10 @@ def build_plan_report(
     arch = f"spec/archive/{year_month}/poc-{topic.topic_id}/"
     if mode == "reject":
         lines.append(f"- [ ] Set `TOPIC.md` status → `rejected`")
+        lines.append(
+            "- [ ] Sync `NOTES.md` header status → `rejected` "
+            "(or N/A if no NOTES.md) ([[BEH-025]])"
+        )
         lines.append(f"- [ ] Write/update product DEC with `Rejects: {topic.topic_id}`")
         lines.append(f"- [ ] Move binder → `{arch}`")
         lines.append(
@@ -442,16 +446,133 @@ def build_plan_report(
         )
     elif mode == "promote":
         lines.append(f"- [ ] Set `TOPIC.md` status → `promoted`")
+        lines.append(
+            "- [ ] Sync `NOTES.md` header status → `promoted` "
+            "(or N/A if no NOTES.md) ([[BEH-025]])"
+        )
         lines.append(f"- [ ] Record `src_commit` + `spec_commit` in `COMMITS.md`")
         lines.append(f"- [ ] Move binder → `{arch}` (or summary pointer)")
         lines.append(f"- [ ] Commit trailers: `Topic:`, `Proposals:`, `Clauses:`, `Promotes: {topic.topic_id}`")
     else:
         lines.append("- [ ] Keep `TOPIC.md` status `exploring` (or note partial promote subset)")
+        lines.append(
+            "- [ ] NOTES.md: mark partial / still exploring "
+            "(MUST NOT imply full close) (or N/A if no NOTES.md)"
+        )
         lines.append("- [ ] Archive only closed amend proposals if desired; do not full-close topic")
         lines.append(f"- [ ] Promoted subset trailers: `Promotes: {topic.topic_id}` (partial)")
         lines.append(f"- [ ] Full binder archive `{arch}` deferred until topic closed")
     lines.append(f"- [ ] `spec/open/` stubs for Implemented proposals if still pointing at live paths")
     lines.append("")
+
+    # §4b Semantic core (MODEL) — promote/partial only; [[META-004]] / [[BEH-019]]
+    if mode == "reject":
+        lines.append("## 4b. Semantic core (MODEL)")
+        lines.append("")
+        lines.append("Semantic core: **N/A (reject)** — no distill decision required ([[META-004]]).")
+        lines.append("")
+        lines.append("## 4c / 4d. Baseline & surface")
+        lines.append("")
+        lines.append(
+            "Baseline invalidation / surface overlap: **N/A (reject)** "
+            "([[BEH-025]])."
+        )
+        lines.append("")
+    else:
+        lines.append(
+            "## 4b. Semantic core decision (MAY deliver; MUST decide; "
+            "[[META-004]] / [[BEH-019]])"
+        )
+        lines.append("")
+        lines.append(
+            "Not executed by this tool. Missing MODEL is **not** a close/graphcheck failure."
+        )
+        lines.append("")
+        lines.append(
+            "- [ ] Decide: distill L3 semantic core for promoted behavior?"
+        )
+        lines.append(
+            "  - [ ] No — reason: ________ (L1+VER enough / bugfix only / …)"
+        )
+        lines.append(
+            "  - [ ] Defer — follow-up product proposal after Trunk green"
+        )
+        lines.append(
+            "  - [ ] Yes — deliver in promote proposal or immediate follow-up:"
+        )
+        lines.append(
+            "    - [ ] Add `spec/models/<name>.md` "
+            "(oracle only: enable / timing / ops / invariants)"
+        )
+        lines.append(
+            "    - [ ] Wire `model=<MODEL-ID>` on owning L1 clause(s)"
+        )
+        lines.append(
+            "    - [ ] MUST NOT copy poc tree / git patches / COMMITS into `models/`"
+        )
+        lines.append(
+            "- [ ] If Yes: after land, `python3 spec/meta/tools/ndf_index.py index` "
+            "(model node + edge visible)"
+        )
+        lines.append("")
+
+        lines.append(
+            "## 4c. Baseline invalidation (Trunk moved; [[BEH-025]] / [[BEH-019]])"
+        )
+        lines.append("")
+        lines.append("Not executed by this tool. Checklist for Agent/human after merge.")
+        lines.append("")
+        lines.append(
+            "- [ ] Note new Trunk `src` SHA after this close "
+            f"(topic=`{topic.topic_id}`, mode=`{mode}`)"
+        )
+        lines.append(
+            "- [ ] List exploring topics: "
+            "`python3 spec/meta/tools/ndf_index.py poc-topics`"
+        )
+        lines.append(
+            "- [ ] Set `baseline_status=stale` on affected exploring topics "
+            "(**including this topic if still exploring** after partial)"
+        )
+        lines.append(
+            "- [ ] Disjoint-surface siblings MAY mark N/A + reason "
+            "(still SHOULD refresh `baseline_trunk_sha` when convenient)"
+        )
+        lines.append(
+            "- [ ] Do NOT treat pre-promote R0 tables as current-Trunk baseline"
+        )
+        lines.append(
+            "- [ ] Before next round on a stale topic: re-measure R0 @ current Trunk"
+        )
+        lines.append("")
+
+        lines.append(
+            "## 4d. Surface overlap / conflict check ([[BEH-025]] / [[BEH-018]] §9)"
+        )
+        lines.append("")
+        lines.append(
+            "- [ ] Read this topic `explore_surface` from TOPIC.md"
+        )
+        lines.append(
+            "- [ ] List exploring topics whose `explore_surface` intersects "
+            "(from `poc-topics`)"
+        )
+        lines.append(
+            "- [ ] For each overlap: confirm `depends_on_topics` / "
+            "`conflicts_with_topics` OR resolve before claiming additive gains"
+        )
+        lines.append(
+            "- [ ] Overlapping exploring siblings: `baseline_status=stale` "
+            "AND `next_gate` includes conflict re-check vs promoted slice"
+        )
+        lines.append(
+            "- [ ] MUST NOT promote two overlapping topics in the same close"
+        )
+        lines.append(
+            "- [ ] Cross-topic ΔQPS: re-measure on same "
+            "`baseline_trunk_sha` + protocol (gains not default-additive)"
+        )
+        lines.append("")
 
     report_path = f"spec/open/graphcheck-after-close-{topic.topic_id}.md"
     lines.append("## 5. Post-merge checks (MUST run after Trunk edits)")

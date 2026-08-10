@@ -32,15 +32,19 @@
 - [ ] python3 spec/meta/tools/ndf_graphcheck.py --report tmp/ndf-graphcheck.md
 - [ ] python3 spec/meta/tools/ndf_bindcheck.py --report tmp/ndf-bindcheck.md
 - [ ] python3 spec/meta/tools/ndf_advise.py plan --surface graph|bind ...
+- [ ] optional: ndf_poc_isolation.py check --all-topics
+- [ ] optional: ndf_perf_baseline.py check --all-exploring
 - [ ] optional simulate; remind sandbox ≠ apply
 - [ ] human edits SoT via proposal discipline → recheck
 - [ ] POC close: ndf_close.py plan --topic <t> --mode promote|reject|partial
+- [ ] MUST NOT write check reports under spec/ (use tmp/ or --report -)
 ```
 
 ## sync
 
 ```text
 - [ ] Compare package VERSION vs installed seed notes
-- [ ] Refresh CLAUSE-FORMAT / GOVERNANCE / VENDOR as needed
+- [ ] Refresh CLAUSE-FORMAT / GOVERNANCE / VENDOR / tools (incl. report_io, isolation, perf_baseline)
+- [ ] Diff norms/meta process+language vs package; never silent overwrite consumer edits
 - [ ] Diff AGENTS.md; never silent overwrite
 ```

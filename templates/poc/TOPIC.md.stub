@@ -1,13 +1,28 @@
 # TOPIC.md（template）
 
-```yaml
-topic_id: ⟨TBD⟩
-status: exploring  # exploring | blocked | promoted | rejected
-baseline_protocol: ⟨TBD⟩
-proposals: []
-draft_clauses: []
-active_hypothesis: ⟨TBD⟩
-next_gate: ⟨TBD⟩
-```
+> topic_id: ⟨TBD⟩  
+> status: exploring  
+> track: poc  
+> explore_surface: ⟨tag1,tag2⟩  
+> baseline_protocol: ⟨measurement protocol refs⟩  
+> baseline_trunk_sha: ⟨after R0⟩  
+> baseline_status: current  
+> perf_baseline: ndf/PERF_BASELINE.md  
+> depends_on_topics: []  
+> conflicts_with_topics: []  
 
-Binder is **not** Trunk must. See [[BEH-025]] / [[DEF-022]].
+## Active hypothesis
+
+⟨TBD⟩
+
+## Next gate
+
+⟨TBD⟩
+
+## Proposals
+
+| path | status | role |
+|------|--------|------|
+| | | root |
+
+Binder is **not** Trunk must. See [[BEH-025]] / [[DEF-022]] / [[META-007]].

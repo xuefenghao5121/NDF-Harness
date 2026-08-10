@@ -8,8 +8,11 @@ for human review.
 
 Usage:
   python3 spec/meta/tools/ndf_graphcheck.py
+  python3 spec/meta/tools/ndf_graphcheck.py --meta
+  python3 spec/meta/tools/ndf_graphcheck.py --product
   python3 spec/meta/tools/ndf_graphcheck.py --format text --hop 2
-  python3 spec/meta/tools/ndf_graphcheck.py --report /tmp/ndf-graphcheck.md
+  python3 spec/meta/tools/ndf_graphcheck.py --report tmp/ndf-graphcheck.md
+  python3 spec/meta/tools/ndf_graphcheck.py --report -   # stdout only
 """
 
 from __future__ import annotations
@@ -27,8 +30,10 @@ if str(_TOOLS) not in sys.path:
     sys.path.insert(0, str(_TOOLS))
 
 import ndf_index as ndx  # noqa: E402
+import ndf_report_io as rio  # noqa: E402
 
 TOOL = "spec/meta/tools/ndf_graphcheck.py"
+DEFAULT_REPORT = "tmp/ndf-graphcheck.md"
 
 # Edges used for cycle detection (refinement / dependency DAG)
 CYCLE_RELS = ("refines", "depends-on")
@@ -395,15 +400,125 @@ def render_issue_block(
 def run_checks(by_id: dict[str, ndx.Clause]) -> tuple[list[Issue], list[Issue]]:
     errors: list[Issue] = []
     warnings: list[Issue] = []
-    for fn in (
-        find_cycles,
-        find_stable_must_deps,
-        find_conflict_asym,
-        find_meta_dangling,
-    ):
-        errors.extend(fn(by_id))
+    errors.extend(find_cycles(by_id))
+    errors.extend(find_stable_must_deps(by_id))
+    errors.extend(find_conflict_asym(by_id))
+    errors.extend(find_meta_dangling(by_id))
     warnings.extend(find_unlinked(by_id))
     return errors, warnings
+
+
+def filter_product_issues(
+    by_id: dict[str, ndx.Clause],
+    errors: list[Issue],
+    warnings: list[Issue],
+) -> tuple[list[Issue], list[Issue]]:
+    """Keep issues that touch at least one product (non-meta) clause.
+
+    Full graph is still used for edge resolution (product→meta targets stay valid).
+    Meta-only defects (e.g. process-profile cycles) are suppressed.
+    """
+    product = {cid for cid, c in by_id.items() if not ndx.is_meta_clause(c)}
+
+    def touches_product(issue: Issue) -> bool:
+        return any(s in product for s in issue.seeds)
+
+    return (
+        [i for i in errors if touches_product(i)],
+        [i for i in warnings if touches_product(i)],
+    )
+
+
+def issue_loc(by_id: dict[str, ndx.Clause], issue: Issue) -> str:
+    if issue.seeds and issue.seeds[0] in by_id:
+        c = by_id[issue.seeds[0]]
+        return f"{c.file}:{c.line}"
+    return ""
+
+
+def issue_row(by_id: dict[str, ndx.Clause], issue: Issue, idx: int) -> tuple[str, ...]:
+    """Return table cells: #, sev, kind, from, edge, to, loc."""
+    if issue.bad_edges:
+        src, rel, tgt = issue.bad_edges[0]
+    elif len(issue.seeds) >= 2:
+        src, rel, tgt = issue.seeds[0], "—", issue.seeds[1]
+    elif issue.seeds:
+        src, rel, tgt = issue.seeds[0], "—", "—"
+    else:
+        src, rel, tgt = "—", "—", "—"
+    return (
+        str(idx),
+        issue.severity,
+        issue.kind,
+        src,
+        rel,
+        tgt,
+        issue_loc(by_id, issue),
+    )
+
+
+def render_kind_figure(
+    by_id: dict[str, ndx.Clause],
+    kind: str,
+    items: list[Issue],
+    fmt: str,
+) -> str:
+    """One compact figure per kind (bad edges only; no hop expansion)."""
+    if not items:
+        return ""
+    if kind == "unlinked":
+        lines = [
+            f"### Figure: `{kind}`",
+            "",
+            "| id | loc | title |",
+            "|----|-----|-------|",
+        ]
+        for issue in items:
+            cid = issue.seeds[0] if issue.seeds else "—"
+            loc = issue_loc(by_id, issue)
+            title = ""
+            if cid in by_id:
+                title = (by_id[cid].title or "").replace("|", "\\|")
+            lines.append(f"| `{cid}` | `{loc}` | {title} |")
+        lines.append("")
+        return "\n".join(lines)
+
+    edges: list[tuple[str, str, str]] = []
+    seen: set[tuple[str, str, str]] = set()
+    for issue in items:
+        for e in issue.bad_edges:
+            if e not in seen:
+                seen.add(e)
+                edges.append(e)
+    if not edges:
+        return f"### Figure: `{kind}`\n\n_(no bad edges)_\n"
+
+    if fmt == "text":
+        lines = [f"### Figure: `{kind}`", "", "bad edges:"]
+        for s, rel, t in edges:
+            lines.append(f"  {s} --{rel}!!> {t}")
+        lines.append("")
+        return "\n".join(lines)
+
+    nodes: set[str] = set()
+    for s, _r, t in edges:
+        nodes.add(s)
+        nodes.add(t)
+    lines = [
+        f"### Figure: `{kind}`",
+        "",
+        "```mermaid",
+        "flowchart LR",
+    ]
+    for n in sorted(nodes):
+        mid = mermaid_id(n)
+        lab = node_label(by_id, n).replace('"', "'")
+        lines.append(f'  {mid}["{lab}"]')
+    for s, rel, t in edges:
+        lines.append(f"  {mermaid_id(s)} -.->|{rel}|{mermaid_id(t)}")
+    lines.append("```")
+    lines.append("")
+    return "\n".join(lines)
 
 
 def build_report(
@@ -413,8 +528,10 @@ def build_report(
     max_issues: int,
     hop: int,
     fmt: str,
+    detail: bool = False,
 ) -> str:
     now = datetime.now(timezone.utc).strftime("%Y-%m-%dT%H:%M:%SZ")
+    all_issues = errors + warnings
     lines = [
         "# NDF graphcheck report",
         "",
@@ -428,7 +545,7 @@ def build_report(
         "",
     ]
     counts: dict[str, int] = defaultdict(int)
-    for i in errors + warnings:
+    for i in all_issues:
         counts[i.kind] += 1
     lines.append("| kind | count | severity |")
     lines.append("|------|------:|----------|")
@@ -438,24 +555,91 @@ def build_report(
             lines.append(f"| {k} | {counts[k]} | {sev} |")
     lines.append("")
 
-    def emit_section(title: str, items: list[Issue], force_fmt: str) -> None:
-        lines.append(f"## {title}")
+    lines.append("## Issue index")
+    lines.append("")
+    if not all_issues:
+        lines.append("_(none)_")
         lines.append("")
-        if not items:
-            lines.append("_(none)_")
-            lines.append("")
-            return
-        show = items[:max_issues]
-        for i, issue in enumerate(show, 1):
-            lines.append(render_issue_block(by_id, issue, i, hop, force_fmt))
-            lines.append("")
-        if len(items) > max_issues:
-            lines.append(f"_… +{len(items) - max_issues} more omitted (`--max-issues`)_")
-            lines.append("")
+    else:
+        lines.append("| # | sev | kind | from | edge | to | loc |")
+        lines.append("|--:|-----|------|------|------|----|-----|")
+        for i, issue in enumerate(all_issues, 1):
+            row = issue_row(by_id, issue, i)
+            lines.append(
+                f"| {row[0]} | {row[1]} | `{row[2]}` | `{row[3]}` | {row[4]} "
+                f"| `{row[5]}` | `{row[6]}` |"
+            )
+        lines.append("")
 
-    emit_section("Hard errors", errors, fmt)
-    emit_section("Warnings", warnings, fmt)
+    lines.append("## Figures")
+    lines.append("")
+    any_fig = False
+    for k in ("cycle", "stable_dep", "conflict_asym", "meta_dangling", "unlinked"):
+        group = [i for i in all_issues if i.kind == k]
+        if not group:
+            continue
+        any_fig = True
+        lines.append(render_kind_figure(by_id, k, group, fmt))
+    if not any_fig:
+        lines.append("_(none)_")
+        lines.append("")
+
+    if detail:
+        lines.append("## Appendix: per-issue detail")
+        lines.append("")
+
+        def emit_section(title: str, items: list[Issue]) -> None:
+            lines.append(f"### {title}")
+            lines.append("")
+            if not items:
+                lines.append("_(none)_")
+                lines.append("")
+                return
+            show = items[:max_issues]
+            for i, issue in enumerate(show, 1):
+                lines.append(render_issue_block(by_id, issue, i, hop, fmt))
+                lines.append("")
+            if len(items) > max_issues:
+                lines.append(
+                    f"_… +{len(items) - max_issues} more omitted (`--max-issues`)_"
+                )
+                lines.append("")
+
+        emit_section("Hard errors", errors)
+        emit_section("Warnings", warnings)
+
     return "\n".join(lines) + "\n"
+
+
+def format_console_summary(
+    scope: str,
+    by_id: dict[str, ndx.Clause],
+    errors: list[Issue],
+    warnings: list[Issue],
+    product_n: int | None = None,
+) -> str:
+    lines = [
+        f"# ndf_graphcheck ({scope})",
+        f"clauses: {len(by_id)}"
+        + (f" (product≈{product_n})" if product_n is not None else ""),
+        f"summary: {len(errors)} error(s), {len(warnings)} warning(s)",
+        "",
+    ]
+    counts: dict[str, int] = defaultdict(int)
+    for i in errors + warnings:
+        counts[i.kind] += 1
+    for k in ("cycle", "stable_dep", "conflict_asym", "meta_dangling", "unlinked"):
+        if counts[k]:
+            lines.append(f"  {k}: {counts[k]}")
+    if counts:
+        lines.append("")
+    for i, issue in enumerate(errors + warnings, 1):
+        row = issue_row(by_id, issue, i)
+        lines.append(
+            f"- [{row[1]}] `{row[2]}` {row[3]} -[{row[4]}]-> {row[5]}"
+            + (f" @ `{row[6]}`" if row[6] else "")
+        )
+    return "\n".join(lines).rstrip() + "\n"
 
 
 def main() -> int:
@@ -465,59 +649,79 @@ def main() -> int:
     )
     ap.add_argument("--archive", action="store_true", help="include spec/archive/")
     ap.add_argument("--open", action="store_true", help="include spec/open/ and spec/meta/open/")
-    ap.add_argument("--max-issues", type=int, default=20, help="max issues printed per severity class")
-    ap.add_argument("--hop", type=int, default=1, help="context hops around error seeds")
+    ap.add_argument(
+        "--meta",
+        action="store_true",
+        help="META-only: check process-profile graph (meta/ or scope=ndf-process)",
+    )
+    ap.add_argument(
+        "--product",
+        action="store_true",
+        help="PRODUCT-focus: full graph resolve, report only issues touching non-meta clauses",
+    )
+    ap.add_argument("--max-issues", type=int, default=20, help="max issues in --detail appendix")
+    ap.add_argument("--hop", type=int, default=1, help="context hops in --detail appendix")
     ap.add_argument(
         "--format",
         choices=("mermaid", "text"),
         default="mermaid",
-        help="error subgraph render format (default: mermaid)",
+        help="figure / detail render format (default: mermaid)",
     )
-    ap.add_argument("--report", type=Path, help="write Markdown report to PATH")
+    ap.add_argument(
+        "--report",
+        default=DEFAULT_REPORT,
+        help=f"Markdown report path (default: {DEFAULT_REPORT}); '-' = stdout only; "
+        "MUST NOT be under spec/",
+    )
+    ap.add_argument(
+        "--detail",
+        action="store_true",
+        help="include per-issue hop subgraphs in report appendix",
+    )
     args = ap.parse_args()
 
-    by_id = ndx.load_graph(include_archive=args.archive, include_open=args.open)
+    if args.meta and args.product:
+        print("error: --meta and --product are mutually exclusive", file=sys.stderr)
+        return 2
+
+    try:
+        report_path = rio.resolve_report_path(args.report, DEFAULT_REPORT)
+    except rio.ReportPathError as e:
+        print(f"error: {e}", file=sys.stderr)
+        return 2
+
+    by_id = ndx.load_graph(
+        include_archive=args.archive,
+        include_open=args.open,
+        meta_only=args.meta,
+    )
     errors, warnings = run_checks(by_id)
+    if args.product:
+        errors, warnings = filter_product_issues(by_id, errors, warnings)
 
-    print(f"# ndf_graphcheck")
-    print(f"clauses: {len(by_id)}")
-    print(f"hard_errors: {len(errors)}")
-    print(f"warnings: {len(warnings)}")
-    print()
+    if args.meta:
+        scope = "META"
+        product_n = None
+    elif args.product:
+        scope = "PRODUCT"
+        product_n = sum(1 for c in by_id.values() if not ndx.is_meta_clause(c))
+    else:
+        scope = "full"
+        product_n = None
 
-    counts: dict[str, int] = defaultdict(int)
-    for i in errors + warnings:
-        counts[i.kind] += 1
-    print("## counts")
-    for k in ("cycle", "stable_dep", "conflict_asym", "meta_dangling", "unlinked"):
-        if counts[k]:
-            print(f"  {k}: {counts[k]}")
-    print()
-
-    def print_class(title: str, items: list[Issue]) -> None:
-        print(f"## {title} ({len(items)})")
-        if not items:
-            print("(none)")
-            print()
-            return
-        for i, issue in enumerate(items[: args.max_issues], 1):
-            print(render_issue_block(by_id, issue, i, args.hop, args.format))
-        if len(items) > args.max_issues:
-            print(f"... +{len(items) - args.max_issues} more")
-        print()
-
-    print_class("Hard errors", errors)
-    print_class("Warnings", warnings)
-
-    if args.report:
-        # report always embeds mermaid for archiveability unless format=text
-        report_fmt = args.format
-        text = build_report(
-            by_id, errors, warnings, args.max_issues, args.hop, report_fmt
-        )
-        args.report.parent.mkdir(parents=True, exist_ok=True)
-        args.report.write_text(text, encoding="utf-8")
-        print(f"wrote report: {args.report}")
+    text = build_report(
+        by_id,
+        errors,
+        warnings,
+        args.max_issues,
+        args.hop,
+        args.format,
+        detail=args.detail,
+    )
+    written = rio.write_report(report_path, text)
+    if written is not None:
+        print(format_console_summary(scope, by_id, errors, warnings, product_n))
+        print(f"wrote report: {written}")
 
     return 1 if errors else 0
 
