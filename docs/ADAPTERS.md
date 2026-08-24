@@ -6,24 +6,40 @@ Business SoT: installed `AGENTS.md` + `spec/meta/` + `skill/ndf-workflow/SKILL.m
 
 ## Capability matrix
 
-| Capability | generic | cursor | openclaw | claude-code | opencode |
-|------------|---------|--------|----------|-------------|----------|
-| Five-phrase human entry | available | available | available | available | available |
-| Skill tree install | unsupported | available | available | available | available |
-| Command agent (orchestration) | available | available | unsupported | unsupported | available |
-| OpenClaw control dispatch | unsupported | available¹ | available | available¹ | available¹ |
-| Claude Code ACP dispatch | unsupported | available¹ | available¹ | available | available¹ |
-| Context verify in pack | available | available | available | available | available |
-| Gate slice drift UI | available | available | available | available | available |
-| Per-project workspace state | available | available | available | available | available |
-| Genesis bootstrap | available | available | available | available | available |
-| POC poc-dispatch | available | available | available | available | available |
-| Promote close merge | available | available | available | available | available |
-| Init/adopt public menu | **unsupported** | **unsupported** | **unsupported** | **unsupported** | **unsupported** |
-| Commander / Replay panel | **unsupported** | **unsupported** | **unsupported** | **unsupported** | **unsupported** |
+| Capability | generic | cursor | openclaw | claude-code | opencode | codex |
+|------------|---------|--------|----------|-------------|----------|-------|
+| Five-phrase human entry | available | available | available | available | available | available |
+| Skill tree install | unsupported | available | available | available | available | available |
+| Command agent (orchestration) | available | available | available¹ | available¹ | available | available |
+| Preferred Control (OpenClaw) | unsupported | available² | available | available² | available² | available² |
+| Preferred Implementation (Claude ACP) | unsupported | available² | available² | available | available² | available² |
+| in_host / dual_session fallback | available | available | available | available | available | available |
+| Role wizard at init | available | available | available | available | available | available |
+| Context verify in pack | available | available | available | available | available | available |
+| Gate slice drift UI | available | available | available | available | available | available |
+| Per-project workspace state | available | available | available | available | available | available |
+| Genesis bootstrap | available | available | available | available | available | available |
+| POC poc-dispatch | available | available | available | available | available | available |
+| Promote close merge | available | available | available | available | available | available |
+| Init/adopt public menu | **unsupported** | **unsupported** | **unsupported** | **unsupported** | **unsupported** | **unsupported** |
+| Commander / Replay panel | **unsupported** | **unsupported** | **unsupported** | **unsupported** | **unsupported** | **unsupported** |
 
-¹ Requires respective CLI on PATH (`openclaw`, `claude`). Installer verify reports
-`available` or `unsupported`; dispatch fails closed if missing.
+¹ Host may act as Command surface when that is the human entry.
+² Preferred CLI when on PATH. If missing, `ndf.workflow.yaml` `fallback: in-host|dual-session`
+keeps workflow usable — verify reports CLI `unsupported` but roles still `available`.
+
+## Role binding
+
+Configure at **初始化项目** (phrase `角色已配置`):
+
+```bash
+python3 spec/meta/tools/ndf_role_binding.py probe --repo . --json
+python3 spec/meta/tools/ndf_role_binding.py bind --repo . \
+  --command cursor --control openclaw --control-fallback in-host \
+  --implementation claude-code --implementation-fallback in-host
+```
+
+See [`ARCHITECTURE.md`](ARCHITECTURE.md) three-layer roles and [`WORKFLOW.md`](WORKFLOW.md).
 
 ## Mount paths
 
@@ -34,6 +50,7 @@ Business SoT: installed `AGENTS.md` + `spec/meta/` + `skill/ndf-workflow/SKILL.m
 | openclaw | `skills/ndf-harness/` | [`adapters/openclaw/SKILL.md`](../adapters/openclaw/SKILL.md) |
 | claude-code | `.claude/skills/ndf-harness/` | [`adapters/claude-code/SKILL.md`](../adapters/claude-code/SKILL.md) |
 | opencode | `.opencode/skills/ndf-harness/` | [`adapters/opencode/SKILL.md`](../adapters/opencode/SKILL.md) |
+| codex | `.codex/skills/ndf-harness/` | [`adapters/codex/SKILL.md`](../adapters/codex/SKILL.md) |
 
 Install:
 

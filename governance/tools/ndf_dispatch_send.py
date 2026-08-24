@@ -140,9 +140,15 @@ def _pack_sha(pack: Mapping[str, Any]) -> str:
     return hashlib.sha256(blob).hexdigest()
 
 
-def _safe_to_send(pack: Mapping[str, Any]) -> tuple[bool, list[str]]:
+def _safe_to_send(
+    pack: Mapping[str, Any],
+    *,
+    skip_roles_check: bool = False,
+) -> tuple[bool, list[str]]:
     blockers = [str(item) for item in (pack.get("blockers") or []) if str(item).strip()]
-    preflight_blockers = _pack_preflight_blockers(pack)
+    preflight_blockers = _pack_preflight_blockers(
+        pack, skip_roles_check=skip_roles_check
+    )
     for item in preflight_blockers:
         if item not in blockers:
             blockers.append(item)
@@ -160,9 +166,24 @@ def _safe_to_send(pack: Mapping[str, Any]) -> tuple[bool, list[str]]:
     return False, blockers or ["not_safe_to_dispatch"]
 
 
-def _pack_preflight_blockers(pack: Mapping[str, Any]) -> list[str]:
+def _pack_preflight_blockers(
+    pack: Mapping[str, Any],
+    *,
+    skip_roles_check: bool = False,
+) -> list[str]:
     """Verify pack-side fields that MUST exist before transport (not Worker-minted)."""
     blockers: list[str] = []
+    if not skip_roles_check:
+        try:
+            import ndf_role_binding as role_binding
+
+            ok, role_blockers = role_binding.check_roles_for_dispatch(ROOT)
+            if not ok:
+                for item in role_blockers:
+                    if item not in blockers:
+                        blockers.append(item)
+        except Exception:
+            blockers.append("roles_unbound")
     truth = pack.get("workspace_truth")
     if isinstance(truth, Mapping) and truth.get("workspace_bound") is False:
         blockers.append("workspace_unbound")
@@ -1141,6 +1162,200 @@ def _write_heartbeat(
         "heartbeat_at": time.time(),
     }
     _write_last(payload)
+
+
+def _effective_dispatch_provider(pack: Mapping[str, Any]) -> tuple[str, dict[str, Any]]:
+    """Resolve pack provider via ndf.workflow.yaml role adapters (CLI or fallback)."""
+    import ndf_role_binding as role_binding
+
+    declared = str(pack.get("provider") or "")
+    resolved = role_binding.resolve_pack_provider(ROOT, pack)
+    provider = str(resolved.get("provider") or "unsupported")
+    if provider == "unsupported":
+        return declared or "unsupported", resolved
+    if declared in {"openclaw", "claude-code-acp"} and provider in {
+        "openclaw",
+        "claude-code-acp",
+    }:
+        return provider, resolved
+    if provider in {"in-host", "dual-session", "custom"}:
+        return provider, resolved
+    return declared or provider, resolved
+
+
+def _wait_spawn_provider_with_heartbeat(
+    pack: Mapping[str, Any],
+    *,
+    provider: str,
+    role: str,
+    spawn_path: Path,
+    timeout_sec: int,
+) -> dict[str, Any]:
+    """Write spawn file and heartbeat-wait for disk completion (no transport ACK)."""
+    ping_sec, stall_sec, max_sec = _acp_wait_budgets(timeout_sec)
+    pack_sha = _pack_sha(pack)
+    request_id = str(pack.get("request_id") or f"req-{pack_sha[:16]}")
+    started = time.time()
+    hard_deadline = started + max_sec
+    last_progress_at = started
+    ping_count = 0
+    last_ping_at = 0.0
+    summary = (
+        f"spawn 文件已写 {spawn_path.name}；等待磁盘 completion"
+        if provider == "in-host"
+        else f"dual-session spawn 已写 {spawn_path.name}；等待磁盘 completion"
+    )
+    _write_heartbeat(
+        pack_sha=pack_sha,
+        request_id=request_id,
+        provider=provider,
+        started_at=started,
+        heartbeat={
+            "spawn_path": str(spawn_path),
+            "role": role,
+            "pings": 0,
+            "elapsed_sec": 0.0,
+        },
+        key="spawn_heartbeat",
+        summary=summary,
+    )
+    while True:
+        now = time.time()
+        disk_done = _disk_completion_present(pack)
+        if disk_done:
+            receipt_rel = completion_receipt_path_for_pack(pack)
+            notify = {
+                "schema": "ndf-dispatch-notify/v1",
+                "result": "success",
+                "receipt_path": receipt_rel,
+                "topic": pack.get("topic") or "",
+                "task": pack.get("task") or "",
+                "episode_id": _pack_episode_id(pack),
+                "attempt_id": str(
+                    pack.get("attempt_id") or pack.get("action_id") or ""
+                ),
+            }
+            return {
+                "ok": True,
+                "transport_ok": True,
+                "state": "transport_acknowledged",
+                "response_text": json.dumps(notify, ensure_ascii=False),
+                "spawn_path": str(spawn_path),
+                "provider": provider,
+                "spawn_heartbeat": {
+                    "pings": ping_count,
+                    "elapsed_sec": round(now - started, 1),
+                    "disk_completion_present": True,
+                },
+            }
+        if now - last_ping_at >= ping_sec:
+            last_ping_at = now
+            ping_count += 1
+            heartbeat = {
+                "pings": ping_count,
+                "elapsed_sec": round(now - started, 1),
+                "seconds_since_progress": round(now - last_progress_at, 1),
+                "stall_sec": stall_sec,
+                "max_sec": max_sec,
+                "spawn_path": str(spawn_path),
+                "role": role,
+                "disk_completion_present": False,
+            }
+            _write_heartbeat(
+                pack_sha=pack_sha,
+                request_id=request_id,
+                provider=provider,
+                started_at=started,
+                heartbeat=heartbeat,
+                key="spawn_heartbeat",
+                summary=summary,
+            )
+            if now - last_progress_at >= stall_sec:
+                return {
+                    "ok": False,
+                    "transport_ok": False,
+                    "state": "failed",
+                    "error": f"{provider.replace('-', '_')}_stalled",
+                    "detail": f"no disk completion for {stall_sec:.0f}s",
+                    "response_text": None,
+                    "spawn_path": str(spawn_path),
+                    "spawn_heartbeat": heartbeat,
+                }
+        if now >= hard_deadline:
+            return {
+                "ok": False,
+                "transport_ok": False,
+                "state": "failed",
+                "error": f"{provider.replace('-', '_')}_timeout",
+                "detail": f"absolute max_sec={max_sec:.0f} exceeded",
+                "response_text": None,
+                "spawn_path": str(spawn_path),
+            }
+        time.sleep(min(ping_sec, 1.0))
+
+
+def _send_spawn_provider(
+    pack: Mapping[str, Any],
+    *,
+    provider: str,
+    role_resolution: Mapping[str, Any],
+    timeout_sec: int,
+) -> dict[str, Any]:
+    import ndf_role_binding as role_binding
+
+    role = str(role_resolution.get("mapped_role") or role_resolution.get("role") or "implementation")
+    pack_path = ROOT / "tmp" / "ndf-dispatch-last-pack.json"
+    spawn_path = role_binding.write_spawn_file(
+        ROOT,
+        role,
+        pack_path,
+        provider=provider,
+        completion_receipt_path=pack.get("completion_receipt_path"),
+        write_roots=pack.get("allowed_write_root") or pack.get("allowed_write_roots"),
+        topic=pack.get("topic"),
+        task=pack.get("task"),
+        episode_id=_pack_episode_id(pack),
+        attempt_id=pack.get("attempt_id") or pack.get("action_id"),
+        base_sha=pack.get("base_sha"),
+        model=role_resolution.get("model"),
+    )
+    if provider == "custom":
+        cmd = str(role_resolution.get("custom_command") or "").strip()
+        if not cmd:
+            return {
+                "ok": False,
+                "transport_ok": False,
+                "state": "failed",
+                "error": "custom_command_missing",
+                "response_text": None,
+            }
+        try:
+            proc = subprocess.run(
+                cmd,
+                shell=True,
+                cwd=ROOT,
+                text=True,
+                stdout=subprocess.PIPE,
+                stderr=subprocess.STDOUT,
+                check=False,
+                timeout=float(timeout_sec),
+            )
+        except (OSError, subprocess.TimeoutExpired) as exc:
+            return {
+                "ok": False,
+                "transport_ok": False,
+                "state": "failed",
+                "error": "custom_command_failed",
+                "detail": str(exc),
+                "response_text": None,
+            }
+    return _wait_spawn_provider_with_heartbeat(
+        pack,
+        provider=provider,
+        role=role,
+        spawn_path=spawn_path,
+        timeout_sec=timeout_sec,
+    )
 
 
 def _write_openclaw_heartbeat(
@@ -2192,7 +2407,7 @@ def dispatch_send(
     if prior and prior.get("state") in {"succeeded", "failed", "blocked"}:
         return {**prior, "schema": "ndf-dispatch-send/v1"}, 0 if prior.get("state") == "succeeded" else 1
 
-    ok_to_send, blockers = _safe_to_send(pack)
+    ok_to_send, blockers = _safe_to_send(pack, skip_roles_check=lease_only)
     if not ok_to_send and not lease_only:
         payload = {
             "schema": "ndf-dispatch-send/v1",
@@ -2267,11 +2482,48 @@ def dispatch_send(
     }
     _write_last(sent_receipt)
 
+    effective_provider, role_resolution = _effective_dispatch_provider(pack)
+    if effective_provider != provider:
+        provider = effective_provider
+        sent_receipt["delegate_to"] = provider
+        _write_last(sent_receipt)
+
     if provider == "openclaw":
         send_result = _send_openclaw(pack, message=message, timeout_sec=timeout)
+        if (
+            not send_result.get("transport_ok")
+            and send_result.get("error") == "openclaw_cli_missing"
+        ):
+            fb = role_resolution.get("provider")
+            if fb in {"in-host", "dual-session", "custom"}:
+                send_result = _send_spawn_provider(
+                    pack,
+                    provider=str(fb),
+                    role_resolution=role_resolution,
+                    timeout_sec=timeout,
+                )
     elif provider == "claude-code-acp":
         send_result = _send_acp(
             pack, message=message, timeout_sec=timeout, lease_only=lease_only
+        )
+        if (
+            not send_result.get("transport_ok")
+            and send_result.get("error") in {"claude_cli_missing", "acp_session_unconfigured"}
+        ):
+            fb = role_resolution.get("provider")
+            if fb in {"in-host", "dual-session", "custom"}:
+                send_result = _send_spawn_provider(
+                    pack,
+                    provider=str(fb),
+                    role_resolution=role_resolution,
+                    timeout_sec=timeout,
+                )
+    elif provider in {"in-host", "dual-session", "custom"}:
+        send_result = _send_spawn_provider(
+            pack,
+            provider=provider,
+            role_resolution=role_resolution,
+            timeout_sec=timeout,
         )
     else:
         send_result = {

@@ -22,7 +22,7 @@ PKG_ROOT = Path(__file__).resolve().parent
 VERSION_FILE = PKG_ROOT / "VERSION"
 
 VALID_PROFILES = ("dual-track", "minimal", "linter-only")
-VALID_RUNTIMES = ("cursor", "openclaw", "claude-code", "opencode", "generic")
+VALID_RUNTIMES = ("cursor", "openclaw", "claude-code", "opencode", "codex", "generic")
 DEFAULT_RUNTIMES = ("generic",)
 
 # Harness → target layout
@@ -55,7 +55,9 @@ FULL_TOOL_SCRIPTS = (
     "ndf_poc_dispatch.py",
     "ndf_workflow_status.py",
     "ndf_dispatch_send.py",
+    "ndf_role_binding.py",
     "ndf_acp_session_bootstrap.py",
+    "ndf_role_binding.py",
     "ndf_replay.py",
 )
 
@@ -672,9 +674,59 @@ def cmd_verify(repo: Path, profile: str, runtimes: Sequence[str], *, as_json: bo
                 failures.append(f"skill entry missing for runtime {runtime}: {skill_md}")
 
     # external CLI capabilities
-    for cli, label in (("openclaw", "openclaw"), ("claude", "claude-code")):
-        found = shutil.which(cli)
-        notes["capabilities"][label] = "available" if found else "unsupported"
+    openclaw_ok = bool(shutil.which("openclaw"))
+    claude_ok = bool(shutil.which("claude"))
+    notes["capabilities"]["openclaw"] = "available" if openclaw_ok else "unsupported"
+    notes["capabilities"]["claude-code"] = "available" if claude_ok else "unsupported"
+
+    roles_binding: dict[str, Any] = {"roles_bound": False}
+    try:
+        tools_dir = repo / "spec/meta/tools"
+        if str(tools_dir) not in sys.path:
+            sys.path.insert(0, str(tools_dir))
+        import ndf_role_binding as role_binding
+
+        roles_binding = role_binding.status_report(repo)
+        notes["roles_binding"] = {
+            "roles_bound": roles_binding.get("roles_bound"),
+            "roles_sha": roles_binding.get("roles_sha"),
+            "project_maturity": roles_binding.get("project_maturity"),
+            "genesis_roles_gate": roles_binding.get("genesis_roles_gate"),
+            "roles": {
+                role: {
+                    "adapter": info.get("adapter"),
+                    "provider": info.get("provider"),
+                    "available": info.get("available"),
+                }
+                for role, info in (roles_binding.get("roles") or {}).items()
+            },
+        }
+        if roles_binding.get("roles_bound"):
+            pass
+        elif all(
+            role_binding.role_config(repo, role)["adapter"] for role in role_binding.ROLES
+        ) and all(
+            role_binding.resolve_role(repo, role)["provider"]
+            in {"in-host", "dual-session", "openclaw", "claude-code-acp"}
+            for role in role_binding.ROLES
+        ):
+            # Adapters configured (in_host/dual_session or reachable CLIs) — not fatal.
+            pass
+        elif openclaw_ok or claude_ok:
+            failures.append("roles_unbound: run ndf_role_binding.py bind")
+        else:
+            has_fallback = any(
+                str((info or {}).get("provider") or "") in {"in-host", "dual-session"}
+                for info in (roles_binding.get("roles") or {}).values()
+            )
+            if not has_fallback:
+                failures.append(
+                    "roles_unbound and no in_host/dual_session fallback while CLIs missing"
+                )
+    except Exception as exc:
+        notes["roles_binding"] = {"error": str(exc), "roles_bound": False}
+        if not openclaw_ok and not claude_ok:
+            failures.append(f"roles_binding_check_failed:{exc}")
 
     notes["ok"] = not failures
     notes["failures"] = failures

@@ -26,6 +26,7 @@ live at `spec/meta/tools/` in the consumer repo.
 | [`ndf_workflow_status.py`](#ndf_workflow_statuspy) | Workflow CLI hub |
 | [`ndf_dispatch_send.py`](#ndf_dispatch_sendpy) | Pack transport + completion wait |
 | [`ndf_acp_session_bootstrap.py`](#ndf_acp_session_bootstrappy) | ACP session bootstrap |
+| [`ndf_role_binding.py`](#ndf_role_bindingpy) | Role adapter bind / probe / resolve |
 | [`ndf_replay.py`](#ndf_replaypy) | **Retired tombstone** |
 
 ---
@@ -266,6 +267,26 @@ python3 ndf_acp_session_bootstrap.py [--resume]
 ```
 
 **Exit codes:** `0` ok; `1` bootstrap failure.
+
+---
+
+## ndf_role_binding.py
+
+**Purpose:** Bind / probe / resolve Command / Control / Implementation adapters
+(`ndf.workflow.yaml`). Used at init (角色已配置) and by dispatch when preferred CLI
+is missing (`in-host` / `dual-session` / `custom`).
+
+**Commands:**
+
+```bash
+python3 ndf_role_binding.py probe --repo . --json
+python3 ndf_role_binding.py status --repo . --json
+python3 ndf_role_binding.py bind --repo . \
+  --command cursor --control openclaw --control-fallback in-host \
+  --implementation claude-code --implementation-fallback in-host
+```
+
+**Exit codes:** `0` roles bound / probe ok; `1` unbound; `2` bind args error.
 
 ---
 

@@ -27,3 +27,14 @@ Same workflow as skill core（初始化 / Idea / 派发 / 继续 / 关闭）. In
 modules stay under `skill/ndf-workflow/` — not exposed to humans.
 
 See [`SKILL.md`](SKILL.md) wrapper in this folder.
+
+## How this host spawns Control/Implementation children
+
+Cursor is the **Command** role. Resolve Control/Implementation from `ndf.workflow.yaml`:
+
+| Role | Preferred | Fallback on Cursor |
+|------|-----------|-------------------|
+| Control | `openclaw` → `dispatch-send` | `in_host`: subagent Task with control pack; or `dual_session` prompt |
+| Implementation | `claude-code` → `poc-dispatch --send` | `in_host`: subagent Task with isolated worktree + `allowed_write_root` |
+
+Command MUST NOT write worker boundaries itself. Success = disk completion receipt.

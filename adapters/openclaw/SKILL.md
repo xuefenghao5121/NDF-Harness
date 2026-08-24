@@ -10,3 +10,6 @@ You are the **Control** agent. Follow installed `AGENTS.md` + `spec/meta/`.
 Human workflow pointer: [`../../skill/ndf-workflow/SKILL.md`](../../skill/ndf-workflow/SKILL.md).
 
 Write boundaries: `spec/open/`, `spec/meta/open/`, `poc/<topic>/ndf/`, `.openclaw/state.json` only.
+
+Dispatch: `dispatch-send` with gateway session when Command sends control-pack.
+Spawn notes: [`README.md`](README.md).

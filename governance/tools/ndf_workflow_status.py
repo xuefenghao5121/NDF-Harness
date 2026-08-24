@@ -42,6 +42,17 @@ import ndf_gate_slices  # noqa: E402
 import ndf_replay  # noqa: E402
 
 
+def roles_dispatch_blockers() -> list[str]:
+    """Return roles_unbound blockers when ndf.workflow.yaml roles are incomplete."""
+    try:
+        import ndf_role_binding as role_binding
+
+        ok, blockers = role_binding.check_roles_for_dispatch(ROOT)
+        return [] if ok else list(blockers)
+    except Exception:
+        return ["roles_unbound"]
+
+
 class _RetiredActionsModule:
     """ActionSpec / Commander catalog retired (ADR-META-004).
 
@@ -6801,6 +6812,26 @@ def genesis_paths() -> dict[str, Path]:
     }
 
 
+def _genesis_roles_summary() -> dict[str, Any]:
+    try:
+        import ndf_role_binding as role_binding
+
+        status = role_binding.status_report(ROOT)
+        return {
+            "roles_bound": status.get("roles_bound"),
+            "roles_sha": status.get("roles_sha"),
+            "roles": status.get("roles"),
+            "genesis_roles_gate": status.get("genesis_roles_gate"),
+        }
+    except Exception:
+        return {
+            "roles_bound": False,
+            "roles_sha": None,
+            "roles": {},
+            "genesis_roles_gate": False,
+        }
+
+
 def genesis_status() -> dict[str, Any]:
     paths = genesis_paths()
     decision_text = read_text(paths["decision"])
@@ -6882,6 +6913,9 @@ def genesis_status() -> dict[str, Any]:
         "clause_count": clause_count,
         "paths": {name: {"path": rel(path), "exists": path.is_file()} for name, path in paths.items()},
         "rail": rail,
+        "roles_bound": _genesis_roles_summary().get("roles_bound"),
+        "roles": _genesis_roles_summary().get("roles"),
+        "roles_sha": _genesis_roles_summary().get("roles_sha"),
         "next_step": next(
             (
                 {"id": item["id"], "label": item["label"], "phrase": item["next_phrase"]}
@@ -6892,7 +6926,13 @@ def genesis_status() -> dict[str, Any]:
         ),
         "warning": "Genesis provenance missing; legacy operational project"
         if maturity == "operational_legacy"
-        else None,
+        else (
+            "roles_unbound: bind command/control/implementation in ndf.workflow.yaml "
+            "and append 角色已配置 to genesis GATES before G1"
+            if not _genesis_roles_summary().get("roles_bound")
+            and maturity in {"idea_review", "ndf_foundation", "trunk_candidate", "uninitialized"}
+            else None
+        ),
         "install_needed": maturity in GENESIS_INSTALL_MATURITIES,
         "kernel_installed": maturity == "operational" and accepted,
     }
@@ -8195,6 +8235,7 @@ def pack_topic(topic: str, episode_id: str | None = None) -> tuple[dict[str, Any
             "missing_active_isolated_lease",
         }
     ]
+    role_blockers = roles_dispatch_blockers()
     blockers = [
         *([] if static_ready else static_blockers),
         *(["workspace_unbound"] if not workspace_bound else []),
@@ -8216,7 +8257,10 @@ def pack_topic(topic: str, episode_id: str | None = None) -> tuple[dict[str, Any
             and not lease_stale_vs_head(lease)
             else []
         ),
+        *role_blockers,
     ]
+    if role_blockers:
+        safe_to_dispatch = False
     payload = {
         "schema": "ndf-workflow-pack/v2",
         "compatibility": {"legacy_schema": "ndf-workflow-pack/v1"},
@@ -8659,6 +8703,10 @@ def control_proposal_idea_pack(
     if not context_valid:
         blockers.append("context_verify_failed")
     blockers.extend(control_runtime_dispatch_blockers(control_runtime))
+    role_blockers = roles_dispatch_blockers()
+    blockers.extend(role_blockers)
+    if role_blockers:
+        safe = False
     intent_sha = (
         hashlib.sha256(normalized_intent.encode("utf-8")).hexdigest()
         if normalized_intent
@@ -8850,6 +8898,10 @@ def control_pack(
         if not context_valid:
             blockers.append("context_verify_failed")
         blockers.extend(control_runtime_dispatch_blockers(control_runtime))
+    role_blockers = roles_dispatch_blockers()
+    blockers.extend(role_blockers)
+    if role_blockers:
+        safe = False
     # SHA drift is the reason for gate_sha_audit / gate_pipeline focus — not a
     # static preflight blocker for those audit tasks.
     pipeline_block = None

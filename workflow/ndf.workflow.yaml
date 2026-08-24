@@ -20,19 +20,27 @@ roles:
   command:
     label: Command surface
     description: Human-facing orchestration; pack construction; gate phrases; CLI triggers
+    adapter: cursor
     entry: AGENTS.md
     skill: .cursor/skills/ndf-workflow/
   control:
     label: Control agent
     description: Proposals, binders, gate docs; no Trunk implementation
+    adapter: openclaw
+    fallback: in-host
+    model: null
     writable:
       - spec/open/
       - spec/meta/open/
       - poc/*/ndf/
       - .openclaw/state.json
+      - ndf.workspace.json
   implementation:
     label: Implementation agent
     description: Code and measurement per track write_roots
+    adapter: claude-code
+    fallback: in-host
+    model: null
     handshake_required:
       - workspace.repo_root
       - allowed_write_root
@@ -41,11 +49,17 @@ roles:
 adapters:
   runtimes:
     - generic
+    - cursor
+    - openclaw
+    - claude-code
+    - opencode
+    - codex
   optional:
     cursor: .cursor/skills/ndf-workflow/
     openclaw: skills/ndf-harness/
     claude-code: .claude/skills/ndf-harness/
     opencode: .opencode/skills/ndf-harness/
+    codex: .codex/skills/ndf-harness/
 
 write_roots_by_track:
   bootstrap:
@@ -98,6 +112,7 @@ gate_policy:
   bundle_sha_binding: true
   poc_text_first_default: true
   legacy_three_gates_allowed: true
+  genesis_role_gate: 角色已配置
 
 context:
   max_tokens_env: NDF_ACP_CONTEXT_MAX_TOKENS
@@ -117,6 +132,7 @@ tools:
   close: spec/meta/tools/ndf_close.py
   poc_isolation: spec/meta/tools/ndf_poc_isolation.py
   perf_baseline: spec/meta/tools/ndf_perf_baseline.py
+  role_binding: spec/meta/tools/ndf_role_binding.py
 
 profiles:
   active: dual-track

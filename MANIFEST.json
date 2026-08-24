@@ -1,8 +1,8 @@
 {
   "schema": "ndf-harness-manifest/v1",
-  "version": "1.0.0",
+  "version": "1.0.1",
   "source_commit": "783163a3f6eac26a871c71c1cf7492e11a987e58",
-  "generated_at": "2026-08-24T13:25:14+00:00",
+  "generated_at": "2026-08-24T13:56:47+00:00",
   "files": [
     {
       "path": ".gitignore",
@@ -11,8 +11,8 @@
     },
     {
       "path": "CHANGELOG.md",
-      "sha256": "8a4e7a0faab2324f4c2c738a95bb8ca485157494ee4cc6459e80b5cea47704ff",
-      "bytes": 2894
+      "sha256": "6de0b3a1250f76f5d8ad7999cff0505a18caa3061d9cdfaf4593ba2bfd09fe7e",
+      "bytes": 3235
     },
     {
       "path": "README.md",
@@ -21,7 +21,7 @@
     },
     {
       "path": "VERSION",
-      "sha256": "59854984853104df5c353e2f681a15fc7924742f9a2e468c29af248dce45ce03",
+      "sha256": "44e161e4495cac2cf7858043e9e6418e9579f0ddcfae826f9a372622968ce066",
       "bytes": 6
     },
     {
@@ -31,53 +31,63 @@
     },
     {
       "path": "adapters/claude-code/README.md",
-      "sha256": "90c4554f6235b4c67b72e7f1f6623f5f9d1bd947dce36424331eacdd56172b37",
-      "bytes": 522
+      "sha256": "c2da67793bf23340bbf917090d10a5951d51d4d9e888edb7eca312a2b74c167f",
+      "bytes": 1036
     },
     {
       "path": "adapters/claude-code/SKILL.md",
-      "sha256": "9672536ef08349a867f71944413aed42d3203c3482330793c0b96155d33af34f",
-      "bytes": 551
+      "sha256": "102295b7235caec8a9e91abbb75c05322c480ca840581465973b4e662ccf073b",
+      "bytes": 654
+    },
+    {
+      "path": "adapters/codex/README.md",
+      "sha256": "1e9e6b89bb4dca2c9ab64708a85dddc60b6c83929236205fbee939612459f0ba",
+      "bytes": 1006
+    },
+    {
+      "path": "adapters/codex/SKILL.md",
+      "sha256": "7874af0bf0b912ac669514bf0030796b08e3f4ed3915c4a34e560527e477cc32",
+      "bytes": 537
     },
     {
       "path": "adapters/cursor/README.md",
-      "sha256": "5881297b64bc9ac9e28ee9e2db50448591c558f42537744d66dc7400decbc8d7",
-      "bytes": 877
+      "sha256": "66601fa7665722790870c6abe844119f2c713ca7f0083cef1f0be0af5b632414",
+      "bytes": 1443
     },
     {
       "path": "adapters/cursor/SKILL.md",
-      "sha256": "f6df96e6ebd46f61efa7db0d32274f1029bd154d90aeb733312f29d9503557a2",
-      "bytes": 469
+      "sha256": "86859947e4ae4499aed8160456083cd52224ac695eefa781874d6ed3494eb88f",
+      "bytes": 643
     },
     {
       "path": "adapters/generic/README.md",
-      "sha256": "67c2cf6a66d8ae5db519244c63139fc5c92683fe863264224e9c09a345c1556d",
-      "bytes": 452
+      "sha256": "2e1e4eb2a7b83d1d982fa2cb8de23b82f6edd04472453ada4c6a8bcd193b9f10",
+      "bytes": 960
     },
     {
       "path": "adapters/generic/SKILL.md",
-      "sha256": "b8192703fd8693dabfc1a6e22d5783934a835aedc02896cff3e55bf40273daea",
-      "bytes": 387
+      "sha256": "e8cc31cb041304179e0da3a7c2aa5b886fd347ea0a3a69e20252d6ed308b1687",
+      "bytes": 465
     },
     {
       "path": "adapters/openclaw/README.md",
-      "sha256": "9c91411e7419a7f8c29f91b8f9eea666f7a87111a8edd10b46ac56504e4c630c",
-      "bytes": 518
+      "sha256": "2de41f0e786599a28e29b70a1fc2da6a8349f43cb4edf87858bb8f583e824f87",
+      "bytes": 1072
     },
     {
       "path": "adapters/openclaw/SKILL.md",
-      "sha256": "5159e9af781ef1a75853a697b28b8bcad01060282427d219e3de9f94cc254be8",
-      "bytes": 457
+      "sha256": "289b906227b3d0dbf074c55ee24c101838a2f9ea7993cd137bd310be6d106bcf",
+      "bytes": 577
     },
     {
       "path": "adapters/opencode/README.md",
-      "sha256": "44147520cd9853724a67233b5c73677750e57050b089263e43964534f3b5e46d",
-      "bytes": 350
+      "sha256": "260917e46a0e42ea57a096a2ef5fd093824bc1dd027d014c4777ad1705e601b6",
+      "bytes": 731
     },
     {
       "path": "adapters/opencode/SKILL.md",
-      "sha256": "e83a8927a3334f6a9dd1341c241b38a1fa8f9fe0369ed87a1afa6468f2f8944b",
-      "bytes": 308
+      "sha256": "8327998ef918b8225b39f6e33c2bb0004c919b77140fc2f368fb9ac0f253b769",
+      "bytes": 409
     },
     {
       "path": "bin/ndf-harness",
@@ -86,13 +96,13 @@
     },
     {
       "path": "docs/ADAPTERS.md",
-      "sha256": "b5bac3220907144dbaef8ca03d8a2ae548d33e9ba80e92c2ea1c4b27f5c61b34",
-      "bytes": 3833
+      "sha256": "2d7eeb781d077c02d5843f76364723c6b1982ba192eebfaa31a55932db425644",
+      "bytes": 4885
     },
     {
       "path": "docs/ARCHITECTURE.md",
-      "sha256": "aba27dd7ca74bec0af14681fdbb60640dc11ca21fb1a36f3169cd6b854d12d0d",
-      "bytes": 5109
+      "sha256": "2a927c075aa053866be9365e3ccaa5c9b620815a93e81947b3ae7fd6582f8fb8",
+      "bytes": 5134
     },
     {
       "path": "docs/INIT.md",
@@ -121,8 +131,8 @@
     },
     {
       "path": "docs/TOOLS.md",
-      "sha256": "77de3717716f0b2285a4c961b1795f9715d0932d3f21599784560c4df819ef8d",
-      "bytes": 8096
+      "sha256": "730d0d0606c2ae4b71ae1fd502b12f1148b6709501b95aeea6486d716e6083d3",
+      "bytes": 8818
     },
     {
       "path": "docs/TROUBLESHOOTING.md",
@@ -201,8 +211,8 @@
     },
     {
       "path": "governance/tools/ndf_dispatch_send.py",
-      "sha256": "cc4cf9a1b6f0b083b383b0b8fe6c0551e6894a786ff6aa6f3e1da94171adce0f",
-      "bytes": 93664
+      "sha256": "317c3b59120b836dd5aebd68680c534eca076b715d62a661a994536087509569",
+      "bytes": 102582
     },
     {
       "path": "governance/tools/ndf_gate_slices.py",
@@ -226,8 +236,8 @@
     },
     {
       "path": "governance/tools/ndf_poc_dispatch.py",
-      "sha256": "aa857ff760df254fbfa39bd48737ffe44f6720eb8908b6b2a32bbaccdb563a29",
-      "bytes": 18246
+      "sha256": "bfb972ae14992451fa13fc361167a94e4446b4067f5710f35c7c7e05d1b96cc4",
+      "bytes": 18674
     },
     {
       "path": "governance/tools/ndf_poc_isolation.py",
@@ -245,19 +255,24 @@
       "bytes": 1604
     },
     {
+      "path": "governance/tools/ndf_role_binding.py",
+      "sha256": "734b4007c696b0623bb66a7e01d57005719f4ab975229b7df40f3e4b5594fba1",
+      "bytes": 27020
+    },
+    {
       "path": "governance/tools/ndf_workflow_evidence.py",
       "sha256": "11f55f6ebc1a22f83b8427f54f3ee6389fcabb08bec31fa77abed1d5e10cd544",
       "bytes": 23119
     },
     {
       "path": "governance/tools/ndf_workflow_status.py",
-      "sha256": "59fae8fe193af4a51875383d982e5082ff4baff26f8dea7566a2f545ce2fb77a",
-      "bytes": 410958
+      "sha256": "884c8f359cda2ee2060c91a28c17b28031642dff9b9cb508d75a3ceeef68e2dc",
+      "bytes": 412798
     },
     {
       "path": "install.py",
-      "sha256": "5dd45a2a476c24a5792267042ee2e84163e00bcd1793d15ff3bb348df9620b2b",
-      "bytes": 26044
+      "sha256": "3ba7e731b1a4eed1e1e0bb1e4dfc90cf4a2409875f6a7c1fe5043a54bc484664",
+      "bytes": 28333
     },
     {
       "path": "migration/README.md",
@@ -351,8 +366,8 @@
     },
     {
       "path": "norms/meta/process.md",
-      "sha256": "2a2789188520f0e1838f96dd810f0d3b71d25e2b91a298e0291dbe8c719a3088",
-      "bytes": 44277
+      "sha256": "b9827d4abeb31f3f9876d04af2b9083010f6df92489398eadc612293962afdac",
+      "bytes": 46025
     },
     {
       "path": "norms/ndf.yaml.stub",
@@ -446,8 +461,8 @@
     },
     {
       "path": "skill/ndf-workflow/SKILL.md",
-      "sha256": "ec5f6d51e940dd3776d2c6fa96cad30105c866172acde22add536ac9dd033bea",
-      "bytes": 4037
+      "sha256": "bd6aef285a9b6087c7be041c082ac3f2051f7e7034c7ce94586e82fe76e066c9",
+      "bytes": 4658
     },
     {
       "path": "skill/ndf-workflow/adopt.md",
@@ -461,13 +476,13 @@
     },
     {
       "path": "skill/ndf-workflow/delegate.md",
-      "sha256": "1cfac030fec16d13c787c60d8890fcbcaee255c9cf4bf3103ebd626cabb51f5e",
-      "bytes": 3060
+      "sha256": "f829640b8575b0052fda5990c3cb46f230d095a75679909d4105cf8d699cc068",
+      "bytes": 3768
     },
     {
       "path": "skill/ndf-workflow/genesis.md",
-      "sha256": "10aa14cefe0e756e0e2c49c81209440dfa4412f4cf675a136b7cd58246c240e5",
-      "bytes": 1942
+      "sha256": "83d5e1fbeb4fcef34d5ea300d151e52e6d0c406d0f5d5605482a1fadffe01e9d",
+      "bytes": 2855
     },
     {
       "path": "skill/ndf-workflow/govern.md",
@@ -498,6 +513,16 @@
       "path": "skill/ndf-workflow/proposal.md",
       "sha256": "b83071ecc7faf4697e903e7d22eaaa6e53b6eb5fa4491009fb3c0460d41c2383",
       "bytes": 1411
+    },
+    {
+      "path": "skill/ndf-workflow/roles/control.md",
+      "sha256": "0dfa65cc9868eadd737c6a8657e69e0101cad2a5741ff6118b9c115573244bc0",
+      "bytes": 1183
+    },
+    {
+      "path": "skill/ndf-workflow/roles/implementation.md",
+      "sha256": "f0831e706b722cf3d6c273be863115845b57d3b781cb4bb07e8131e3b6b1fb4a",
+      "bytes": 1534
     },
     {
       "path": "skill/ndf-workflow/sync.md",
@@ -645,9 +670,14 @@
       "bytes": 784
     },
     {
+      "path": "tests/test_role_binding.py",
+      "sha256": "faf0fd3d56da9faad99e5ad94422429064bc91db573c7b74f8e1ea08794b8438",
+      "bytes": 1951
+    },
+    {
       "path": "tests/test_skill_composition.py",
-      "sha256": "7ecc539cc98ec038854718daf8e55ff193f80172d7b5980391932320f926eefa",
-      "bytes": 1264
+      "sha256": "106e4fd7c0d524792055005fa464487b380cdfa793d3a275d0f774c92c6dd4a8",
+      "bytes": 1319
     },
     {
       "path": "workflow/AGENTS.md",
@@ -656,13 +686,13 @@
     },
     {
       "path": "workflow/ndf.workflow.yaml",
-      "sha256": "bdbd6ae734748e11b3feb2d524fc584ab6f69a2f8ac1020bc8f44ac0582ea43f",
-      "bytes": 2856
+      "sha256": "8a40b4622a3f6d14831593a9b72d69a4c842355574bc1969fad6970361e069fc",
+      "bytes": 3226
     },
     {
       "path": "workflow/profile.schema.json",
-      "sha256": "91f7c5cbcea741ef545d445e2186e5b5aca8b974dc51234724ad0688b5aa756b",
-      "bytes": 5657
+      "sha256": "ec906d16136abf80ed06202fcd19fbc496ab643902e91ce9a59b6a9fd334baa0",
+      "bytes": 6432
     }
   ]
 }

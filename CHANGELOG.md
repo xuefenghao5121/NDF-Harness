@@ -1,5 +1,12 @@
 # Changelog
 
+## 1.0.1 — 2026-08-24
+
+Role-adapter fallback: three roles (Command / Control / Implementation) configured at
+init; missing OpenClaw/Claude CLI falls back to `in-host` / `dual-session` / `custom`.
+Adds `ndf_role_binding.py`, `roles/*` skill modules, `codex` adapter, Genesis gate
+`角色已配置`, and `roles_unbound` dispatch hard door.
+
 ## 1.0.0 — 2026-08-24
 
 Major release: text-first workflow, review-slice gates, migration tooling, and full docs set.

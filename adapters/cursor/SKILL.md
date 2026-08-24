@@ -12,3 +12,6 @@ Follow **[`../../skill/ndf-workflow/SKILL.md`](../../skill/ndf-workflow/SKILL.md
 Authority: installed `AGENTS.md` → `spec/meta/` → that skill tree.
 
 Install notes: [`README.md`](README.md).
+
+Cursor hosts **Command**. Control/Implementation spawn via `ndf.workflow.yaml` resolution
+(preferred CLI → `in_host` subagent → `dual_session`). See README spawn table.

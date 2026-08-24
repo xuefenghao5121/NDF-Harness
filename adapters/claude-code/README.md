@@ -11,3 +11,15 @@
 4. Claude Code is typically the **实现 Agent**：poc → `poc/` only；promote → Trunk implementation after 「已审核」.
 
 See [`SKILL.md`](SKILL.md) wrapper.
+
+## How this host spawns Control/Implementation children
+
+Claude Code is typically the **Implementation** adapter:
+
+| Path | Mechanism |
+|------|-----------|
+| Preferred | `poc-dispatch --send` / ACP `genesis-pack` with isolated worktree |
+| `in_host` | N/A when Claude is Implementation — Command spawns into this session |
+| `dual_session` | Human pastes Implementation role prompt + pack into a Claude Code chat |
+
+Control on this host: resolve to `openclaw` via Command's `dispatch-send`, or `dual_session`.

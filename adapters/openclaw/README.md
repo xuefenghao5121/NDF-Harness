@@ -13,3 +13,17 @@ Prefer **pointer/symlink** over duplicating workflow prose.
    modules are for Command Agent only.
 
 See [`SKILL.md`](SKILL.md) wrapper.
+
+## How this host spawns Control/Implementation children
+
+When OpenClaw is **Command** (unusual): follow `skill/ndf-workflow/SKILL.md` five phrases.
+
+When OpenClaw is **Control** (default binding):
+
+| Path | Mechanism |
+|------|-----------|
+| Preferred | `dispatch-send` → gateway `sessionKey` from pack |
+| `in_host` | N/A — OpenClaw is the Control adapter itself |
+| `dual_session` | Human opens second OpenClaw chat with role prompt from pack |
+
+Implementation on this host: delegate to `claude-code` adapter or `in_host` spawn file from Command.

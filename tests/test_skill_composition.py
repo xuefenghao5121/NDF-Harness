@@ -19,6 +19,8 @@ REQUIRED_MODULES = (
     "govern.md",
     "sync.md",
     "OVERVIEW.md",
+    "roles/control.md",
+    "roles/implementation.md",
 )
 
 

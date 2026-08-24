@@ -216,6 +216,15 @@ def poc_dispatch(
         isolation_passed=isolation_passed,
         license_info=license_info,
     )
+    try:
+        import ndf_role_binding as role_binding
+
+        ok_roles, role_blockers = role_binding.check_roles_for_dispatch(wf.ROOT)
+        if not ok_roles:
+            hard.extend(item for item in role_blockers if item not in hard)
+    except Exception:
+        if "roles_unbound" not in hard:
+            hard.append("roles_unbound")
     soft_warnings = [
         reason
         for reason in (view["delegation"].get("dispatch_blockers") or [])
@@ -460,12 +469,12 @@ def poc_dispatch(
 
 def main(argv: list[str] | None = None) -> int:
     import argparse
-    import json
+    import sys
 
     parser = argparse.ArgumentParser(
         description="Text-first POC dispatch safety kernel (ADR-META-003 / ADR-META-004)."
     )
-    parser.add_argument("--topic", help="POC topic id (required)")
+    parser.add_argument("--topic", help="POC topic id (required unless --help)")
     parser.add_argument(
         "--intent",
         choices=sorted(POC_DISPATCH_INTENTS),
@@ -479,7 +488,8 @@ def main(argv: list[str] | None = None) -> int:
     args = parser.parse_args(argv)
 
     if not args.topic:
-        parser.error("--topic is required")
+        print("error: --topic is required for poc dispatch", file=sys.stderr)
+        return 2
 
     payload, code = poc_dispatch(
         args.topic,
@@ -492,7 +502,10 @@ def main(argv: list[str] | None = None) -> int:
         print(json.dumps(payload, indent=2, ensure_ascii=False))
     elif not payload.get("ok"):
         blockers = payload.get("hard_blockers") or payload.get("blockers") or []
-        print(f"poc-dispatch blocked: {', '.join(blockers) or 'unknown'}", file=__import__("sys").stderr)
+        print(
+            f"poc-dispatch blocked: {', '.join(blockers) or 'unknown'}",
+            file=sys.stderr,
+        )
     return code
 
 

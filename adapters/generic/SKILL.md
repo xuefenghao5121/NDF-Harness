@@ -8,3 +8,5 @@ description: Generic runtime adapter — read packages/ndf-harness/skill/ndf-wor
 Follow **[`../../skill/ndf-workflow/SKILL.md`](../../skill/ndf-workflow/SKILL.md)**.
 
 Authority: installed `AGENTS.md` → `spec/meta/` → skill tree. MUST NOT reverse-correct SoT from the package.
+
+Generic Command host: resolve Control/Implementation per README spawn table.

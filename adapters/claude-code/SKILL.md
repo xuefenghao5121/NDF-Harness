@@ -10,3 +10,5 @@ You are the **Implementation** agent. Follow root `AGENTS.md` write boundaries.
 Workflow skill pointer: [`../../skill/ndf-workflow/SKILL.md`](../../skill/ndf-workflow/SKILL.md)（delegate section + [delegate.md](../../skill/ndf-workflow/delegate.md)）.
 
 Implementer boundaries: [`../../templates/implementer-boundaries.md`](../../templates/implementer-boundaries.md).
+
+Spawn: `poc-dispatch --send` / ACP genesis-pack with isolated worktree. See [`README.md`](README.md).

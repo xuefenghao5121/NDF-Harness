@@ -165,20 +165,27 @@ NDF 工作流 MUST 在日常 Proposal/POC 前支持一次性 `track=bootstrap`�
   重建基准另走 process/refactor 提案。
 - 兼容既有健康棕地：无 Genesis 决策但已有完整 `spec/00–50`、产品代码与可运行治理门禁时，
   MAY 标 `operational_legacy` 并提示可选 adopt；MUST NOT 因新流程阻断既有日常 POC。
-  日常指挥面是 Command Agent 文字入口（运行时 adapter 如 `.cursor/skills/ndf-workflow/`）；无可视化面板义务。
+- 日常指挥面是**任意宿主**上运行 ndf-workflow 五句口令（Cursor / OpenClaw / Claude /
+  OpenCode / Codex / generic 等 Command Agent）——**不是** Cursor-only；无可视化面板义务。
+- G0 `IDEA已审核` 之前（或与 IDEA 并行但 MUST 先完成）：角色向导 MUST 将 Command /
+  Control / Implementation 三角色绑定写入项目 `ndf.workflow.yaml`；人类口令 **角色已配置**
+  MUST 追加到 Genesis `GATES.md`，并绑定 roles 段内容 SHA。
+- `roles_unbound` MUST 阻塞 Foundation（G1）与所有 dispatch（`safe_to_dispatch=false`）。
+  operational 项目首次派发若未绑定亦 MUST 先跑角色向导。
 
 初始化门禁 MUST 串行：
 
 ```text
-IDEA已审核 → CHARTER已审核 → ARCHITECTURE已审核
+角色已配置 → IDEA已审核 → CHARTER已审核 → ARCHITECTURE已审核
 → VERIFICATION已审核 → 可以建立初始主线 → GENESIS已审核
 ```
 
 1. 用户原始 IDEA MUST 原样保存来源；确认后的目标/scope/non-goals 进入产品 Charter，
    取舍、已知 draft 与 Genesis 绑定进入产品 Genesis 决策。
 2. 无证据的性能数字 MUST 为 draft/TBD/`not-established`，MUST NOT 冒充性能金标。
-3. 收到「可以建立初始主线」后才可通过 Claude Code 隔离环境建立最小可构建垂直切片。
-4. Claude Code MAY 写初始代码、测试、构建配置与 L2/L3；MUST NOT 修改 L0/L1、
+3. 收到「可以建立初始主线」后才可通过 **Implementation 角色**（默认 Claude Code ACP；
+   MAY 为 `in_host` / `dual_session` / `custom`）隔离环境建立最小可构建垂直切片。
+4. Implementation 角色 MAY 写初始代码、测试、构建配置与 L2/L3；MUST NOT 修改 L0/L1、
    Charter、Architecture、Decisions 或 `spec/meta/`。
 5. NDF 图、构建、最低功能验收与三空间追踪均闭合后，Project Genesis 决策 MUST 绑定
    IDEA 来源、NDF tree SHA、Trunk SHA、verification ref 与 known drafts；
@@ -341,28 +348,47 @@ MUST 取 live `git_head()`。
 不得要求人工第二跳。lease MUST 写入隔离 worktree 与 `tmp/ndf-workflow-leases.jsonl`，
 MUST NOT 用空 stub 冒充。ACP 可达 ≠ 活跃隔离租约。
 
-### 三层能力（指挥面 / OpenClaw / Claude Code）
+### 三层能力（Command / Control / Implementation）
 
-| 层 | 代理 | 入口 | 写界 |
-|----|------|------|------|
-| 指挥面 | Command Agent + `ndf-workflow` skill | 五句口令；造 pack；等人审；调 CLI | tmp pack / 触发回执 CLI；MUST NOT 写 worker 实现/测量 |
-| NDF Control | OpenClaw | `control-pack` / `project-control-pack` →「派发」→ `dispatch-send` | `poc/<topic>/ndf/`、`spec/open/`、`spec/meta/open/`、`.openclaw/state.json` |
-| Implementation | Claude Code ACP | `poc-dispatch`（POC）；`genesis-pack`（初始化）；promote 按 close plan | track 允许写根（POC 仅 `poc/<topic>/`） |
+| 层 | 角色 | 默认绑定 | 入口 | 写界 |
+|----|------|----------|------|------|
+| Command | Command Agent（当前宿主） | 当前宿主 + `ndf-workflow` skill | 五句口令；造 pack；等人审；调 CLI | tmp pack / 触发回执 CLI；MUST NOT 写 worker 实现/测量 |
+| Control | Design agent | OpenClaw | `control-pack` / `project-control-pack` →「派发」→ `dispatch-send` | `poc/<topic>/ndf/`、`spec/open/`、`spec/meta/open/`、`.openclaw/state.json` |
+| Implementation | Implementation agent | Claude Code ACP | `poc-dispatch`（POC）；`genesis-pack`（初始化）；promote 按 close plan | track 允许写根（POC 仅 `poc/<topic>/`） |
 
-OpenClaw MUST NOT 写 `src/`、`include/`、`tests/`、`spec/meta/` 稳定正文（land 除外且须人审），
-MUST NOT 静默写 `GATES.md` 的 `approved_by`。Claude Code MUST NOT 改 L0/L1 / `spec/meta/`。
-指挥面 MUST NOT 代写 worker 边界内的实现/测量，MUST NOT 直接 `openclaw.chat_send` 绕过
+Control MUST NOT 写 `src/`、`include/`、`tests/`、`spec/meta/` 稳定正文（land 除外且须人审），
+MUST NOT 静默写 `GATES.md` 的 `approved_by`。Implementation MUST NOT 改 L0/L1 / `spec/meta/`。
+Command MUST NOT 代写 worker 边界内的实现/测量，MUST NOT 直接 `openclaw.chat_send` 绕过
 `dispatch-send`，MUST NOT 打开可视化面板。运行态从管道查询，MUST NOT 写入
 `.openclaw/state.json` 冒充装订器 must。
 
-OpenClaw Control 探测 MUST 分三态：`gateway_reachable`、`session_configured`
-（`AGENTS.md` 非空 session_key）、`session_dispatchable`（routing key 可匹配 sessions
-store，或本身为合法 UUID）。`session_key`（可含 `:` 的通道路由串）与
+### 角色适配器解析
+
+三角色绑定落项目 `ndf.workflow.yaml` 的 `roles.*`（`adapter` / `fallback` / `model`）。
+MUST NOT 把三层塌缩为一层；Command MUST NOT 兼做 Control+Implementation 写 worker 边界。
+
+每角色独立解析序：
+
+1. **首选 adapter** 且 CLI / 会话可用 → 现行 dispatch 路径
+2. **`in_host`**（或配置的 fallback）→ Command 在同宿主 spawn 子 agent（写出 spawn 文件；
+   不伪造 transport ACK）
+3. **`dual_session`** → 输出角色 prompt；人类在两聊天粘贴；仍等磁盘 completion
+4. **`custom`** + `command` → 用户自定义命令
+5. 否则 → `role_adapter_unsupported` + `human_next`；MUST NOT 伪装成功
+
+缺 OpenClaw / Claude Code CLI **不是** workflow-fatal，若 `ndf.workflow.yaml` 已配置合法
+fallback。`roles_unbound` 仍 MUST fail-closed。
+
+机械入口：`python3 spec/meta/tools/ndf_role_binding.py bind|resolve|status`。
+
+当 Control `adapter=openclaw` 时，OpenClaw 探测 MUST 分三态：`gateway_reachable`、
+`session_configured`（`AGENTS.md` 非空 session_key）、`session_dispatchable`（routing key
+可匹配 sessions store，或本身为合法 UUID）。`session_key`（可含 `:` 的通道路由串）与
 `openclaw agent --session-id`（UUID）MUST 区分。Control `safe_to_dispatch` MUST 要求
 gateway 可达且 session 可派发。`dispatch-send` 对 routing key 走 gateway `sessionKey`；
 仅已解析 UUID 才用 `--session-id`。
 
-OpenClaw 与 Claude Code ACP 等待 MUST 用心跳续等（`NDF_OPENCLAW_*` / `NDF_ACP_PING_SEC` /
+Control 与 Implementation 等待 MUST 用心跳续等（`NDF_OPENCLAW_*` / `NDF_ACP_PING_SEC` /
 `STALL_SEC` / `MAX_SEC`）：有会话或磁盘回执进展则刷新 stall；连续无进展达 stall 阈值才
 stalled；绝对上限才 timeout。MUST NOT 仅靠固定墙钟把仍在工作的长 hop 判死。在途 hop
 「进展如何」MUST `dispatch-probe`，MUST NOT 对同一 pack 再 `dispatch-send`。
@@ -373,10 +399,11 @@ ACP `dispatch-send` MUST 在运输前估算 transcript 与 slim worker 预算；
 
 ### Per-Project Workspace
 
-`.openclaw/state.json` 是仓库本地指挥状态，MUST NOT 与 `~/.openclaw/` 全局 session 混淆。
-所有 pack MUST 含 `workspace`（`repo_root`、`repo_head`、`active_topic`、`topic_dir` 等）。
-相对路径 MUST 在 `workspace.repo_root` 下解析。OpenClaw 收到 pack 后 MUST 写入
-`{repo_root}/.openclaw/state.json`；Claude Code worktree MUST 在 `repo_root` 下。
+项目本地指挥状态首选 `{repo_root}/ndf.workspace.json`；`.openclaw/state.json` 作兼容
+alias（OpenClaw Control 收到 pack 后 MAY 写入）。MUST NOT 与 `~/.openclaw/` 全局 session
+混淆。所有 pack MUST 含 `workspace`（`repo_root`、`repo_head`、`active_topic`、`topic_dir`
+等）。相对路径 MUST 在 `workspace.repo_root` 下解析。Implementation worktree MUST 在
+`repo_root` 下。
 
 ### 宿主 PID 卫生（简化）
 

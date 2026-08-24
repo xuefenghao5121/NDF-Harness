@@ -7,12 +7,12 @@ and disk completion fit together.
 
 ```mermaid
 flowchart LR
-  Human[Human five phrases] --> Command[Command Agent + ndf-workflow skill]
+  Human[Human five phrases] --> Command[Command role on host]
   Command --> Pack[Pack builder + context verify]
-  Pack -->|Control plane| OpenClaw[OpenClaw Control]
-  Pack -->|Implementation| Claude[Claude Code ACP]
-  OpenClaw --> Disk["Disk ndf-agent-completion/v1"]
-  Claude --> Disk
+  Pack -->|Control role| Control[OpenClaw or in_host or dual_session]
+  Pack -->|Implementation role| Impl[Claude ACP or in_host or dual_session]
+  Control --> Disk["Disk ndf-agent-completion/v1"]
+  Impl --> Disk
   Disk --> Command
 ```
 

@@ -50,7 +50,7 @@
           "type": "array",
           "items": {
             "type": "string",
-            "enum": ["generic", "cursor", "openclaw", "claude-code", "opencode"]
+            "enum": ["generic", "cursor", "openclaw", "claude-code", "opencode", "codex"]
           }
         },
         "optional": {
@@ -76,7 +76,8 @@
         "infer_from_file_existence": { "type": "boolean" },
         "bundle_sha_binding": { "type": "boolean" },
         "poc_text_first_default": { "type": "boolean" },
-        "legacy_three_gates_allowed": { "type": "boolean" }
+        "legacy_three_gates_allowed": { "type": "boolean" },
+        "genesis_role_gate": { "type": "string" }
       },
       "additionalProperties": false
     },
@@ -122,12 +123,21 @@
     }
   },
   "$defs": {
+    "runtimeAdapter": {
+      "type": "string",
+      "enum": ["generic", "cursor", "openclaw", "claude-code", "opencode", "codex"]
+    },
+    "roleFallback": {
+      "type": "string",
+      "enum": ["in_host", "dual_session", "custom", "none"]
+    },
     "roleCommand": {
       "type": "object",
       "required": ["label", "entry"],
       "properties": {
         "label": { "type": "string" },
         "description": { "type": "string" },
+        "adapter": { "$ref": "#/$defs/runtimeAdapter" },
         "entry": { "type": "string" },
         "skill": { "type": "string" }
       },
@@ -139,6 +149,10 @@
       "properties": {
         "label": { "type": "string" },
         "description": { "type": "string" },
+        "adapter": { "$ref": "#/$defs/runtimeAdapter" },
+        "fallback": { "$ref": "#/$defs/roleFallback" },
+        "model": { "type": ["string", "null"] },
+        "command": { "type": "string" },
         "writable": {
           "type": "array",
           "items": { "type": "string" }
@@ -152,6 +166,10 @@
       "properties": {
         "label": { "type": "string" },
         "description": { "type": "string" },
+        "adapter": { "$ref": "#/$defs/runtimeAdapter" },
+        "fallback": { "$ref": "#/$defs/roleFallback" },
+        "model": { "type": ["string", "null"] },
+        "command": { "type": "string" },
         "handshake_required": {
           "type": "array",
           "items": { "type": "string" }
