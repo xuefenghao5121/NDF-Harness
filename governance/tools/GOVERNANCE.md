@@ -168,7 +168,7 @@ python3 spec/meta/tools/ndf_graphcheck.py --meta   # MUST hard_errors: 0
 - 不 `git commit --amend` / 不改写历史清 trailer  
 - 不把 POC 数字写入 stable must SLA（[[CON-POC-001]]）  
 - 不把 process ID 塞进产品 `00–50` adopted  
-- 不写 `.openclaw/state.json`（Cursor NDF 维护）  
+- 不写 `.openclaw/state.json`（Command Agent / OpenClaw 维护）  
 
 ---
 

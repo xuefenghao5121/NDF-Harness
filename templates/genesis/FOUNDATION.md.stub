@@ -1,0 +1,39 @@
+# Project Genesis Foundation Matrix
+
+> track: bootstrap
+> bootstrap_mode: greenfield | adopt
+> project_maturity: ndf_foundation
+
+## Design space
+
+| Artifact | Path | Status | Gate SHA | Gaps |
+|----------|------|--------|----------|------|
+| Charter | `spec/00-charter/` | draft | | |
+| Architecture | `spec/10-architecture/` | draft | | |
+| Behavior | `spec/20-behavior/` | draft | | |
+| Interfaces | `spec/30-interfaces/` | draft | | |
+
+## Implementation space
+
+| Slice | Target paths | Depends on clauses | Candidate status |
+|-------|--------------|--------------------|------------------|
+| minimal vertical slice | | | not-started |
+
+## Test space
+
+| Contract | Verification path | Baseline | Status |
+|----------|-------------------|----------|--------|
+| minimum functional acceptance | `spec/50-verification/` | not-established | draft |
+
+Performance values without evidence MUST remain `draft`, `TBD`, or `not-established`.
+
+## Initial traceability
+
+| Goal / clause | Design | Implementation slice | Verification | Gap |
+|---------------|--------|----------------------|--------------|-----|
+| | | | | |
+
+## Gates
+
+`CHARTER已审核` → `ARCHITECTURE已审核` → `VERIFICATION已审核` →
+`可以建立初始主线`.

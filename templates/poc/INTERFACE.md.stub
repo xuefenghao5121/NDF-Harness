@@ -1,0 +1,46 @@
+# INTERFACE.md — POC call surface (binder template)
+
+> topic_id: ⟨TBD⟩  
+> status: draft  
+> links: draft API-*（若有）/ DESIGN.md  
+
+复制到 `poc/<topic>/ndf/INTERFACE.md`。开题实现前 MUST 存在（[[BEH-025]]）。  
+**非** `spec/30-interfaces/` stable SoT；拟升 Trunk 的切片走 draft→stable 提案。
+这是 Design Space 的 POC 调用面，不替代产品 L1 API。
+
+<!-- ndf:gate-slice begin=interface_contract -->
+## Entry points
+
+- CLI / scripts: ⟨path⟩
+- Library symbols: ⟨names⟩
+
+## Types and signatures
+
+伪代码或目标语言签名（可随实现迭代，但调用约定须可读）：
+
+```text
+⟨Type / function signatures⟩
+```
+
+## Config / env / flags
+
+实验面旋钮（与 cfg / Measure 对齐处写指针）：
+
+| name | meaning | default |
+|------|---------|---------|
+| ⟨ENV⟩ | ⟨…⟩ | ⟨…⟩ |
+
+## Errors and invariants
+
+错误码 / 返回约定 / 必须保持的不变量。
+
+## Threading / lifetime
+
+线程模型、所有权、生命周期（N/A 则写明）。
+
+## Draft API-* map
+
+| draft id | this surface | note |
+|----------|--------------|------|
+| ⟨API-… or N/A⟩ | ⟨…⟩ | ⟨…⟩ |
+<!-- ndf:gate-slice end=interface_contract -->

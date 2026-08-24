@@ -1,0 +1,44 @@
+# DELTA.md — feature / hotspot logic space (POC binder template)
+
+> topic_id: ⟨TBD⟩  
+> status: draft  
+> links: TOPIC.md / DESIGN.md / PERF_BASELINE.md  
+
+复制到 `poc/<topic>/ndf/DELTA.md`。`DESIGN已审核` 后、写 INTERFACE 前 MUST 有骨架（[[BEH-025]]）。  
+**非 SoT**。跟踪相对 Trunk 的功能变化与性能热点迁移；数字仍以 PERF_BASELINE / evidence 为准。
+
+<!-- ndf:gate-slice begin=delta_hypothesis -->
+## Bind snapshot
+
+开题钉死的对照金标（改绑 MUST 更新本表并记 Rounds）：
+
+| leg | id / path |
+|-----|-----------|
+| vs | ⟨bl-trunk-golden-…⟩ |
+| config_id | ⟨cfg-…⟩ |
+| measure_script | ⟨scripts/… or topic-relative⟩ |
+
+## Feature delta
+
+相对 Trunk 的功能/行为变更（条目化；链 draft 条款 / DESIGN 模块）：
+
+| id | change | links | status |
+|----|--------|-------|--------|
+| F1 | ⟨…⟩ | ⟨BEH-… / DESIGN §…⟩ | planned / verified / dropped |
+
+## Hotspot delta
+
+预期/实测热点迁移（CPU / IO / lock / cache / …）。链 PERF Numbers 或 `evidence/`；
+**MUST NOT** 抄产品 SLA 观测表作 SoT。此处属测试空间的解释性叙述，不能覆盖
+PERF Numbers（比较/决策 SoT）或原始 evidence（审计/复现证据）；冲突见 [[META-008]]。
+
+| id | hypothesis | measured | links | status |
+|----|------------|----------|-------|--------|
+| H1 | ⟨…⟩ | ⟨pending / Δ% / note⟩ | ⟨PERF / evidence⟩ | open / confirmed / rejected |
+<!-- ndf:gate-slice end=delta_hypothesis -->
+
+## Rounds
+
+| round | date | bind unchanged? | feature notes | hotspot notes | conclusion |
+|-------|------|-----------------|---------------|---------------|------------|
+| R0 | ⟨…⟩ | yes/no | ⟨…⟩ | ⟨…⟩ | ⟨…⟩ |

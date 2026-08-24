@@ -1,0 +1,43 @@
+# DEC: Project Genesis {#DEC-PROJECT-GENESIS}
+
+> Status: Proposed
+> genesis_mode: greenfield | adopt
+> idea_source_ref: <path-or-conversation>
+> ndf_tree_sha: <pending>
+> genesis_trunk_sha: <pending>
+> verification_ref: <pending>
+> performance_golden: not-established
+> accepted_at: <pending>
+
+## Original intent
+
+<Verbatim excerpt or immutable source pointer.>
+
+## Accepted goals and non-goals
+
+- Goals:
+- Non-goals:
+
+## Foundation
+
+- Charter:
+- Architecture:
+- Behavior / interfaces:
+- Constraints:
+- Verification:
+
+## Initial Trunk candidate
+
+- Claude Code run:
+- Base SHA:
+- Candidate commit:
+- Build / test evidence:
+
+## Known drafts and debt
+
+- 
+
+## Decision
+
+The project becomes `operational` only after all bound SHAs resolve, verification passes, and
+`GENESIS已审核` is recorded in Genesis `GATES.md`.

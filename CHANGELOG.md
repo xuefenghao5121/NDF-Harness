@@ -1,5 +1,40 @@
 # Changelog
 
+## 1.0.0 — 2026-08-24
+
+Major release: text-first workflow, review-slice gates, migration tooling, and full docs set.
+
+### Breaking / behavioral
+
+- **Human entry** is five phrases via `skill/ndf-workflow/` (初始化项目 / 提交Idea / 派发 / 继续 / 关闭).
+  Init/adopt/govern/sync are internal modules — not a public skill menu.
+- **Gate identity** binds review-slice bundle SHA + `slice_manifest_sha`; whole-file gate SHA is legacy.
+- **Commander / Episode / Replay / ActionSpec** retired (ADR-META-004); `ndf_replay.py` is tombstone only.
+- **Success criterion** = disk `ndf-agent-completion/v1`; transport ACK is not success.
+- **Installer** (`install.py`): `plan` | `install` | `adopt` | `verify`; protected SoT without `--force`.
+
+### Added
+
+- `migration/detect_0_2.py`, `migration/plan_1_0.md`, `migration/README.md`
+- Full `docs/` set: ARCHITECTURE, INSTALL, WORKFLOW, TOOLS, ADAPTERS, MIGRATION-1.0,
+  TROUBLESHOOTING, SECURITY, WORKFLOW-OVERVIEW
+- Package root `README.md` rewrite as post-install entry
+- Workflow tools: `ndf_context`, `ndf_dispatch_send`, `ndf_gate_slices`, `ndf_workflow_status` hot path,
+  `ndf_acp_session_bootstrap`, `ndf_poc_dispatch`, `ndf_workflow_evidence`
+- `ndf.workflow.yaml` + `workflow/profile.schema.json`
+- Runtime adapters with SKILL wrappers (cursor, openclaw, claude-code, opencode, generic)
+- `bin/ndf-harness` convenience launcher
+
+### Docs
+
+- Rewrote QUICKSTART / INIT / WORKFLOW-FEATURES to point at 1.0 install + five phrases
+- Product-neutral prose (no domain-specific examples in package docs)
+
+### Compatibility
+
+- Consumer repos on 0.2.x: run `migration/detect_0_2.py` then follow `migration/plan_1_0.md`
+- Legacy three-gate POC topics remain readable; hot path uses `bundle_dispatch` + 派发
+
 ## 0.2.0 — 2026-08-10
 
 Distill from verified local NDF process (generic; no product SLA/module names).

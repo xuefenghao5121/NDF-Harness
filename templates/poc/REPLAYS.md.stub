@@ -1,0 +1,21 @@
+# Agent Episode Replay Ledger
+
+> topic: <topic-id>
+> schema: ndf-replay-ledger/v1
+> store: .ndf/replay/ (gitignored local or controlled artifact store)
+
+This ledger stores only small, reviewable pointers. Transcripts and large blobs MUST NOT be
+copied into the binder.
+
+| recorded_at | episode_id | task | manifest_sha | role_plan_sha | completion_commit | replay_coverage | artifact_location | note |
+|---|---|---|---|---|---|---|---|---|
+| <ISO-8601> | <ep-id> | <task> | <sha256> | <sha256> | <sha256> | R0; R1/R2 if available | <local/cold-store pointer> | <coverage gaps> |
+
+## Rules
+
+- The Episode tip and every referenced object MUST pass `ndf_replay.py fsck`.
+- `completion_only`, `messages_only`, missing prompt surface, or recorded-only remote tools
+  MUST remain explicit coverage gaps.
+- A checkpoint appends a commit and preserves raw parent events.
+- R3 forks are new history and MUST NOT be cited as reproduction of the original decision.
+- Human gate tags require a valid gate receipt; Agent-created approval tags are forbidden.

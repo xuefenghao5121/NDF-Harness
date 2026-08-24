@@ -1,0 +1,187 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://ndf.dev/schemas/ndf-workflow-profile.schema.json",
+  "title": "NDF Project Workflow Profile",
+  "description": "Project-local workflow profile installed as ndf.workflow.yaml. No secrets.",
+  "type": "object",
+  "required": ["version", "project", "roots", "roles", "write_roots_by_track", "gate_policy", "completion"],
+  "additionalProperties": false,
+  "properties": {
+    "version": {
+      "type": "string",
+      "pattern": "^[0-9]+$"
+    },
+    "harness_version": {
+      "type": "string"
+    },
+    "project": {
+      "type": "string",
+      "minLength": 1
+    },
+    "roots": {
+      "type": "object",
+      "required": ["spec", "meta", "poc", "archive", "src", "include", "tests"],
+      "additionalProperties": { "type": "string" },
+      "properties": {
+        "spec": { "type": "string" },
+        "meta": { "type": "string" },
+        "poc": { "type": "string" },
+        "archive": { "type": "string" },
+        "src": { "type": "string" },
+        "include": { "type": "string" },
+        "tests": { "type": "string" },
+        "tmp": { "type": "string" }
+      }
+    },
+    "roles": {
+      "type": "object",
+      "required": ["command", "control", "implementation"],
+      "properties": {
+        "command": { "$ref": "#/$defs/roleCommand" },
+        "control": { "$ref": "#/$defs/roleControl" },
+        "implementation": { "$ref": "#/$defs/roleImplementation" }
+      },
+      "additionalProperties": false
+    },
+    "adapters": {
+      "type": "object",
+      "properties": {
+        "runtimes": {
+          "type": "array",
+          "items": {
+            "type": "string",
+            "enum": ["generic", "cursor", "openclaw", "claude-code", "opencode"]
+          }
+        },
+        "optional": {
+          "type": "object",
+          "additionalProperties": { "type": "string" }
+        }
+      },
+      "additionalProperties": false
+    },
+    "write_roots_by_track": {
+      "type": "object",
+      "propertyNames": {
+        "enum": ["bootstrap", "poc", "promote", "process", "bug", "refactor", "rollback"]
+      },
+      "additionalProperties": { "$ref": "#/$defs/writeRootRule" }
+    },
+    "gate_policy": {
+      "type": "object",
+      "required": ["phrases_append_to", "require_human_phrase", "infer_from_file_existence"],
+      "properties": {
+        "phrases_append_to": { "type": "string" },
+        "require_human_phrase": { "type": "boolean" },
+        "infer_from_file_existence": { "type": "boolean" },
+        "bundle_sha_binding": { "type": "boolean" },
+        "poc_text_first_default": { "type": "boolean" },
+        "legacy_three_gates_allowed": { "type": "boolean" }
+      },
+      "additionalProperties": false
+    },
+    "context": {
+      "type": "object",
+      "properties": {
+        "max_tokens_env": { "type": "string" },
+        "manifest_sha_required": { "type": "boolean" },
+        "must_not_read_sla_numbers_for_poc": { "type": "boolean" }
+      },
+      "additionalProperties": false
+    },
+    "completion": {
+      "type": "object",
+      "required": ["receipt_schema", "transport_ack_is_success"],
+      "properties": {
+        "receipt_schema": { "type": "string", "const": "ndf-agent-completion/v1" },
+        "receipt_glob": { "type": "string" },
+        "transport_ack_is_success": { "type": "boolean", "const": false }
+      },
+      "additionalProperties": false
+    },
+    "tools": {
+      "type": "object",
+      "additionalProperties": { "type": "string" }
+    },
+    "profiles": {
+      "type": "object",
+      "properties": {
+        "active": {
+          "type": "string",
+          "enum": ["dual-track", "minimal", "linter-only"]
+        },
+        "available": {
+          "type": "array",
+          "items": {
+            "type": "string",
+            "enum": ["dual-track", "minimal", "linter-only"]
+          }
+        }
+      },
+      "additionalProperties": false
+    }
+  },
+  "$defs": {
+    "roleCommand": {
+      "type": "object",
+      "required": ["label", "entry"],
+      "properties": {
+        "label": { "type": "string" },
+        "description": { "type": "string" },
+        "entry": { "type": "string" },
+        "skill": { "type": "string" }
+      },
+      "additionalProperties": false
+    },
+    "roleControl": {
+      "type": "object",
+      "required": ["label", "writable"],
+      "properties": {
+        "label": { "type": "string" },
+        "description": { "type": "string" },
+        "writable": {
+          "type": "array",
+          "items": { "type": "string" }
+        }
+      },
+      "additionalProperties": false
+    },
+    "roleImplementation": {
+      "type": "object",
+      "required": ["label", "handshake_required"],
+      "properties": {
+        "label": { "type": "string" },
+        "description": { "type": "string" },
+        "handshake_required": {
+          "type": "array",
+          "items": { "type": "string" }
+        }
+      },
+      "additionalProperties": false
+    },
+    "writeRootRule": {
+      "oneOf": [
+        {
+          "type": "object",
+          "required": ["allow", "deny"],
+          "properties": {
+            "allow": { "type": "array", "items": { "type": "string" } },
+            "deny": { "type": "array", "items": { "type": "string" } }
+          },
+          "additionalProperties": false
+        },
+        {
+          "type": "object",
+          "required": ["inherit"],
+          "properties": {
+            "inherit": {
+              "type": "string",
+              "enum": ["promote", "poc", "process", "bootstrap"]
+            }
+          },
+          "additionalProperties": false
+        }
+      ]
+    }
+  }
+}

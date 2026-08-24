@@ -1,14 +1,49 @@
-# QUICKSTART
+# Quickstart
 
-1. **Norms** — copy `norms/meta/` → `spec/meta/`（含 `language.md` + `process.md` META-006/007）；
-   `ndf.yaml.stub` → `spec/ndf.yaml`；create empty product dirs（见 `norms/product-tree/README.md`）。
-   Dual-track：复制 `product-tree/50-verification/{configs,baselines}/` 骨架。  
-2. **AGENTS** — copy `workflow/AGENTS.md` → repo root；fill ⟨TBD⟩ after human confirm.  
-3. **Tools** — copy `governance/tools/ndf_*.py` + `ndf_report_io.py` + `GOVERNANCE.md` + `README.md`
-   → `spec/meta/tools/`（见 `VENDOR.md`）。  
-4. **Templates** — `templates/poc/{TOPIC,PERF_BASELINE,COMMITS}.md.stub` → 新 POC 装订器。  
-5. **Adapter（optional）** — pick `adapters/generic|openclaw|claude-code|opencode|cursor`.  
-6. **Baseline** — run commands in `governance/docs/GOVERN.md`；reports under `tmp/`
-   （MUST NOT under `spec/`）；可选 `ndf_poc_isolation` / `ndf_perf_baseline`。
+Get NDF Harness 1.0 running in a consumer repo in minutes.
 
-Skill modes: read `skill/SKILL.md`. Package version: see `VERSION` / `CHANGELOG.md`.
+## 1. Install
+
+```bash
+HARNESS=packages/ndf-harness   # or path to vendored checkout
+
+python3 "$HARNESS/install.py" install --repo . --profile dual-track \
+  --runtime cursor --runtime openclaw --runtime claude-code
+
+python3 "$HARNESS/install.py" verify --repo . --profile dual-track \
+  --runtime cursor --runtime openclaw --runtime claude-code
+```
+
+Brownfield? Run [`migration/detect_0_2.py`](../migration/detect_0_2.py) and
+[`install.py adopt`](../docs/INSTALL.md) first.
+
+## 2. Baseline governance
+
+```bash
+python3 spec/meta/tools/ndf_index.py index
+python3 spec/meta/tools/ndf_graphcheck.py --meta
+```
+
+## 3. Use five phrases
+
+Open your command agent (Cursor + `.cursor/skills/ndf-workflow/`). Say:
+
+- **提交Idea** — start a proposal
+- **派发** — after human review, authorize worker dispatch
+- **继续** — amend and re-dispatch
+- **关闭** — promote / partial / reject a topic
+- **初始化项目** — greenfield Genesis
+
+Do **not** use the old public init/adopt skill menu — install/adopt are via `install.py` only.
+
+## Next reads
+
+| Doc | When |
+|-----|------|
+| [`README.md`](../README.md) | full package tour |
+| [`INSTALL.md`](INSTALL.md) | profiles and runtimes |
+| [`WORKFLOW.md`](WORKFLOW.md) | tracks and gates |
+| [`WORKFLOW-OVERVIEW.md`](WORKFLOW-OVERVIEW.md) | diagrams |
+| [`INIT.md`](INIT.md) | greenfield vs brownfield checklist |
+
+Version: [`VERSION`](../VERSION) · Changes: [`CHANGELOG.md`](../CHANGELOG.md)

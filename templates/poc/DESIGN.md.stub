@@ -1,0 +1,49 @@
+# DESIGN.md — software design (POC binder template)
+
+> topic_id: ⟨TBD⟩  
+> status: draft  
+> links: TOPIC.md hypothesis / draft clauses  
+
+复制到 `poc/<topic>/ndf/DESIGN.md`。开题实现前 MUST 存在（[[BEH-025]]）。  
+**非 SoT**；与 `proposals/` draft L1 分工：本文件写 HOW，条款写 WHAT。
+
+<!-- ndf:gate-slice begin=design_contract -->
+## Goals / non-goals
+
+- Goals: ⟨链 active_hypothesis / draft BEH-*⟩
+- Non-goals: ⟨明确不做⟩
+
+## Modules and layout
+
+相对 `poc/<topic>/` 的模块与文件落点：
+
+```text
+poc/<topic>/
+  ⟨module_a/⟩
+  ⟨module_b/⟩
+  ndf/DESIGN.md   # this file
+```
+
+## Data / control flow
+
+（可 mermaid）关键路径：输入 → 处理 → 输出。
+
+## Trunk boundary
+
+- Copy-then-edit: ⟨哪些 include/src 文件拷进本 topic⟩
+- Read-only link: ⟨可只读链的 Trunk 对象⟩
+- MUST NOT write Trunk `src/` / `include/` / `tests/`（[[BEH-018]]）
+
+## Implementation slice
+
+本轮实现空间切片：列出要改的 topic 内文件、明确不改的面，并链到 INTERFACE 符号与
+DELTA Feature id。实现计划不是 Trunk SoT；探索期仍适用 [[BEH-018]] 写入隔离。
+
+## Failure modes
+
+关键路径失败时的行为与回退。
+
+## Verification hooks
+
+指针到 `evidence/`、`PERF_BASELINE` Measure；**不**抄 SLA 观测数字。
+<!-- ndf:gate-slice end=design_contract -->

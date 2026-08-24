@@ -1,0 +1,24 @@
+# POC Gate Receipts
+
+> topic_id: <topic>
+> append_only: true
+> schema: META-010
+> bundle_mode: review_slice
+
+Do not infer approval from file existence. Do not rewrite old receipts; append `invalidated`.
+
+| gate | phrase | approved_by | approved_at | approved_content_sha | source_ref | status | bundle_mode | slice_manifest_sha |
+|------|--------|-------------|-------------|----------------------|------------|--------|-------------|--------------------|
+| topic_review | TOPIC已审核 | | | | | pending | review_slice | |
+| design_review | DESIGN已审核 | | | | | pending | review_slice | |
+| implementation_approval | 可以开始实现 | | | | | pending | review_slice | |
+
+## Canonical review slices
+
+- `topic_review`: `topic_contract` + root `proposal_contract`
+- `design_review`: `topic_contract` + `design_contract`
+- `implementation_approval`: `topic_contract` + `design_contract` + `perf_bind` +
+  `delta_hypothesis` + `interface_contract`
+
+`PERF_BASELINE Numbers`, `DELTA Rounds`, evidence, COMMITS and this GATES file are mutable
+outside review slices and do not change gate SHA.

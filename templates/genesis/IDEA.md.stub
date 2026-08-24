@@ -1,0 +1,50 @@
+# Project Genesis IDEA
+
+> track: bootstrap
+> bootstrap_mode: greenfield | adopt
+> status: draft
+> source_ref: <conversation-or-document>
+
+## Verbatim idea
+
+> <Copy the user's original wording verbatim. Do not improve or paraphrase it.>
+
+## Problem and target user
+
+- Problem:
+- Target user:
+- Existing alternative:
+
+## Goals
+
+1. <measurable or explicitly TBD>
+
+## Non-goals
+
+1. <boundary>
+
+## Success conditions
+
+| Condition | Measure | Status |
+|-----------|---------|--------|
+| | | draft |
+
+## Failure / stop conditions
+
+- 
+
+## Hard constraints
+
+- Platform:
+- Language/runtime:
+- Resources:
+- Compliance:
+
+## Unknowns requiring POC
+
+- 
+
+## Gate
+
+Do not generate Charter/Architecture bodies until `IDEA已审核` has a valid receipt in Genesis
+`GATES.md`.

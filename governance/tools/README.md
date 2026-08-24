@@ -31,6 +31,15 @@
 | [`ndf_poc_isolation.py`](ndf_poc_isolation.py) | **POC 写入隔离**（[[BEH-018]] §6）：topic commit / 工作区是否触及 `src/`\|`include/`\|`tests/` |
 | [`ndf_perf_baseline.py`](ndf_perf_baseline.py) | **性能线装订**（[[META-007]]）：TOPIC `perf_baseline` → 卡字段校验（非 SLA 业务） |
 | [`ndf_close.py`](ndf_close.py) | POC **回合计划面**：往 Trunk 追加清单 + 溯源模板 + post-check（只读 `plan`） |
+| [`ndf_report_io.py`](ndf_report_io.py) | 报告路径门禁：默认 `tmp/`；禁写 `spec/` |
+| [`ndf_gate_slices.py`](ndf_gate_slices.py) | 门禁切片 / bundle 片段辅助 |
+| [`ndf_context.py`](ndf_context.py) | Pack **Context Compiler**（manifest / role-plan / verify） |
+| [`ndf_workflow_evidence.py`](ndf_workflow_evidence.py) | 工作流证据读写（completion / dispatch 回执） |
+| [`ndf_poc_dispatch.py`](ndf_poc_dispatch.py) | POC dispatch pack 组装（由 `ndf_workflow_status` 调用） |
+| [`ndf_workflow_status.py`](ndf_workflow_status.py) | **工作流指挥 CLI**：`poc-dispatch`、`control-pack`、`genesis-*`、`topic-health` |
+| [`ndf_dispatch_send.py`](ndf_dispatch_send.py) | 已审 pack **发送** + ACP/OpenClaw 等待 + completion 校验 |
+| [`ndf_acp_session_bootstrap.py`](ndf_acp_session_bootstrap.py) | Claude Code ACP 会话 bootstrap / resume 工件 |
+| [`ndf_replay.py`](ndf_replay.py) | **已退役** tombstone（ADR-META-004；exit 2） |
 
 日常：见 [`GOVERNANCE.md`](GOVERNANCE.md) §2 主链。  
 `graphcheck` → `advise --surface graph`；`bindcheck` → `advise --surface bind`；收口用 `close`。  
@@ -109,7 +118,7 @@ python3 spec/meta/tools/ndf_advise.py simulate --surface bind --issue dual-001 -
 可选路径僵尸与时间线漂移。
 
 ```bash
-python3 spec/meta/tools/ndf_bindcheck.py check --topic l4-cache-mgmt
+python3 spec/meta/tools/ndf_bindcheck.py check --topic <topic>
 python3 spec/meta/tools/ndf_bindcheck.py check --all-topics \
   --checks bind,dual,grain,zombie,drift --report tmp/ndf-bindcheck.md
 python3 spec/meta/tools/ndf_bindcheck.py check --all-topics --report -
@@ -132,7 +141,7 @@ ledger 二部图在 Appendix；`--detail` 才展开逐条 evidence/fix。
 改头/源先拷进 `poc/<topic>/`。开题/委派前后 SHOULD 跑：
 
 ```bash
-python3 spec/meta/tools/ndf_poc_isolation.py check --topic l4-cache-mgmt
+python3 spec/meta/tools/ndf_poc_isolation.py check --topic <topic>
 python3 spec/meta/tools/ndf_poc_isolation.py check --all-topics --workspace \
   --report tmp/ndf-poc-isolation.md
 ```
@@ -162,14 +171,39 @@ python3 spec/meta/tools/ndf_perf_baseline.py check --all-exploring
 3. 落地后 **MUST** 跑 `ndf_index index` + `ndf_graphcheck`
 
 ```bash
-python3 spec/meta/tools/ndf_close.py plan --topic l4-cache-mgmt --mode partial
-python3 spec/meta/tools/ndf_close.py plan --topic io-pipelining --mode promote \
-  --report tmp/close-io-pipelining.md
-python3 spec/meta/tools/ndf_close.py plan --topic pq-quality --mode reject
+python3 spec/meta/tools/ndf_close.py plan --topic <topic> --mode partial
+python3 spec/meta/tools/ndf_close.py plan --topic <topic> --mode promote \
+  --report tmp/close-<topic>.md
+python3 spec/meta/tools/ndf_close.py plan --topic <topic> --mode reject
 ```
 
 `--ids BEH-024 API-012` 可在 `partial`/`promote` 下显式点名回合子集。  
 `promote`/`partial` plan 含 **§4b Semantic core decision**（[[META-004]]）；`reject` 为 N/A。  
 第一版 **无** `apply`（不改 SoT / 不自动归档；亦不自动生成 `models/`）。
+
+## 工作流派发（workflow_status / dispatch_send）
+
+文字优先 POC 热路径（[[ADR-META-003]] / [[ADR-META-004]]）：
+
+```bash
+# 造 pack（POC 实现 / 测量）
+python3 spec/meta/tools/ndf_workflow_status.py poc-dispatch \
+  --topic <topic> --intent implement|measure --json
+
+# 人审后发送
+python3 spec/meta/tools/ndf_workflow_status.py poc-dispatch \
+  --topic <topic> --intent implement --send
+
+# OpenClaw Control / process
+python3 spec/meta/tools/ndf_workflow_status.py control-pack … --json
+python3 spec/meta/tools/ndf_dispatch_send.py \
+  --pack-file tmp/ndf-dispatch-last-pack.json
+
+# ACP 首次绑定
+python3 spec/meta/tools/ndf_acp_session_bootstrap.py
+```
+
+成功以磁盘 `ndf-agent-completion/v1` 为准；stdout / transport ACK ≠ success。
+`ndf_replay.py` 已退役，调用即 exit 2。
 
 流程条款正文在 `spec/meta/`；产品行为在 `00–50`。

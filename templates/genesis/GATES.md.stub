@@ -1,0 +1,24 @@
+# Project Genesis Gate Receipts
+
+> append_only: true
+> schema: META-010
+
+Do not edit or delete old receipts. Append `invalidated` when bound content changes.
+
+| gate | phrase | approved_by | approved_at | approved_content_sha | source_ref | status |
+|------|--------|-------------|-------------|----------------------|------------|--------|
+| idea_review | IDEA已审核 | | | | | pending |
+| charter_review | CHARTER已审核 | | | | | pending |
+| architecture_review | ARCHITECTURE已审核 | | | | | pending |
+| verification_review | VERIFICATION已审核 | | | | | pending |
+| trunk_approval | 可以建立初始主线 | | | | | pending |
+| genesis_review | GENESIS已审核 | | | | | pending |
+
+## Canonical bundles
+
+- `idea_review`: IDEA + bootstrap proposal
+- `charter_review`: IDEA + Charter
+- `architecture_review`: Charter + Architecture + core behavior/interfaces
+- `verification_review`: constraints + verification protocol
+- `trunk_approval`: all Foundation artifacts
+- `genesis_review`: Genesis DEC + NDF tree SHA + Trunk SHA + verification evidence

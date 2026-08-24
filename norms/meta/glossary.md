@@ -1,7 +1,7 @@
 # Meta Glossary — 双轨 / 装订 / 缺陷分类术语
 
 > scope: ndf-process  
-> 条款索引: `DEF-020`…`DEF-023`, `DEF-META-ID-NS`, `DEF-NDF-GRAPH`, `DEF-NDF-CYCLE`, `DEF-NDF-STABLE-DRAFT`, `DEF-NDF-CONFLICT-ASYM`, `DEF-NDF-META-DANGLING`, `DEF-NDF-UNLINKED`, `DEF-NDF-SPEC-DRIFT`, `DEF-NDF-ZOMBIE-SPEC`, `DEF-NDF-REPRO-BIND-GAP`, `DEF-NDF-OBS-GRAIN`, `DEF-NDF-BINDER-DUAL-HEAD`  
+> 条款索引: `DEF-020`…`DEF-023`, `DEF-META-ID-NS`, `DEF-NDF-DESIGN-SPACE`, `DEF-NDF-IMPL-SPACE`, `DEF-NDF-TEST-SPACE`, `DEF-NDF-ORCHESTRATION`, `DEF-NDF-GRAPH`, `DEF-NDF-CYCLE`, `DEF-NDF-STABLE-DRAFT`, `DEF-NDF-CONFLICT-ASYM`, `DEF-NDF-META-DANGLING`, `DEF-NDF-UNLINKED`, `DEF-NDF-SPEC-DRIFT`, `DEF-NDF-ZOMBIE-SPEC`, `DEF-NDF-REPRO-BIND-GAP`, `DEF-NDF-OBS-GRAIN`, `DEF-NDF-BINDER-DUAL-HEAD`  
 > 产品树 adopted 指针: `00-charter/glossary.md`  
 > 分类提案: `meta/open/proposal-meta-ndf-defect-taxonomy.md`  
 > ID 命名空间: [[ADR-META-002]]
@@ -22,9 +22,11 @@ POC 的目标是产生证据（正/负），不是扩展生产 API 表面。承�
 <!-- ndf: kind=def layer=L1 status=stable since=0.9 source=deduced scope=ndf-process -->
 <!-- ndf: depends-on=DEF-020 -->
 
-某一 `poc/<topic>/` 探索主题的**进度与可复现入口**，目录为 `poc/<topic>/ndf/`
-（含 `TOPIC.md`、`proposals/`、`evidence/`、`COMMITS.md`）。装订器 **不是** Trunk SoT
-（`poc.sot: false`）；Trunk must 仍只在 `spec/00–50`。纪律见 [[BEH-025]]。
+某一 `poc/<topic>/` 探索主题的**进度、设计面、金标绑定、Δ 跟踪与可复现入口**，目录为
+`poc/<topic>/ndf/`（含 `TOPIC.md`、`DESIGN.md`、`INTERFACE.md`、`DELTA.md`、
+`proposals/`、`evidence/`、`COMMITS.md`；以及 `PERF_BASELINE.md`）。装订器含状态/溯源、
+可指导编码的设计面与性能功能逻辑空间，**不是** Trunk SoT（`poc.sot: false`）；Trunk must
+仍只在 `spec/00–50`。纪律见 [[BEH-025]]。
 
 ## DEF: Commit Ledger（提交账本） {#DEF-023}
 <!-- ndf: kind=def layer=L1 status=stable since=0.9 source=deduced scope=ndf-process -->
@@ -49,6 +51,56 @@ Process profile（`spec/meta/`）条款 ID 规则：
    数字续号；产品亦 MUST NOT 复用上述冻结同号。
 
 权威决策见 [[ADR-META-002]]。
+
+## DEF: Design Space（设计空间） {#DEF-NDF-DESIGN-SPACE}
+<!-- ndf: kind=def layer=L1 status=stable since=0.9 source=deduced scope=ndf-process -->
+<!-- ndf: depends-on=META-008 -->
+
+收敛“做什么、模块如何切、调用契约与假设”的 NDF 工作视角。常见载体为 L0/L1、
+draft proposal、DESIGN/INTERFACE 与 DELTA Feature；不以 SLA 观测数字作为其真值。
+
+## DEF: Implementation Space（实现空间） {#DEF-NDF-IMPL-SPACE}
+<!-- ndf: kind=def layer=L1 status=stable since=0.9 source=deduced scope=ndf-process -->
+<!-- ndf: depends-on=META-008,BEH-018 -->
+
+收敛“代码落点、改写边界与实现切片”的 NDF 工作视角。POC 实现在 `poc/<topic>/`；
+Trunk 实现仅按 promote/bug 等路径进入 `src/`/`include/`/`tests/`。
+
+## DEF: Test Space（测试空间） {#DEF-NDF-TEST-SPACE}
+<!-- ndf: kind=def layer=L1 status=stable since=0.9 source=deduced scope=ndf-process -->
+<!-- ndf: depends-on=META-006,META-008 -->
+
+收敛“对照、测量、数字、证据与热点结论”的 NDF 工作视角。比较 SoT、审计证据与
+解释性叙述的冲突处理见 [[META-008]]。
+
+## DEF: Interaction Orchestration（交互编排） {#DEF-NDF-ORCHESTRATION}
+<!-- ndf: kind=def layer=L1 status=stable since=0.9 source=deduced scope=ndf-process -->
+<!-- ndf: depends-on=META-008,BEH-025 -->
+
+人和 Agent 按任务意图、装订器读序、图依赖及当前证据组装上下文、通过口令同步的 process
+策略。它调度三工作空间，不构成第四业务 SoT，也不等同于 NDF 依赖图。
+
+## DEF: Project Genesis {#DEF-NDF-PROJECT-GENESIS}
+<!-- ndf: kind=def layer=L1 status=stable since=0.9.13 source=deduced scope=ndf-process -->
+<!-- ndf: depends-on=META-009 -->
+
+一次性将原始 IDEA、确认后的项目目标、本地 NDF Foundation、初始 Trunk 与验证证据绑定到
+可解析 git SHA 的初始化闭环。它建立 operational 起点，不替代日常 Proposal/POC。
+
+## DEF: Gate Receipt（门禁回执） {#DEF-NDF-GATE-RECEIPT}
+<!-- ndf: kind=def layer=L1 status=stable since=0.9.13 source=deduced scope=ndf-process -->
+<!-- ndf: depends-on=META-010 -->
+
+人工口令的 append-only 审计记录，至少含审批人、时间、来源和 approved content SHA。
+文件存在不是回执；绑定内容变化后，下游回执失效。
+
+## DEF: Workflow Projection（工作流投影） {#DEF-NDF-WORKFLOW-PROJECTION}
+<!-- ndf: kind=def layer=L1 status=deprecated since=0.9.13 source=deduced scope=ndf-process -->
+<!-- ndf: depends-on=META-011 -->
+
+**Deprecated（[[ADR-META-004]]）。** 曾指从树/图/git/装订器派生的可视化状态（Commander /
+Canvas）。现行无可视化宿主义务；工作流状态以磁盘文件（装订器、GATES、completion）与
+CLI（`topic-health` / `poc-dispatch` 等）为准，不成为第五 SoT。
 
 ## DEF: NDF 条款语义图模型 {#DEF-NDF-GRAPH}
 <!-- ndf: kind=def layer=L1 status=stable since=0.9 source=deduced scope=ndf-process -->

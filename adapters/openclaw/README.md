@@ -1,12 +1,15 @@
 # Adapter: OpenClaw
 
-1. Install root `AGENTS.md` from `workflow/AGENTS.md`（指挥默认入口）.  
-2. Optional: copy or symlink skill core into the OpenClaw skills directory, e.g.:
+1. Install root `AGENTS.md` from `workflow/AGENTS.md`（command / control default entry）.  
+2. Optional: copy or symlink skill core into the OpenClaw skills directory:
 
 ```text
-skills/ndf-harness/SKILL.md  →  content from packages/ndf-harness/skill/SKILL.md
+skills/ndf-workflow/SKILL.md  →  packages/ndf-harness/skill/ndf-workflow/SKILL.md
 ```
 
-Prefer **pointer/symlink** over duplicating MODES prose.
+Prefer **pointer/symlink** over duplicating workflow prose.
 
-3. Commander sessions MUST follow root `AGENTS.md` track workflow; use skill modes for init/govern/sync.
+3. OpenClaw sessions MUST follow root `AGENTS.md` track workflow; internal init/govern/sync
+   modules are for Command Agent only.
+
+See [`SKILL.md`](SKILL.md) wrapper.

@@ -1,57 +1,158 @@
-# NDF Portable Harness
+# NDF Harness 1.0
 
 > **role:** ndf-process-package  
 > **product_behavior:** false  
-> **version:** see `VERSION`  
-> **proposal:** `{#PROP-META-NDF-PORTABLE-HARNESS}`
+> **version:** see [`VERSION`](VERSION)
 
-可移植包：把 **NDF 规范**、**仓库级工作流（`AGENTS.md`）**、**治理 CLI** 装进任意工程。  
-消费方包括 OpenClaw、Claude Code、OpenCode、Cursor 及其他能读仓库约定的 Agent——**不绑某一 IDE**。
+Portable package that installs **NDF process norms**, **command workflow** (`AGENTS.md`),
+**governance CLI**, **skills**, and **templates** into any repository. Works with Cursor,
+OpenClaw, Claude Code, OpenCode, or generic agents — no single IDE is required.
 
-**权威流向**：消费仓本地已验证实践 → 蒸馏进本包 → 再分发。禁止用本包反推纠正本地 SoT。
+## What Harness is / is not
 
-## 装什么（P0）
+| Harness **is** | Harness **is not** |
+|----------------|-------------------|
+| A distilled, product-neutral process seed | Your project's specification SoT |
+| Install scaffolding + governance tools | Automatic spec or code mutation |
+| Runtime adapters (thin pointers) | A replacement for human gate phrases |
+| Migration helpers for 0.2 → 1.0 | Authority over settled local `spec/meta/` |
 
-| 目录 | 内容 |
-|------|------|
-| [`norms/`](norms/) | 条款格式 + process profile 种子（含 META-006/007 性能线）+ 空产品树骨架 |
-| [`workflow/AGENTS.md`](workflow/AGENTS.md) | 真实项目指挥工作流（跨运行时默认入口） |
-| [`governance/`](governance/) | GOVERNANCE + **`tools/` 审核脚本**（`ndf_*.py`）+ 日常命令卡 |
-| [`skill/`](skill/) | init / adopt / govern / sync（**运行时无关**正文） |
-| [`templates/`](templates/) | TOPIC / PERF_BASELINE / COMMITS stubs + implementer boundaries |
+**One-way flow:** verified practice in a consumer repo → distill into this package → redistribute.
+Never use the package to reverse-correct a consumer's authoritative `spec/meta/`.
 
-P1：[`adapters/`](adapters/) 把同一 `skill/` 挂到各运行时。
+## 30-second install
 
-## 快速开始
+```bash
+cd /path/to/consumer-repo
+python3 /path/to/ndf-harness/install.py install \
+  --profile dual-track \
+  --runtime cursor,openclaw,claude-code
+python3 /path/to/ndf-harness/install.py verify --repo . --profile dual-track \
+  --runtime cursor,openclaw,claude-code
+```
 
-1. 读 [`docs/QUICKSTART.md`](docs/QUICKSTART.md)  
-2. **先扫能力全景（可选）**：[`docs/WORKFLOW-FEATURES.md`](docs/WORKFLOW-FEATURES.md)  
-3. 选 profile（默认 `dual-track`，见 `ndf.profile.yaml`）  
-4. 按 [`docs/INIT.md`](docs/INIT.md) 或让 Agent 执行 skill 模式 **init**  
-5. 任选 [`adapters/<runtime>/`](adapters/) 挂载 skill  
-6. 按 [`governance/docs/GOVERN.md`](governance/docs/GOVERN.md) 跑基线检查  
+Then open your command agent and use the **five phrases** (see [Workflow](#five-phrases--typical-session)).
 
-顺序：**规范 → AGENTS.md → 治理基线**。
+## Install modes
 
-## 非目标
+| Mode | Command | Use when |
+|------|---------|----------|
+| **Greenfield** | `install.py install` | New repo; no `spec/` yet |
+| **Brownfield adopt** | `install.py adopt` (plan only) then `install` | Existing NDF tree; review conflicts first |
+| **Upgrade 0.2→1.0** | `migration/detect_0_2.py` + [`migration/plan_1_0.md`](migration/plan_1_0.md) | Legacy gates or Commander residue |
 
-- 不包含任何具体产品域契约 / SLA / 模块名  
-- 不自动 apply advise 沙盒、不静默改 git  
-- 不把某一运行时（如 Cursor）当作唯一入口  
+Details: [`docs/INSTALL.md`](docs/INSTALL.md) · [`docs/MIGRATION-1.0.md`](docs/MIGRATION-1.0.md)
 
-## 工具脚本
+## Five phrases + typical session
 
-审核工具在 [`governance/tools/`](governance/tools/)：
+Human cognitive contract (唯一入口 — [`skill/ndf-workflow/SKILL.md`](skill/ndf-workflow/SKILL.md)):
 
-| 脚本 | 职责 |
-|------|------|
-| `ndf_index` / `graphcheck` / `bindcheck` / `advise` / `close` | 索引 / 图 / 绑定 / 顾问 / 回合计划 |
-| `ndf_report_io` | 报告路径门禁（默认 `tmp/`；禁写 `spec/`） |
-| `ndf_poc_isolation` | POC 写入隔离（禁写 Trunk `src/include/tests`） |
-| `ndf_perf_baseline` | 性能线装订（TOPIC→PERF_BASELINE；非 SLA 业务） |
+| Phrase | Purpose |
+|--------|---------|
+| **初始化项目** | Project Genesis bootstrap |
+| **提交Idea** | New proposal (product or process plane) |
+| **派发** | Authorize dispatch after human review |
+| **继续** | Amend binder / re-dispatch |
+| **关闭** | Close topic (promote / partial / reject) |
 
-安装到目标仓时复制到 `spec/meta/tools/`，见 [`governance/tools/VENDOR.md`](governance/tools/VENDOR.md)。
+Typical POC session:
 
-## 变更
+```text
+提交Idea → 已确认 → 已审核 → 装订器 written → 派发 → worker completion on disk
+→ 继续 (amend?) → 派发 → … → 关闭
+```
 
-见 [`CHANGELOG.md`](CHANGELOG.md)。
+Full workflow: [`docs/WORKFLOW.md`](docs/WORKFLOW.md) · [`docs/WORKFLOW-OVERVIEW.md`](docs/WORKFLOW-OVERVIEW.md)
+
+## Profile, runtime, layout
+
+**Profiles** (`ndf.profile.yaml`):
+
+| Profile | Norms | Tools | AGENTS | POC |
+|---------|-------|-------|--------|-----|
+| `dual-track` | full | full | required | yes |
+| `minimal` | slim | index + graphcheck | required | no |
+| `linter-only` | none | full | optional | no |
+
+**Runtimes:** `cursor` · `openclaw` · `claude-code` · `opencode` · `generic`
+
+**Install map:**
+
+| Package path | Lands in consumer |
+|--------------|-------------------|
+| `norms/meta/` | `spec/meta/` |
+| `norms/product-tree/` | `spec/` skeleton |
+| `governance/tools/*.py` | `spec/meta/tools/` |
+| `workflow/AGENTS.md` | `AGENTS.md` |
+| `workflow/ndf.workflow.yaml` | `ndf.workflow.yaml` |
+| `skill/ndf-workflow/` | runtime skill dir (see adapter) |
+| `templates/` | `spec/meta/templates/` |
+
+## Verify
+
+```bash
+python3 install.py verify --repo . --profile dual-track --runtime cursor --json
+```
+
+Checks: VERSION, AGENTS, workflow yaml, tool `--help` smoke, skill entry paths, optional CLI availability.
+
+## Common blockers
+
+| Blocker | Doc |
+|---------|-----|
+| Gate / bundle SHA mismatch | [`docs/TROUBLESHOOTING.md`](docs/TROUBLESHOOTING.md) |
+| `context_verify_failed` | [`docs/TROUBLESHOOTING.md`](docs/TROUBLESHOOTING.md) |
+| graphcheck / bindcheck failures | [`docs/TOOLS.md`](docs/TOOLS.md) |
+| Wrong workspace / repo_root | [`docs/SECURITY.md`](docs/SECURITY.md) |
+| Fake or missing completion | [`docs/SECURITY.md`](docs/SECURITY.md) |
+
+## Version / compatibility
+
+- Current: **1.0.0** ([`CHANGELOG.md`](CHANGELOG.md))
+- 0.2.x repos: run [`migration/detect_0_2.py`](migration/detect_0_2.py)
+- Installed consumer `spec/meta/` wins over package after adopt
+
+## Uninstall
+
+Harness does not track uninstall manifests. Remove installed copies manually:
+
+- `spec/meta/tools/ndf_*.py` (if only from harness)
+- Runtime skill directories (`.cursor/skills/ndf-workflow/`, etc.)
+- Optionally revert `AGENTS.md` / `ndf.workflow.yaml` via git
+
+Do **not** delete consumer-authored `spec/meta/` clauses or POC binders.
+
+## Documentation index
+
+| Doc | Topic |
+|-----|-------|
+| [`docs/ARCHITECTURE.md`](docs/ARCHITECTURE.md) | Layers, dispatch pipeline, security boundaries |
+| [`docs/INSTALL.md`](docs/INSTALL.md) | Profiles, runtimes, exact commands |
+| [`docs/WORKFLOW.md`](docs/WORKFLOW.md) | Tracks, gates, close modes |
+| [`docs/WORKFLOW-OVERVIEW.md`](docs/WORKFLOW-OVERVIEW.md) | Call graph + closed loops |
+| [`docs/WORKFLOW-FEATURES.md`](docs/WORKFLOW-FEATURES.md) | Capability catalog from META |
+| [`docs/TOOLS.md`](docs/TOOLS.md) | Every shipped governance script |
+| [`docs/ADAPTERS.md`](docs/ADAPTERS.md) | Runtime capability matrix |
+| [`docs/MIGRATION-1.0.md`](docs/MIGRATION-1.0.md) | 0.2 / legacy POC upgrade |
+| [`docs/TROUBLESHOOTING.md`](docs/TROUBLESHOOTING.md) | Operational fixes |
+| [`docs/SECURITY.md`](docs/SECURITY.md) | Fail-closed gates |
+| [`docs/QUICKSTART.md`](docs/QUICKSTART.md) | Short path to first verify |
+| [`docs/INIT.md`](docs/INIT.md) | Greenfield vs brownfield checklist |
+| [`migration/README.md`](migration/README.md) | Migration tool index |
+| [`governance/docs/GOVERN.md`](governance/docs/GOVERN.md) | Governance command card |
+
+## Package layout
+
+```text
+packages/ndf-harness/
+├── install.py          # plan | install | adopt | verify
+├── ndf.profile.yaml    # profile selector
+├── norms/              # meta + product-tree seed
+├── workflow/           # AGENTS.md + ndf.workflow.yaml
+├── governance/tools/   # ndf_*.py CLI
+├── skill/ndf-workflow/ # five-phrase command skill
+├── adapters/           # runtime mounts
+├── templates/          # POC / genesis stubs
+├── migration/          # 0.2 detect + plan
+└── docs/               # product-neutral guides
+```

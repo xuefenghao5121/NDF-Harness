@@ -7,7 +7,7 @@ formerly labeled Layer B). Independent of ndf_index and ndf_graphcheck
 OBS-GRAIN, and optional ZOMBIE-SPEC / SPEC-DRIFT heuristics.
 
 Usage:
-  python3 spec/meta/tools/ndf_bindcheck.py check --topic l4-cache-mgmt
+  python3 spec/meta/tools/ndf_bindcheck.py check --topic <topic>
   python3 spec/meta/tools/ndf_bindcheck.py check --all-topics \\
       --checks bind,dual,grain,zombie,drift --report tmp/ndf-bindcheck.md
 """
@@ -779,6 +779,49 @@ def check_drift(
     return findings
 
 
+def check_design_docs(topic: str, info: ncl.TopicInfo) -> list[Finding]:
+    """BEH-025 design surface: DESIGN.md + INTERFACE.md (warning if missing).
+
+    Historical topics may lack these files; do not hard-fail the binder suite.
+    New opens MUST create them (process + AGENTS); this check only warns.
+    """
+    findings: list[Finding] = []
+    ndf = POC / topic / "ndf"
+    for name, kind in (
+        ("DESIGN.md", "missing_design"),
+        ("INTERFACE.md", "missing_interface"),
+    ):
+        path = ndf / name
+        if path.is_file():
+            continue
+        findings.append(
+            Finding(
+                "BEH-025",
+                "warning",
+                topic,
+                kind,
+                f"binder missing {name} (design surface; required before new code)",
+                loc=f"poc/{topic}/ndf/{name}",
+                evidence=[
+                    f"TOPIC status: {info.status}",
+                    f"expected: poc/{topic}/ndf/{name}",
+                    "template: spec/meta/templates/poc/"
+                    + ("DESIGN.md.stub" if name.startswith("DESIGN") else "INTERFACE.md.stub"),
+                ],
+                fix=(
+                    f"Copy stub to poc/{topic}/ndf/{name} and fill sections "
+                    "(warning only for historical topics; MUST for new opens)."
+                ),
+                diagram_nodes=[
+                    ("TOPIC", "TOPIC.md"),
+                    ("MISS", name),
+                ],
+                diagram_edges=[("TOPIC", "lacks", "MISS", True)],
+            )
+        )
+    return findings
+
+
 def bipartite_summary(info: ncl.TopicInfo) -> list[tuple[str, str]]:
     pairs: list[tuple[str, str]] = []
     if not info.commits_path or not info.commits_path.is_file():
@@ -818,6 +861,9 @@ def run_topic(
         return result
 
     result.bipartite = bipartite_summary(info)
+
+    # Always scan design surface (warnings only; not gated by --checks)
+    result.findings.extend(check_design_docs(topic, info))
 
     if "bind" in checks:
         result.findings.extend(check_bind(topic, info, since))

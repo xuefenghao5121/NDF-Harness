@@ -4,7 +4,7 @@ Map into runtime-specific files（e.g. `.claude/CLAUDE.md`）.
 
 ## Never
 
-- Edit `spec/meta/`（process profile）unless track=process and commander already landed the proposal  
+- Edit `spec/meta/`（process profile）unless track=process and the command / control agent already landed the proposal  
 - Edit L0/L1 product clauses without an Implemented proposal  
 - Put production-path experiments into `spec/models/`  
 - On **poc** track: modify Trunk `src/**`、`include/**`、`tests/**`（[[BEH-018]] §6）；

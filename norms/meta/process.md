@@ -1,11 +1,11 @@
 # Meta Process — 探索轨 / 晋升 / 负结果 / 装订
 
 > scope: ndf-process  
-> 条款索引: `CHR-008`, `BEH-018`, `BEH-019`, `BEH-020`, `BEH-025`, `BEH-026`, `META-006`, `META-007`  
+> 条款索引: `CHR-008`, `BEH-018`, `BEH-019`, `BEH-020`, `BEH-025`, `BEH-026`,
+> `META-006`, `META-007`, `META-009`, `META-010`, `META-011`, `META-012`, `META-013`, `META-014`, `META-015`
 > 目录边界: [[ARCH-008]]；SLA 隔离: [[CON-POC-001]]  
 > 术语: [[DEF-020]], [[DEF-021]], [[DEF-022]], [[DEF-023]], [[DEF-NDF-GRAPH]]  
 > 缺陷分类: [[DEF-NDF-CYCLE]]…[[DEF-NDF-BINDER-DUAL-HEAD]]（见 `meta/glossary.md`）
-> 性能线: [[META-006]], [[META-007]]（产品金标条款由消费仓自行定义）
 
 ## 探索与晋升双轨 {#CHR-008}
 <!-- ndf: kind=arch level=must layer=L0 status=stable since=0.7 source=deduced scope=ndf-process -->
@@ -30,8 +30,10 @@
 1. 契约草稿 MUST 留在 `spec/open/proposal-*.md` 或主题装订器 `poc/<topic>/ndf/proposals/`，
    或固定目录中显式 `status=draft` / `level=tbd`；凡本主题提案 MUST 登记进
    `poc/<topic>/ndf/TOPIC.md`（[[BEH-025]]）。**流程/卫生**提案 MUST 写在
-   `spec/meta/open/proposal-meta-*.md`（见 `AGENTS.md` track=process）
-2. MUST NOT 将探索期指标写入 `status=stable` 的产品 SLA / 性能约束 must 行
+   `spec/meta/open/proposal-meta-*.md`（见 `AGENTS.md` track=process）。
+   Draft 状态的存在与演进 MUST 由 `spec/meta/open/draft-map/` 并发映射承载；
+   固定模块正文的 `status` 字段 MUST NOT 单独充当 Draft 事实源。
+2. MUST NOT 将探索期指标写入 `status=stable` 的 `{#CON-SLA-*}` must 行
 3. MUST NOT 将探索期行为标为生产默认（环境变量默认开启、去掉 opt-in 门控等）
 4. 正文与提案 MUST 使用明确标记：`POC` / `status=draft` / `explore=`，并 `depends-on`
    对应开放提案或 DEC 方向
@@ -76,12 +78,13 @@
    commit message 引用条款 ID 与提案/DEC，并含 trailers：`Topic:`、`Proposals:`、
    `Clauses:`、`Promotes: <topic>`（[[BEH-025]]）
 4. **验证**：触发编译验证与相关 SLA/VER；失败则不得宣称已晋升
-5. **装订器收口**：`TOPIC.md` status → `promoted`；`COMMITS.md` 记录一对
-   `src_commit` + `spec_commit`；装订器迁入 `spec/archive/YYYY-MM/poc-<topic>/`
-   或保留摘要指针（二选一，promote 提案写明）。若存在 `poc/<topic>/NOTES.md`，MUST
-   将文件头 status 与 TOPIC 对齐为 `promoted`（日期/DEC/提案指针；见 [[BEH-025]]）。
-   **partial** 且主题仍 exploring 时：NOTES SHOULD 标明 `partial` + TOPIC 仍 exploring，
-   MUST NOT 写成全量关闭。
+5. **装订器最终收口**：在代码集成、index/graphcheck、编译、适用的性能与金标验证全部通过前，
+   主题只能处于 `closing` 编排态，MUST NOT 先标 `promoted` 或归档。全部通过后：
+   `TOPIC.md` status → `promoted`；`COMMITS.md` 记录 `src_commit` + `spec_commit`；
+   装订器迁入 `spec/archive/YYYY-MM/poc-<topic>/` 或保留摘要指针（二选一，promote 提案写明）。
+   若存在 `poc/<topic>/NOTES.md`，MUST 将文件头 status 与 TOPIC 对齐为 `promoted`
+   （日期/DEC/提案指针；见 [[BEH-025]]）。**partial** 且主题仍 exploring 时：
+   NOTES SHOULD 标明 `partial` + TOPIC 仍 exploring，MUST NOT 写成全量关闭。
 6. **语义核决策**（[[META-004]]）：promote 或 partial 收口 MUST 决定是否蒸馏 L3 语义核
    （**要** / **不要** / **延期**）。造核为 MAY（同提案或紧随产品提案交付 `spec/models/` +
    `model=`）；MUST NOT 用 poc/patch/ledger 冒充金标；**不**替代 VER。
@@ -94,6 +97,11 @@
    - 对 `explore_surface` 相交的活跃主题做冲突/依赖复核（`conflicts_with_topics` /
      `depends_on_topics`）；MUST NOT 默认可加跨主题收益。
    清单承载：`ndf_close` plan §4c / §4d。
+8. **Draft 映射受控路径**：晋升 MUST 以 `spec/meta/open/draft-map/` 映射条目为闸门。
+   条目 `proposed_status` MUST 按 `exploring → closing` 由提案确认触发；全部闸门通过后
+   MUST 将映射条目归档（`spec/meta/open/draft-map/archive/` 或等效摘要指针），然后固定
+   模块正文才写入对应 `status=stable` 条款。MUST NOT 在映射条目仍 `exploring` 时把正文
+   写成 stable。
 
 禁止：先合主线再补 stable 契约；或先写 stable must 再补 POC 证据。
 
@@ -103,50 +111,459 @@
 
 每次 promote / bug / refactor 合入 Trunk `src/` 后，MUST：
 
-1. 按**产品**金标约束（产品树现行金标条款）重跑其声明的标准配置矩阵，得到完整观测点集，
-   每点至少 2 轮。
-2. 在产品验证树写入**新**观测基线卡（`baselines/bl-trunk-golden-<shortsha>.md` 或项目约定等价路径）：
-   - 新 Trunk SHA（`git rev-parse HEAD`）
-   - 各点的吞吐 / 质量 / 变异指标（产品协议字段）
-   - 列出所用配置身份（`cfg-*` 或等价 id）
-   MUST NOT 原地偷改仍被 TOPIC `vs:` 引用的旧基线卡数字而不 bump id。
-3. 如测量配置变更：在产品验证树的配置空间新增或 bump 配置身份，并薄更新产品金标条款指针。
-4. 更新产品金标索引（thin 导航 → 现行基线卡 + 配置身份）。
-5. MUST NOT 仅靠改写产品 stable SLA 正文中的观测/叙事数字冒充金标更新（合约下限 ≠ 观测线；
-   见 [[META-007]]）。
-6. 金标更新 commit MUST 引用触发的 promote/bug 提案（`Promotes:` / `Fixes:` trailer）。
+1. 重跑产品树现行 Golden 约束声明的标准配置与测量矩阵。
+2. 生成或更新产品验证树中的 Golden Baseline：
+   - 绑定新 Trunk SHA（`git rev-parse HEAD`）
+   - 记录现行协议要求的性能、质量、稳定性与资源指标
+3. 如配置参数变更（新增/修改运行时旋钮、默认值、数据路径），同步更新产品 Golden
+   约束所指向的配置快照。
+4. 金标更新 commit MUST 引用触发的 promote/bug 提案（`Promotes:` / `Fixes:` trailer）。
 
 **豁免**：纯文档变更（spec/ / README）、POC 目录内变更（poc/）不触发金标更新。
 
-> rationale: 金标三要素落在产品验证树的可引用配置/基线身份；索引薄导航避免双份数字。
-> 产品落点见验证树 `configs/` + `baselines/`（本仓 `spec/50-verification/`）。
-> 提案: spec/meta/open/proposal-meta-perf-baseline-space.md
+> rationale: 性能测试不仅依赖代码，还依赖配置参数。流程层只规定 SHA + 配置 + 测量结果
+> 的更新义务；具体矩阵、路径与指标属于产品验证树。
 
-## 性能线读写义务 {#META-007}
+## POC 性能线唯一绑定 {#META-007}
 <!-- ndf: kind=req level=must layer=L1 status=stable since=0.9.12 source=deduced scope=ndf-process -->
-<!-- ndf: depends-on=BEH-025,META-006,CON-POC-001 -->
+<!-- ndf: depends-on=BEH-025,META-006 -->
 
-Agent / 协作者在 POC 开题、写相对性能、委派压测前 MUST：
+活跃性能 POC MUST 由 TOPIC `perf_baseline` 唯一指向 `PERF_BASELINE.md`，卡头 MUST 绑定：
 
-1. 读 `poc/<topic>/ndf/TOPIC.md` 的 `perf_baseline`（R0 后 MUST 存在）
-2. 读该路径指向的性能线卡（通常 `ndf/PERF_BASELINE.md`）
-3. 按卡内配置身份 / experimental Config、`Numbers`（或显式沿用的 `vs:` 基线卡）作对照
+```text
+vs × config_id × measure_script
+```
 
-**SLA ≠ 性能线**：产品 stable SLA 是合约下限；观测金标与 POC R0 在产品验证树配置/基线空间
-与主题 `PERF_BASELINE.md`。MUST NOT 从 SLA 正文抄观测表当 R0；MUST NOT 因配置-only 调参
-改写 stable SLA 数字冒充新基线（[[CON-POC-001]]）。
+1. `vs` 标识比较金标或显式 Trunk 基准；`config_id` 标识配置快照；
+   `measure_script` 标识可执行测量入口，可另列 `measure_binary`。
+2. 首次 R0 前 Numbers MAY 为 pending；R0 后 MUST 写 `baseline_trunk_sha`、
+   `baseline_status=current` 与 Numbers。
+3. 比 Δ% / 压测 MUST 只读 TOPIC → PERF_BASELINE（绑定与 Numbers）→ DELTA；
+   MUST NOT 从 stable SLA 或 NOTES 抄观测数字。
+4. `DELTA.md` 记录 Feature / Hotspot / Bind snapshot / Rounds，是 Design↔Test 变化账本，
+   不替代比较 SoT 或原始 evidence。
+5. 配置-only 变更 MUST 更新绑定并重测，不得以修改 stable SLA 代替。
 
-**配置-only 变更**：MUST 选用或新增配置身份（或在主题卡 inline 全量测量配置），重测并更新
-主题卡 / 必要时新基线卡；MUST NOT 静默改共用配置身份语义。
+> rationale: 性能结论必须能回答「对谁、用什么配置、由哪个入口、得到哪些数」；
+> SLA 是合约下限，不是探索观测线。
 
-**stale**：`baseline_status=stale` 时 MUST 重测并更新主题卡与 `baseline_trunk_sha`，或
-evidence 显式 `vs_trunk=<old>` 且 MUST NOT 当作现行 Trunk 基线叙事（[[BEH-025]]）。
+## Project Genesis 初始化轨 {#META-009}
+<!-- ndf: kind=req level=must layer=L1 status=stable since=0.9.13 source=deduced scope=ndf-process -->
+<!-- ndf: depends-on=META-003,META-008 -->
 
-校验/摘要：`python3 spec/meta/tools/ndf_perf_baseline.py show|check --topic <id>`
-（流程装订门禁，与 bindcheck 同族；不含产品 SLA/吞吐业务逻辑）。
+NDF 工作流 MUST 在日常 Proposal/POC 前支持一次性 `track=bootstrap`：
 
-> rationale: 收口既有黄金意图到 Agent 必读路径；配置身份防止基线漂移。
-> 提案: spec/meta/open/proposal-meta-perf-baseline-space.md
+```text
+> track: bootstrap
+> bootstrap_mode: greenfield | adopt
+```
+
+- `greenfield` 从用户原始 IDEA 建立项目目标、本地 NDF Foundation 与初始 Trunk candidate。
+- `adopt` 对已有代码做 observed 盘点、建立本地 NDF、验证并冻结 Genesis；
+  MUST NOT 改写既有 git 历史。
+- 已存在 accepted Project Genesis 决策的 operational 项目 MUST NOT 重跑 bootstrap；
+  重建基准另走 process/refactor 提案。
+- 兼容既有健康棕地：无 Genesis 决策但已有完整 `spec/00–50`、产品代码与可运行治理门禁时，
+  MAY 标 `operational_legacy` 并提示可选 adopt；MUST NOT 因新流程阻断既有日常 POC。
+  日常指挥面是 Command Agent 文字入口（运行时 adapter 如 `.cursor/skills/ndf-workflow/`）；无可视化面板义务。
+
+初始化门禁 MUST 串行：
+
+```text
+IDEA已审核 → CHARTER已审核 → ARCHITECTURE已审核
+→ VERIFICATION已审核 → 可以建立初始主线 → GENESIS已审核
+```
+
+1. 用户原始 IDEA MUST 原样保存来源；确认后的目标/scope/non-goals 进入产品 Charter，
+   取舍、已知 draft 与 Genesis 绑定进入产品 Genesis 决策。
+2. 无证据的性能数字 MUST 为 draft/TBD/`not-established`，MUST NOT 冒充性能金标。
+3. 收到「可以建立初始主线」后才可通过 Claude Code 隔离环境建立最小可构建垂直切片。
+4. Claude Code MAY 写初始代码、测试、构建配置与 L2/L3；MUST NOT 修改 L0/L1、
+   Charter、Architecture、Decisions 或 `spec/meta/`。
+5. NDF 图、构建、最低功能验收与三空间追踪均闭合后，Project Genesis 决策 MUST 绑定
+   IDEA 来源、NDF tree SHA、Trunk SHA、verification ref 与 known drafts；
+   收到 `GENESIS已审核` 后项目才进入 `operational`。
+
+项目目标金标（Charter + Genesis 决策 + git SHA）与性能 Golden Baseline 是不同对象。
+
+## 人工门禁回执 {#META-010}
+<!-- ndf: kind=req level=must layer=L1 status=stable since=0.9.13 source=deduced scope=ndf-process -->
+<!-- ndf: depends-on=META-001,META-008 -->
+
+需要机械展示或自动委派的人工作业 MUST 使用 append-only 门禁回执。POC 回执位于
+`poc/<topic>/ndf/GATES.md`；Genesis 使用初始化 GATES。每条回执 MUST 记录：
+
+```text
+gate / phrase / approved_by / approved_at
+approved_content_sha / source_ref / status
+```
+
+1. 文件存在 MUST NOT 推导为人工已审核；缺回执时只能显示 `missing` / `unknown`。
+2. 内容 SHA MUST 由该闸绑定的 canonical 文件束计算；实质修改后，下游回执 MUST
+   追加 `invalidated`，不得改写历史审批。
+3. POC 的 `topic_review` 绑定 TOPIC + root proposal；
+   `design_review` 绑定 TOPIC + DESIGN；
+   `implementation_approval` 绑定 TOPIC + DESIGN + PERF_BASELINE 绑定头 + DELTA 假设 +
+   INTERFACE。
+4. **文字优先路径**（[[ADR-META-003]]）：新托管主题 MAY 用单次回执
+   `bundle_dispatch`（phrase=`派发`）代替闸 3；内容束 MUST 与
+   `implementation_approval` 相同。`topic_review` / `design_review` 三闸串行对
+   该路径为 legacy/可选；产品提案「已确认」/「已审核」仍为契约落地门。
+5. 口令仍由人触发；Command Agent / 工具 MUST NOT 静默批准或伪造 `approved_by`。
+6. 本条不要求回填历史 POC；历史主题显示 `legacy/unknown`。
+
+### POC 门禁 review slice
+
+新建或已迁移主题的门禁 MUST 绑定显式 `review_slice`，而不是冻结整份探索日志。
+切片标记 MUST 在同一文件内成对、ID 唯一、不可嵌套；canonical 输入为：
+
+```text
+slice_id NUL repo_relative_path NUL slice_bytes NUL
+```
+
+bundle 中切片按 `slice_id + path` 排序后计算 SHA-256。推荐标记：
+
+```markdown
+<!-- ndf:gate-slice begin=topic_contract -->
+... reviewed contract ...
+<!-- ndf:gate-slice end=topic_contract -->
+```
+
+| gate | review slices |
+|------|---------------|
+| `topic_review` | TOPIC intent/scope/hypothesis/directions/proposal contract |
+| `design_review` | topic contract + DESIGN goals/non-goals/modules/data-flow/trunk-boundary/design contract |
+| `implementation_approval` | 上述 contract + PERF bind header + DELTA hypothesis + INTERFACE contract |
+| `bundle_dispatch`（文字优先） | 与 `implementation_approval` 相同；phrase=`派发` |
+
+下列 mutable 内容 MUST 位于 review slice 外；仅追加它们 MUST NOT 改变闸 SHA：
+TOPIC lifecycle/baseline 导航字段、PERF Numbers、DELTA Rounds、`evidence/`、
+`COMMITS.md`、`GATES.md`。若结果反向修改假设、接口、绑定配置或实现边界，MUST 先修改
+对应 review slice，不得借 mutable 区绕过重审。
+
+**证伪 / drop 落点（[[BEH-019]] partial 路径）**：假设证伪或 Feature/Hotspot 标
+`dropped` 的**叙事与证据** MUST 写入可变面（DELTA Rounds 结论行、NOTES、`evidence/`）。
+改 `delta_hypothesis` / DESIGN contract 中 Feature 或 Hotspot 的 **status 字段**
+属于实质 amend：MUST 走 `binder_amend`（或装订器流水线）并按失效矩阵重审受影响闸，
+MUST NOT 指挥官直改契约切片后假装闸回执仍有效。再派 ACP 写码前 MUST 重过闸 3；
+**选 `partial` / 跑 `ndf_close plan --mode partial` MUST NOT 仅因闸 3 invalidated 被挡**
+（见下「门禁完成、探索决策与关闭资格」）。
+
+失效矩阵：
+
+| changed review slice | invalidated gates |
+|----------------------|-------------------|
+| TOPIC contract | topic_review, design_review, implementation_approval |
+| DESIGN contract | design_review, implementation_approval |
+| PERF bind / DELTA hypothesis / INTERFACE contract | implementation_approval |
+| Numbers / Rounds / evidence / COMMITS / GATES | none |
+
+缺标记、重复标记、错配或嵌套 MUST fail closed。旧主题 MAY 显示
+`bundle_mode=legacy_whole_file`；迁移必须追加 invalidated/迁移说明并重新审核，
+旧 whole-file SHA MUST NOT 验证为 review-slice SHA。
+
+### 闸漂移解释（人审 UI）
+
+内容 SHA 仍是身份钉；人审需要的是 **相对最近一次有效回执** 的可读 diff，不是两个
+hex。当任一 POC 闸（含 `bundle_dispatch`）为 `invalidated` 或
+`approved_content_sha` ≠ 当前 `expected_content_sha` 时，指挥面与相关 CLI（至少
+`poc-dispatch`、`topic-health`）MUST 产出漂移解释，至少含：
+
+1. `gate`、`approved_content_sha`、`expected_content_sha`；
+2. `changed_slices`（`slice_id` + 相对路径）；未变切片 MUST NOT 喧宾夺主；
+3. `slice_diffs`：每个变更切片的 unified diff（或等价行级 diff），**仅**
+   `ndf:gate-slice` 内字节；
+4. `human_next`：重审后回「派发」，或先改回契约再派发。
+
+mutable 面（Numbers / Rounds / evidence / COMMITS / GATES / TOPIC 导航头）MUST NOT
+进入该 diff。无法还原批准时刻切片正文时 MUST 报 `diff_unavailable` + 原因，并仍列出
+当前 slice 指纹；MUST NOT 静默假装无变化或自动重批。
+
+为可 diff，写入有效闸回执时 MUST 保留可对比基线（按 `approved_content_sha` 索引的
+slice 快照、可 `git show` 的 `source_ref`、或 pack 内嵌副本之一）。缺基线 →
+`diff_unavailable`。解释默认落聊天；全文 MAY 写 `tmp/ndf-gate-drift-<topic>.md`，
+MUST NOT 写入 `spec/open/`。
+
+Process proposal 的 `已确认` / `已审核` 也属于人工回执，其内容束与状态机由
+[[META-014]] 定义；MUST NOT 直接套用 POC gate 推导规则，或由 proposal 文件存在
+与 Agent acknowledged 推进状态。
+
+## 文字委派与磁盘完成合同 {#META-011}
+<!-- ndf: kind=req level=must layer=L1 status=stable since=0.9.13 source=deduced scope=ndf-process -->
+<!-- ndf: depends-on=META-008,META-010 -->
+
+日常 POC 与 Control 委派的权威合同是**文字指挥 + 机械安全门 + 磁盘 completion**，不是可视化面板或回放仪式（[[ADR-META-003]]、[[ADR-META-004]]）。无面板亦 MUST 能完成完整环。
+
+**文字优先主路径**（[[ADR-META-003]]）：
+
+```text
+Idea → 产品提案「已确认」/「已审核」
+→ 整包装订器（TOPIC/DESIGN/PERF_BASELINE/DELTA/INTERFACE）
+→ Human「派发」（绑定当前契约 bundle SHA）
+→ poc-dispatch（实现|测量）
+→ Human「继续」修订装订器再派发，或选 close 模式
+```
+
+日常写入口是 CLI `poc-dispatch`（内联租约）。人审「派发」/「继续」是聊天确认授权送出 ready
+pack；POC「派发」仍 MUST 把 `bundle_dispatch` 回执写入 `GATES.md`（[[META-010]]），
+聊天确认 ≠ 回执存在。legacy 三闸「可以开始实现」仅兼容旧主题。
+
+### 成功分层（不得互相冒充）
+
+1. **transport acknowledgement**：CLI / agent exit 0 只表示消息已送达。
+2. **validated completion**：日常 POC 以 pack 钉死的 `completion_receipt_path` 上磁盘
+   `ndf-agent-completion/v1` 为准——`result=success` 且 topic/task/run 身份匹配。
+3. stdout `ndf-dispatch-notify/v1` 仅运输辅助；stdout 中的 completion MUST NOT 冒充磁盘回执。
+
+历史 Episode / Replay 缺字段 MUST NOT 单独把实质完成判失败（[[ADR-META-004]]）。
+
+### 硬安全门
+
+委派前 MUST 同时满足：
+
+1. `workspace_truth.workspace_bound`（`repo_root` + `active_topic` 等身份一致）；
+2. 对应人工回执有效且 approved content / bundle SHA 未漂移；
+3. `allowed_write_root` 在 `repo_root` 下可解析 + POC isolation 通过；
+4. 同 topic 无其它写 run；`run_id` 作为 lease；
+5. Claude Code 管道返回 `run_id/session_id`、`base_sha`、独立 worktree/branch（或可证等价）与写根；
+6. context manifest / role plan 发送时有效；ACP 估算不超 `NDF_ACP_CONTEXT_MAX_TOKENS`。
+
+缺任一项 MUST `unsafe` / 拒绝派发。`workspace_bound=false` 时 MUST NOT `safe_to_dispatch`。
+因人工 bundle SHA 漂移而硬阻塞时，报告 MUST 满足 [[META-010]] 闸漂移解释最小合同
+（changed slices + slice diff 或 `diff_unavailable`），使人可完成重审；MUST NOT 仅输出
+不透明哈希。
+
+身份绑定与执行 HEAD 绑定 MUST 分离：仅身份失配构成 `workspace_unbound`；HEAD 漂移单独记
+`execution_binding_stale`。`execution_binding_stale` MUST NOT 挡测量或实现。pack `base_sha`
+MUST 取 live `git_head()`。
+
+`prepare-acp-lease` 保持 lease_only legacy；`poc-dispatch` MUST 内联创建或复用隔离租约，
+不得要求人工第二跳。lease MUST 写入隔离 worktree 与 `tmp/ndf-workflow-leases.jsonl`，
+MUST NOT 用空 stub 冒充。ACP 可达 ≠ 活跃隔离租约。
+
+### 三层能力（指挥面 / OpenClaw / Claude Code）
+
+| 层 | 代理 | 入口 | 写界 |
+|----|------|------|------|
+| 指挥面 | Command Agent + `ndf-workflow` skill | 五句口令；造 pack；等人审；调 CLI | tmp pack / 触发回执 CLI；MUST NOT 写 worker 实现/测量 |
+| NDF Control | OpenClaw | `control-pack` / `project-control-pack` →「派发」→ `dispatch-send` | `poc/<topic>/ndf/`、`spec/open/`、`spec/meta/open/`、`.openclaw/state.json` |
+| Implementation | Claude Code ACP | `poc-dispatch`（POC）；`genesis-pack`（初始化）；promote 按 close plan | track 允许写根（POC 仅 `poc/<topic>/`） |
+
+OpenClaw MUST NOT 写 `src/`、`include/`、`tests/`、`spec/meta/` 稳定正文（land 除外且须人审），
+MUST NOT 静默写 `GATES.md` 的 `approved_by`。Claude Code MUST NOT 改 L0/L1 / `spec/meta/`。
+指挥面 MUST NOT 代写 worker 边界内的实现/测量，MUST NOT 直接 `openclaw.chat_send` 绕过
+`dispatch-send`，MUST NOT 打开可视化面板。运行态从管道查询，MUST NOT 写入
+`.openclaw/state.json` 冒充装订器 must。
+
+OpenClaw Control 探测 MUST 分三态：`gateway_reachable`、`session_configured`
+（`AGENTS.md` 非空 session_key）、`session_dispatchable`（routing key 可匹配 sessions
+store，或本身为合法 UUID）。`session_key`（可含 `:` 的通道路由串）与
+`openclaw agent --session-id`（UUID）MUST 区分。Control `safe_to_dispatch` MUST 要求
+gateway 可达且 session 可派发。`dispatch-send` 对 routing key 走 gateway `sessionKey`；
+仅已解析 UUID 才用 `--session-id`。
+
+OpenClaw 与 Claude Code ACP 等待 MUST 用心跳续等（`NDF_OPENCLAW_*` / `NDF_ACP_PING_SEC` /
+`STALL_SEC` / `MAX_SEC`）：有会话或磁盘回执进展则刷新 stall；连续无进展达 stall 阈值才
+stalled；绝对上限才 timeout。MUST NOT 仅靠固定墙钟把仍在工作的长 hop 判死。在途 hop
+「进展如何」MUST `dispatch-probe`，MUST NOT 对同一 pack 再 `dispatch-send`。
+
+ACP `dispatch-send` MUST 在运输前估算 transcript 与 slim worker 预算；超限 MUST
+`acp_context_over_budget` fail-closed。默认 `--fork-session`（可用 env 关闭），每 hop
+分叉执行面。换绑 ACP 会话后 MUST `ndf_acp_session_bootstrap.py` 再派发。
+
+### Per-Project Workspace
+
+`.openclaw/state.json` 是仓库本地指挥状态，MUST NOT 与 `~/.openclaw/` 全局 session 混淆。
+所有 pack MUST 含 `workspace`（`repo_root`、`repo_head`、`active_topic`、`topic_dir` 等）。
+相对路径 MUST 在 `workspace.repo_root` 下解析。OpenClaw 收到 pack 后 MUST 写入
+`{repo_root}/.openclaw/state.json`；Claude Code worktree MUST 在 `repo_root` 下。
+
+### 宿主 PID 卫生（简化）
+
+发现 Agent Shell `EAGAIN` / fork 失败时 MUST 先跑
+`python3 spec/meta/tools/ndf_workflow_status.py host-pids --json`，读 cgroup /
+consumers / advice，再决定是否清理嫌疑进程。MUST NOT 改 `environment=cloud` 绕开，
+MUST NOT 调大 TasksMax。
+
+完成回执 MUST 含 changed files、commit SHA（若有）、复现命令与 evidence 路径；随后 MUST
+再跑写入隔离检查。POC 正结果关闭顺序仍为 promote 提案 → `ndf_close plan` → 集成 →
+index/graphcheck → 编译/性能/金标 → TOPIC 收口（见 [[BEH-019]]）。
+
+> rationale: 可信度由身份、写根、人审 bundle、并发、上下文预算与磁盘 completion 保证；
+> 面板与回放不得反客为主（[[ADR-META-004]]）。
+
+## NDF 任务上下文与证据绑定 {#META-012}
+<!-- ndf: kind=req level=must layer=L1 status=stable since=0.9.14 source=deduced scope=ndf-process -->
+<!-- ndf: depends-on=META-002,META-008,META-010,META-011 -->
+
+Command Agent、OpenClaw 与 Claude Code MUST 使用同一份带 SHA 的 Task Manifest，并从中派生
+各自的 role-specific Context Plan；不同 role plan SHA MAY 不同，但 MUST 引用同一
+`manifest_sha`。工具只读投影 Manifest / 角色摘要，MUST NOT 成为第四上下文 SoT
+（[[ADR-META-004]]）。
+
+任务上下文 MUST 按以下顺序机械组装：
+
+```text
+BinderReadOrder → NDFGraphClosure → Git/ImplementationSurface
+→ Evidence/Baseline → Gate/RuntimeLease → RoleSpecificPrivilege
+```
+
+1. Binder MUST 先按 [[BEH-025]] 读序；clause seed MUST 来自 TOPIC、提案、ledger /
+   trailers、task 默认条款或 close plan，禁止仅凭自由文本猜测。
+2. 图默认只沿 `depends-on` / `refines` 展开；其它边 MUST 按 task 明确启用。
+   traversal MUST 有 depth/node/byte budget，截断 MUST 报告。
+3. Task Manifest MUST 绑定 task、track、topic、repo HEAD、共享图/evidence/gate；
+   Context Plan MUST 绑定 manifest SHA、role、source generation、gate bundle、
+   baseline、ordered reads、图策略、允许写根、禁止路径与人工口令。
+4. Context Bundle MUST 绑定 plan SHA、每个文件/条款 chunk SHA、git/evidence joins；
+   Agent 执行前 MUST `context-verify`，漂移时 MUST 停止并重新编译。
+5. 默认 bundle MUST NOT 从 NOTES / stable SLA 抄 POC 观测数字；仅显式测量 task
+   MAY 读取 PERF_BASELINE Numbers。
+6. OpenClaw 只接收 Control 文档流 role plan；Claude Code 只接收 Implementation/Test
+   及对应已批准契约 role plan。不兼容 `role × task × track` MUST fail closed。
+7. Task Manifest MUST 绑定 Context Compiler 派生证明（compiler identity/version、
+   policy、seed/binder/graph/evidence 输入摘要，以及 closure、truncation、conflicts、
+   baseline、blockers 与 role policy 摘要）。验证 MUST 用同一 policy 重新派生语义；
+   仅重算 `manifest_sha` 不足以证明合法。
+8. Task Manifest / Context Plan MUST 绑定
+   `bundle_mode | slice_id/path/content_sha | allowed_sections | mutable_sections`。
+   Context verify MUST 重算 slice SHA；legacy whole-file 与 review-slice plan 不兼容时
+   MUST 新 Manifest，不得 silently 混用。
+9. Project-control 任务 MUST 额外绑定 `proposal_id | flow_id | hop | origin`，以及
+   `intent_sha` 或 `proposal_path + proposal_sha`。内容或 hop 漂移时 MUST 创建新
+   Manifest。
+
+机械入口：`ndf_context.py manifest-create|role-plan|context-expand|context-verify`。
+
+委派 readiness MUST 分离 soft 与 hard：
+
+```text
+poc_dispatch_hard_passed | static_preflight_passed | runtime_dispatch_ready
+```
+
+**文字优先硬门**（`poc-dispatch`，[[ADR-META-003]] / [[ADR-META-004]]）仅：
+`repo_root`+topic 身份；Human「派发」或闸 3 绑定**当前**契约 bundle SHA；
+`allowed_write_root=poc/<topic>/` + isolation；同 topic 无并发写 run；隔离
+worktree/base_sha 可证；context manifest/plan 发送时有效；磁盘 completion 身份匹配；
+ACP context 不超预算。
+
+下列 MUST NOT 单独挡住 `poc-dispatch`（soft / warning）：meta graph、全量 bindcheck、
+product graph、缺非必要 completion 字段、默认 runtime probe。它们 MAY 在提案收口 /
+实质 amend / close/promote 时强制。
+
+legacy `static_preflight_passed`（gate / baseline / perf / isolation / context /
+bindcheck / product graph）继续门控旧 `delegate-poc` / `pack` 路径。MUST NOT 作为
+`partial`/`reject` 或 close 编排必要条件。闸 3 / `bundle_dispatch` invalidated 时写派发
+MUST 仍 fail-closed；Human 选 `partial` 与 `ndf_close plan --mode partial` MUST NOT
+仅因此被挡。
+
+`poc-dispatch` writable pack MUST 绑定 Task Manifest、role plan 与 exact
+`allowed_write_root`。
+
+Command Agent / 工具 MUST NOT 修改 `.openclaw/state.json`；runtime lease 只写
+gitignored 临时证据。Runtime lease 在 live worktree 校验成功时 MUST 保存
+acquisition-time durable binding proof；completion MUST 以 acquisition/completion
+双快照证明 tracked、untracked 与越界 mutation，并使实际变化集合与声明的
+`changed_files` 双向一致。Close/post-check receipt MUST 绑定注册 verifier 的绝对身份、
+argv/version、真实退出码与结构化输出；任意 evidence bytes 加自报 `passed` 不得使
+验证状态变绿。
+
+> rationale: 同一 manifest SHA 装订 OpenClaw 与 Claude Code；硬门只保留执行安全与
+> 磁盘合同，软检查不得伪装成日常派发仪式。
+
+## Agent Episode、事件链与回放等级 {#META-013}
+<!-- ndf: kind=req level=must layer=L1 status=deprecated since=0.9.15 source=deduced scope=ndf-process -->
+<!-- ndf: depends-on=META-010,META-011,META-012 -->
+
+**历史合同（已退役运行义务）。** Agent Episode 曾是 Context Plan 之外的可审计时间 DAG：
+内容寻址对象、`seq` / `prev_event_sha` / `event_sha` 事件链、R0–R3 回放等级、tool
+cassette、checkpoint、Control gate/binder 双流水线分步事件，以及 Commander Replay /
+button-action 账本。可写委派曾 SHOULD 绑定 Episode 与同一 `ndf-task-manifest/v1`。
+
+按 [[ADR-META-004]]（supersedes [[ADR-META-003]] 中「保留 Episode/Replay 为审计工具」
+的运行义务）：
+
+1. Episode / Replay / Action begin-commit-finish / button-action **MUST NOT** 作为日常
+   `poc-dispatch`、派发成功或 close 的必要条件。
+2. 日常成功合同仅为：硬安全门（[[META-011]]）+ Task Manifest / context verify
+   （[[META-012]]）+ 磁盘 `ndf-agent-completion/v1` 身份匹配。
+3. 历史 `.ndf/replay/`（及同类本地回放工件）保持**只读考古**；MUST NOT 新生成参与
+   成功判定，MUST NOT 要求人类理解投影/回放状态才能继续文字指挥。
+4. 争议取证 MAY 只读查阅历史对象；MUST NOT 把缺完整 Episode DAG / Replay 字段单独
+   判失败。
+
+本条款 `status=deprecated`：正文保留语义摘要供考古，新建流程 MUST NOT 依赖本条运行。
+
+> rationale: 少则得——回放仪式不得反客为主；安全内核留在 META-011/012。
+
+## 回放沙箱与执行器边界 {#META-015}
+<!-- ndf: kind=req level=must layer=L1 status=deprecated since=0.9.17 source=deduced scope=ndf-process -->
+<!-- ndf: depends-on=META-011,META-013 -->
+
+**历史合同（已退役）。** 本条曾定义可选 Lvm guest 沙盒证明：执行器不在现仓、现仓对
+guest 不可写、出站仅回执、`ndf-replay-guest-proof/v1` 可证伪，以及 Lsoft / Lns / Lvm
+分级（仅 Lvm 可称「已回放」）。宿主 `guest-run` 曾为可选 adapter，不是文字指挥主路径。
+
+按 [[ADR-META-004]]：Guest / Lvm / `guest-run` / R2 沙盒证明 **不再**作为日常委派、
+成功判定或人类工作流义务。无 guest 后端 MUST NOT 阻塞 `poc-dispatch` 或磁盘
+completion 收口。历史证明文件若存在，只读考古；MUST NOT 新要求人类跑 guest 才能
+继续。
+
+本条款 `status=deprecated`。
+
+> rationale: 可选沙盒证明曾服务 Replay；控制面退役后不再占用注意力。
+
+## Process Proposal 生命周期与回执 {#META-014}
+<!-- ndf: kind=req level=must layer=L1 status=stable since=0.9.16 source=deduced scope=ndf-process -->
+<!-- ndf: depends-on=META-010,META-011 -->
+
+### Idea / 提案路径分流（[[ADR-META-004]]）
+
+| Idea 类型 | 落点 |
+|-----------|------|
+| 产品能力、运行中项目、bug、性能、POC、Genesis | `spec/open/` |
+| NDF 语言、工作流、Agent 编排、治理工具、规范卫生 | `spec/meta/open/` |
+| 同时影响两面 | 拆成两个互相引用的提案；无法判断时先问人 |
+
+产品提案 MUST NOT 写入 `spec/meta/open/`；process 提案 MUST NOT 写入 `spec/open/`。
+路径与 plane / track 不一致 MUST fail closed。共享任务名 `control_proposal` MAY 作
+兼容别名，默认映射产品平面；新流程 SHOULD 使用 `product_proposal` 与
+`process_proposal` / `ndf_improvement_proposal`。
+
+### 生命周期
+
+新托管 process proposal MUST 使用：
+
+```text
+pending_confirmation
+→ confirmed_pending_land
+→ implemented_pending_review
+→ reviewed
+```
+
+`rejected` / `superseded` 为终态；archive 只是存储位置。旧
+`Status: Implemented on ...` 与审核标记只作兼容输入；缺现代回执时 MUST 标
+`legacy_*_unbound`，不得自动完成 gate 或产生可写 hop。
+
+### 人工回执
+
+`proposal.confirmed` / `proposal.reviewed` MUST 是 append-only 结构化回执，并至少绑定：
+
+```text
+proposal_id | phrase | actor | approved_at | proposal_sha | status
+```
+
+actor MUST 为 Human，phrase 分别为精确口令 `已确认` / `已审核`（[[META-010]]）。
+Agent acknowledged、文件存在 MUST NOT 推进生命周期。proposal 内容漂移后，下游回执
+MUST append `invalidated`，不得改写历史。
+
+落地（confirm_land）MUST 仅写入提案声明的 `land_targets`（通常 `spec/meta/**` 与
+产品 thin 指针）；MUST NOT 静默改产品实现树。审核回执 MUST NOT 重写已落地 META 正文。
+
+`.openclaw/state.json` 只承载 workspace 绑定与 OpenClaw 指挥进度，MUST NOT 承载
+proposal receipt 真值。
+
+> rationale: process 提案用路径分流 + 人口令 SHA 生命周期即可；Episode/面板对账已退役。
 
 ## 负结果与回退 {#BEH-020}
 <!-- ndf: kind=req level=must layer=L1 status=stable since=0.7 source=deduced scope=ndf-process -->
@@ -177,7 +594,11 @@ evidence 显式 `vs_trunk=<old>` 且 MUST NOT 当作现行 Trunk 基线叙事（
 ```text
 poc/<topic>/ndf/
   TOPIC.md
-  PERF_BASELINE.md  # 性能线卡（R0 后 MUST；[[META-007]]）
+  DESIGN.md
+  PERF_BASELINE.md
+  DELTA.md
+  INTERFACE.md
+  GATES.md        # 人工回执（新主题；历史主题可无）
   proposals/     # 本主题提案正文，或 stub 指回 spec/open/
   evidence/      # validation / 对照表
   COMMITS.md     # Commit Ledger [[DEF-023]]
@@ -188,32 +609,44 @@ poc/<topic>/ndf/
 - `poc/<topic>/ndf/` MUST 作为 POC 内唯一规范性呈现面；如存在 `poc/<topic>/README.md`，MUST NOT 作为 must 源（仅允许导航指针）。
 - 协作者在 POC 内获取 NDF 的推荐阅读顺序 MUST 为：
   1. `poc/<topic>/ndf/TOPIC.md`
-  2. `poc/<topic>/ndf/PERF_BASELINE.md`（若已 R0 / 已声明 `perf_baseline`；比性能 MUST 读）
-  3. `poc/<topic>/ndf/proposals/`（或 stub → `spec/open/`）
-  4. `poc/<topic>/ndf/evidence/`
-  5. `poc/<topic>/ndf/COMMITS.md`
+  2. `poc/<topic>/ndf/DESIGN.md`
+  3. `poc/<topic>/ndf/PERF_BASELINE.md`
+  4. `poc/<topic>/ndf/DELTA.md`
+  5. `poc/<topic>/ndf/INTERFACE.md`
+  6. `poc/<topic>/ndf/GATES.md`
+  7. `poc/<topic>/ndf/proposals/`（或 stub → `spec/open/`）
+  8. `poc/<topic>/ndf/evidence/`
+  9. `poc/<topic>/ndf/COMMITS.md`
+
+### 分段门禁与 GATES
+
+**文字优先主路径**（[[ADR-META-003]]）：产品提案「已确认」/「已审核」后，OpenClaw
+MAY **一次写齐** TOPIC / DESIGN / PERF_BASELINE / DELTA / INTERFACE（及测试计划）。
+Human 以「派发」回执（`bundle_dispatch`，绑定与闸 3 相同的契约 bundle SHA）授权
+实现/测量。仅实质 amend 假设、接口、测量协议或写入边界后，下一次「派发」才绑定新
+SHA；Numbers / Rounds / evidence 追加 MUST NOT 触发重审。
+
+三闸串行仍为 **legacy/可选**：
+
+```text
+TOPIC已审核 → DESIGN已审核 →（PERF 绑定 + DELTA）→ 可以开始实现
+```
+
+对应回执 MUST 写入 `GATES.md` 并符合 [[META-010]]。未收到「派发」或「可以开始实现」
+（或回执 SHA 已失效）时，MUST NOT 编写/委派主题代码。工具 MUST 同时认文字优先与
+三闸回执。历史 POC 不强制回填，投影显示 legacy。
 
 ### TOPIC.md
 
 MUST 记录至少：`topic_id`；`status` ∈ {`exploring`,`blocked`,`promoted`,`rejected`}；
-`baseline_protocol`（测量口径指针，可与性能线卡 `protocol` 一致；**不是**数字源）；
+`baseline_protocol`（如产品树现行验收协议路径 + 数据集/线程）；
 `explore_surface`（逗号分隔短标签，开题 MUST；例：`fine-rerank` / `page-cache-l4` /
 `pq-codes` / `mt-scaling`）；
 `baseline_trunk_sha`（首次 R0 后 MUST：当时 Trunk `src` 短 SHA）；
 `baseline_status` ∈ {`current`,`stale`,`n/a`}（R0 后默认 `current`；关闭主题可用 `n/a`）；
-首次 R0 后 MUST 另有 **`perf_baseline`**（相对装订器路径，通常 `ndf/PERF_BASELINE.md`）；
-比 Δ% / 压测对照 MUST 只读该卡（[[META-007]]），MUST NOT 从产品 SLA 正文抄观测表当 R0；
 `proposals[]`（路径、Status、角色 root/amend/process-hygiene）；`draft_clauses[]`；
 `active_hypothesis` / `next_gate`；可选 `depends_on_topics[]`；互斥时 MUST
 `conflicts_with_topics[]`。
-
-### PERF_BASELINE.md
-
-主题内唯一性能线卡。头字段至少：`trunk_sha`（与 TOPIC `baseline_trunk_sha` 前缀一致）、
-`config_id`（`cfg-*`）或标明 experimental、`protocol`、`status`；宜有 `vs:` 指向现行
-`bl-trunk-golden-*`。正文 MUST 含 **Config** 与 **Numbers**（本主题 R0 表，或显式
-「沿用 `baselines/<id>`」并链接）。模板：
-`spec/50-verification/baselines/PERF_BASELINE.topic-template.md`。
 
 ### NOTES.md（实验日志；关闭时状态镜像）
 
@@ -260,8 +693,8 @@ MUST 记录至少：`topic_id`；`status` ∈ {`exploring`,`blocked`,`promoted`,
   - `depends_on_topics` MUST 含已关闭的旧 `topic_id`；若另有使能依赖主题，MUST 一并列出
   - TOPIC（及存在时的 NOTES）MUST 写明相对旧 DEC / `Rejects:` 的**新假设或新 Trunk 前提**；
     MUST NOT 假装旧负结果未发生
-  - MUST 新建装订器；首次 R0 后 MUST 写本主题 `baseline_trunk_sha`、
-    `perf_baseline` → `PERF_BASELINE.md` 与 `baseline_status=current`
+  - MUST 新建装订器；首次 R0 后 MUST 写本主题 `baseline_trunk_sha` 与
+    `baseline_status=current`
   - 开题 MUST 扫活跃 exploring 的 `explore_surface`（[[BEH-018]] 第 9 条）
 - 仍为 `exploring` / `blocked`（含 **partial** promote 未全关）：继续同主题 amend /
   重测 R0（见「基线 stale」）；**不是**本小节「重启」。
@@ -292,7 +725,8 @@ promote 另加 `Promotes: <topic>`；负结果 DEC 相关 commit 加 `Rejects: <
 ### 与 Trunk SoT
 
 装订器 **MUST NOT** 成为 `status=stable` must 源。Agent 实现 Trunk 时以 `spec/00–50`
-为准；装订器仅服务探索进度与可复现。
+为准；装订器仅服务探索进度与可复现。它在 [[META-008]] 中呈现 Design / Implementation /
+Test 空间的 POC 工作副本，交互编排不改变其非 SoT 身份。
 
 > rationale: 多轮提案下用主题装订收敛进度，用 ledger/trailer 绑定 commit↔NDF，
 > 使「只读文档可复现测量」成为可检查纪律。有条件并行与基线 stale 防止

@@ -5,10 +5,10 @@ Detects poc-track leakage into Trunk write surfaces:
   src/**  include/**  tests/**
 
 Usage:
-  python3 spec/meta/tools/ndf_poc_isolation.py check --topic l4-cache-mgmt
+  python3 spec/meta/tools/ndf_poc_isolation.py check --topic <topic>
   python3 spec/meta/tools/ndf_poc_isolation.py check --all-topics
   python3 spec/meta/tools/ndf_poc_isolation.py check --workspace
-  python3 spec/meta/tools/ndf_poc_isolation.py check --topic io-pipelining --workspace
+  python3 spec/meta/tools/ndf_poc_isolation.py check --topic <topic> --workspace
 
 Exit 1 if any hard finding. Reports go to stdout (or --report tmp/...).
 """

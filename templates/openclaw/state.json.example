@@ -1,0 +1,21 @@
+{
+  "current_proposal": "null",
+  "scenario_type": "null",
+  "track": "null",
+  "workspace": {
+    "repo_root": "/absolute/path/to/repo",
+    "repo_name": "⟨TBD: project-name⟩",
+    "repo_head": "git-sha",
+    "state_path": ".openclaw/state.json",
+    "bound_sha": "git-sha-at-bind",
+    "bound_at": "2026-01-01T00:00:00+00:00",
+    "active_topic": "null"
+  },
+  "validation_round": 0,
+  "max_validation_rounds": 3,
+  "pending_decision": "null",
+  "validation_status": "pending",
+  "perf_status": "pending",
+  "last_activity": "null",
+  "notes": "Per-project workspace binding; copy to .openclaw/state.json on pack bind"
+}

@@ -1,0 +1,126 @@
+# NDF Harness — project workflow profile (installed copy)
+# Schema: packages/ndf-harness/workflow/profile.schema.json (or spec/meta/templates/ after install)
+# Customize roots/adapters for this repo; no secrets.
+
+version: "1"
+harness_version: "1.0.0"
+project: "⟨TBD: project-name⟩"
+
+roots:
+  spec: spec/
+  meta: spec/meta/
+  poc: poc/
+  archive: spec/archive/
+  src: src/
+  include: include/
+  tests: tests/
+  tmp: tmp/
+
+roles:
+  command:
+    label: Command surface
+    description: Human-facing orchestration; pack construction; gate phrases; CLI triggers
+    entry: AGENTS.md
+    skill: .cursor/skills/ndf-workflow/
+  control:
+    label: Control agent
+    description: Proposals, binders, gate docs; no Trunk implementation
+    writable:
+      - spec/open/
+      - spec/meta/open/
+      - poc/*/ndf/
+      - .openclaw/state.json
+  implementation:
+    label: Implementation agent
+    description: Code and measurement per track write_roots
+    handshake_required:
+      - workspace.repo_root
+      - allowed_write_root
+      - base_sha
+
+adapters:
+  runtimes:
+    - generic
+  optional:
+    cursor: .cursor/skills/ndf-workflow/
+    openclaw: skills/ndf-harness/
+    claude-code: .claude/skills/ndf-harness/
+    opencode: .opencode/skills/ndf-harness/
+
+write_roots_by_track:
+  bootstrap:
+    allow:
+      - spec/open/
+      - spec/00-charter/
+      - spec/10-architecture/
+      - spec/50-verification/
+      - src/
+      - include/
+      - tests/
+    deny:
+      - spec/meta/
+  poc:
+    allow:
+      - poc/
+    deny:
+      - src/
+      - include/
+      - tests/
+      - spec/meta/
+  promote:
+    allow:
+      - src/
+      - include/
+      - tests/
+      - spec/20-behavior/
+      - spec/30-interfaces/
+      - spec/50-verification/
+    deny:
+      - poc/
+  process:
+    allow:
+      - spec/meta/
+      - AGENTS.md
+      - ndf.workflow.yaml
+    deny:
+      - src/
+  bug:
+    inherit: promote
+  refactor:
+    inherit: promote
+  rollback:
+    inherit: promote
+
+gate_policy:
+  phrases_append_to: poc/*/ndf/GATES.md
+  require_human_phrase: true
+  infer_from_file_existence: false
+  bundle_sha_binding: true
+  poc_text_first_default: true
+  legacy_three_gates_allowed: true
+
+context:
+  max_tokens_env: NDF_ACP_CONTEXT_MAX_TOKENS
+  manifest_sha_required: true
+  must_not_read_sla_numbers_for_poc: true
+
+completion:
+  receipt_schema: ndf-agent-completion/v1
+  receipt_glob: tmp/ndf-agent-completion*.json
+  transport_ack_is_success: false
+
+tools:
+  index: spec/meta/tools/ndf_index.py
+  graphcheck: spec/meta/tools/ndf_graphcheck.py
+  bindcheck: spec/meta/tools/ndf_bindcheck.py
+  advise: spec/meta/tools/ndf_advise.py
+  close: spec/meta/tools/ndf_close.py
+  poc_isolation: spec/meta/tools/ndf_poc_isolation.py
+  perf_baseline: spec/meta/tools/ndf_perf_baseline.py
+
+profiles:
+  active: dual-track
+  available:
+    - dual-track
+    - minimal
+    - linter-only

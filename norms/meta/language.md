@@ -1,7 +1,7 @@
 # Meta Language — NDF 条款原始规范（本仓 SoT）
 
 > scope: ndf-process  
-> 条款索引: `META-001`, `META-002`, `META-003`, `META-004`, `META-005`  
+> 条款索引: `META-001`, `META-002`, `META-003`, `META-004`, `META-005`, `META-008`  
 > **role:** NDF 语言 / 条款格式 SoT（产品无关）  
 > 上游参考（**非 SoT**）: [hengliao1972/normative_language](https://github.com/hengliao1972/normative_language)  
 > 图语义扩展: [[DEF-NDF-GRAPH]]；取号: [[DEF-META-ID-NS]] / [[ADR-META-002]]
@@ -107,6 +107,30 @@
 | git | 时间与证据；装订器 ledger / trailer 见 [[DEF-023]] / [[BEH-025]] |
 
 > rationale: 语言层只定义「怎么写 NDF」；双轨/晋升等流程见 [[CHR-008]] / [[BEH-018]]…。
+
+## NDF 工作空间视角 {#META-008}
+<!-- ndf: kind=def level=must layer=L0 status=stable since=0.9 source=deduced scope=ndf-process -->
+<!-- ndf: depends-on=META-002,META-003 -->
+
+设计、实现、测试是罩在 NDF 分层与三栖纪律上的**正交工作视角**，不是平行规范树。
+一个条款/文件 MAY 同时属于多个空间；MUST NOT 将 L0–L3 简化为与三空间一一对应。
+
+| 空间 | 回答 | 主要 NDF 载体 |
+|------|------|---------------|
+| Design | 做什么、模块/数据流、调用契约、假设 | L0/L1、draft proposal、DESIGN/INTERFACE、DELTA Feature |
+| Implementation | 代码落点、改写边界、实现切片 | L2/L3、`poc/` 或 Trunk 源码、COMMITS/git |
+| Test | 对照、测量、数字、证据与热点结论 | VER、cfg/bl、PERF_BASELINE、evidence、DELTA Hotspot |
+
+树承载空间内散文，图承载可组合约束，git 承载时间与证据。`DELTA` 是 Design↔Test
+的变化账本，不是第四空间。promote 是三空间向 Trunk 的 stable 契约、实现与验证树收敛。
+
+测试中，绑定 PERF Numbers（或显式 `vs:` 金标）是**比较/决策 SoT**；原始 evidence、
+脚本与 git SHA 是**审计/复现证据**；DELTA/NOTES 是解释性叙述。比较 SoT 与审计证据不一致时
+MUST 标记冲突并复测或由 DEC/提案裁决，MUST NOT 静默覆盖任一方。
+
+交互编排（读序、口令、图检索）调度三空间产出但不替代其真值；具体策略见 [[BEH-025]] 与
+`AGENTS.md`。NDF 图是规范依赖 IR，不单独决定 prompt 上下文；机械化工作台投影与
+Claude Code 委派边界见 [[META-011]]。
 
 ## NDF `model` 边与语义核纪律 {#META-004}
 <!-- ndf: kind=def level=must layer=L0 status=stable since=0.9 source=deduced scope=ndf-process -->

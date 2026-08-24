@@ -1,18 +1,29 @@
 # Adapter: Cursor
 
-Cursor is **one** consumer. Workflow SoT is still root `AGENTS.md` + `packages/ndf-harness/skill/`.
+Cursor is **one** consumer. Workflow SoT is installed repo `AGENTS.md` + `spec/meta/` +
+[`../../skill/ndf-workflow/SKILL.md`](../../skill/ndf-workflow/SKILL.md).
 
 ## Install
 
-Place a thin skill under `.cursor/skills/ndf-harness/` whose body **points to** the package skill core（do not fork process text）:
+**Option A — pointer skill**（recommended）:
 
 ```text
-.cursor/skills/ndf-harness/SKILL.md
-  → short frontmatter + "Follow packages/ndf-harness/skill/SKILL.md"
+.cursor/skills/ndf-workflow/SKILL.md
+  → frontmatter + "Follow packages/ndf-harness/skill/ndf-workflow/SKILL.md"
 ```
 
-In this maintaining repo, `.cursor/skills/ndf-harness` is that thin adapter.
+**Option B — copy tree** after vendoring the package:
+
+```bash
+mkdir -p .cursor/skills/ndf-workflow
+cp -a packages/ndf-harness/skill/ndf-workflow/* .cursor/skills/ndf-workflow/
+```
+
+Do **not** fork process prose into a second copy; refresh from package on sync.
 
 ## Modes
 
-Same four modes as skill core. Prefer `disable-model-invocation` for init/adopt if the host supports it, to avoid accidental scaffolding.
+Same workflow as skill core（初始化 / Idea / 派发 / 继续 / 关闭）. Internal init/adopt/govern/sync
+modules stay under `skill/ndf-workflow/` — not exposed to humans.
+
+See [`SKILL.md`](SKILL.md) wrapper in this folder.
