@@ -64,7 +64,7 @@ Internal modules (`genesis.md`, `poc.md`, …) are **not** a second public skill
 
 | Phrase | Modules | Human waits | Delegate |
 |--------|---------|-------------|----------|
-| 初始化项目 | genesis → delegate | Genesis gate phrases | OpenClaw → Claude |
+| 初始化项目 | genesis → delegate | 角色已配置 / 派发 / GENESIS已审核 | Control + 同句测量；greenfield 另可 genesis-pack |
 | 提交Idea | intake → proposal → delegate | 已确认 · 已审核 | OpenClaw |
 | 派发 | poc + delegate | 派发 | Claude or OpenClaw |
 | 继续 | poc + delegate | 派发 again | OpenClaw → Claude |

@@ -50,9 +50,18 @@ PACK_PROVIDER_ROLE = {
 }
 CONTROL_WRITABLE = [
     "spec/open/",
+    "spec/00-charter/",
+    "spec/10-architecture/",
+    "spec/20-behavior/",
+    "spec/30-interfaces/",
+    "spec/40-constraints/",
+    "spec/50-verification/",
+    "spec/decisions/",
+    "spec/INDEX.md",
     "spec/meta/open/",
     "poc/*/ndf/",
     ".openclaw/state.json",
+    "ndf.workspace.json",
 ]
 GENESIS_GATES = Path("spec/open/project-genesis/GATES.md")
 ROLES_GATE_PHRASE = "角色已配置"

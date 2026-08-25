@@ -1,5 +1,22 @@
 # Changelog
 
+## 1.0.2 — 2026-08-25
+
+Distill Genesis init-freeze workflow from consumer validation:
+
+- **META-009 / META-010**: bootstrap is `绑内核 → 一句「派发」(契约+基线) → GENESIS已审核`.
+  Skeleton (non-SLA) and measured baselines/SLA become `stable` on freeze; adopt skips
+  `genesis-pack`. Legacy CHARTER/ARCHITECTURE/VERIFICATION serial hops fail-closed
+  (`genesis_per_draft_dispatch`). Unfrozen bootstrap MAY wipe and restart.
+- **Tools**: `ndf_workflow_status` / `ndf_context` / `ndf_dispatch_send` — `hop=genesis_design`,
+  design write roots under `spec/00–50`, disk-first closeout, session-reset hop hygiene.
+- **Self-checks**: `test_ndf_genesis_kernel_bind.py`, `test_ndf_genesis_status_gates.py`,
+  `test_ndf_worker_pack_intent.py`, `test_ndf_dispatch_disk_first.py`.
+- **Skill / AGENTS / docs**: genesis.md, SKILL.md, close.md, delegate.md, roles/control.md,
+  workflow AGENTS §6.2e, docs/WORKFLOW.md Genesis gates.
+- **Profile**: Control `writable` + bootstrap `write_roots` include product tree for design hop.
+- **Template**: shorter `FOUNDATION.md.stub` (kernel bind record).
+
 ## 1.0.1 — 2026-08-24
 
 Role-adapter fallback: three roles (Command / Control / Implementation) configured at

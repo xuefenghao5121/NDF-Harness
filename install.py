@@ -358,6 +358,8 @@ def _iter_norm_files(mode: str | bool, cfg: dict[str, Any]) -> Iterable[tuple[Pa
         elif rel.name == "CLAUSE-FORMAT.md":
             yield src, Path("spec/meta/CLAUSE-FORMAT.md")
         elif rel.parts[0] == "meta":
+            if len(rel.parts) > 1 and rel.parts[1] == "open":
+                continue
             yield src, Path("spec") / rel
         # skip ndf.yaml.stub handled above; skip duplicate README at norms root if needed
 

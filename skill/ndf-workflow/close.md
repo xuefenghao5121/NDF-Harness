@@ -1,5 +1,8 @@
 # Close — 关闭主题
 
+**初始化骨架/基线升 stable** 不走本页：见 [genesis.md](genesis.md)（`GENESIS已审核`）。
+本页只服务日常 POC / 优化主题收口。
+
 人说「关闭」或选定收口模式后执行。先 **plan（只读）**，再提案/委派 apply。
 
 ```bash

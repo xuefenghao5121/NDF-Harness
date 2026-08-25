@@ -783,7 +783,20 @@ def _privileges(
                 "decision_selected",
             ]
         elif task in {"control_proposal", "product_proposal"}:
-            value["allowed_write_roots"] = ["spec/open/"]
+            if track == "bootstrap":
+                value["allowed_write_roots"] = [
+                    "spec/open/project-genesis/",
+                    "spec/00-charter/",
+                    "spec/10-architecture/",
+                    "spec/20-behavior/",
+                    "spec/30-interfaces/",
+                    "spec/40-constraints/",
+                    "spec/50-verification/",
+                    "spec/decisions/",
+                    "spec/INDEX.md",
+                ]
+            else:
+                value["allowed_write_roots"] = ["spec/open/"]
             value["forbidden_write_paths"] = _unique(
                 [
                     *value.get("forbidden_write_paths", []),

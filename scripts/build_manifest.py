@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import hashlib
 import json
+import subprocess
 import sys
 from datetime import datetime, timezone
 from pathlib import Path
@@ -11,8 +12,20 @@ from pathlib import Path
 PKG_ROOT = Path(__file__).resolve().parents[1]
 VERSION_FILE = PKG_ROOT / "VERSION"
 MANIFEST_PATH = PKG_ROOT / "MANIFEST.json"
-SOURCE_COMMIT = "783163a3f6eac26a871c71c1cf7492e11a987e58"
 SKIP_DIRS = {"__pycache__", ".git"}
+
+
+def source_commit() -> str:
+    try:
+        out = subprocess.check_output(
+            ["git", "rev-parse", "HEAD"],
+            cwd=PKG_ROOT,
+            text=True,
+            stderr=subprocess.DEVNULL,
+        ).strip()
+        return out or "unknown"
+    except (OSError, subprocess.CalledProcessError):
+        return "unknown"
 
 
 def sha256_file(path: Path) -> str:
@@ -52,7 +65,7 @@ def build_manifest() -> dict:
     return {
         "schema": "ndf-harness-manifest/v1",
         "version": version,
-        "source_commit": SOURCE_COMMIT,
+        "source_commit": source_commit(),
         "generated_at": datetime.now(timezone.utc).replace(microsecond=0).isoformat(),
         "files": entries,
     }

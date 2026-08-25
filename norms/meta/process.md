@@ -149,7 +149,7 @@ vs × config_id × measure_script
 
 ## Project Genesis 初始化轨 {#META-009}
 <!-- ndf: kind=req level=must layer=L1 status=stable since=0.9.13 source=deduced scope=ndf-process -->
-<!-- ndf: depends-on=META-003,META-008 -->
+<!-- ndf: depends-on=META-003,META-008,META-010 -->
 
 NDF 工作流 MUST 在日常 Proposal/POC 前支持一次性 `track=bootstrap`：
 
@@ -167,31 +167,47 @@ NDF 工作流 MUST 在日常 Proposal/POC 前支持一次性 `track=bootstrap`�
   MAY 标 `operational_legacy` 并提示可选 adopt；MUST NOT 因新流程阻断既有日常 POC。
 - 日常指挥面是**任意宿主**上运行 ndf-workflow 五句口令（Cursor / OpenClaw / Claude /
   OpenCode / Codex / generic 等 Command Agent）——**不是** Cursor-only；无可视化面板义务。
-- G0 `IDEA已审核` 之前（或与 IDEA 并行但 MUST 先完成）：角色向导 MUST 将 Command /
-  Control / Implementation 三角色绑定写入项目 `ndf.workflow.yaml`；人类口令 **角色已配置**
+- 角色向导 MUST 将 Command / Control / Implementation 三角色绑定写入项目
+  `ndf.workflow.yaml`，且 MUST 在绑内核与「派发」之前完成；人类口令 **角色已配置**
   MUST 追加到 Genesis `GATES.md`，并绑定 roles 段内容 SHA。
 - `roles_unbound` MUST 阻塞 Foundation（G1）与所有 dispatch（`safe_to_dispatch=false`）。
   operational 项目首次派发若未绑定亦 MUST 先跑角色向导。
 
-初始化门禁 MUST 串行：
+初始化 MUST 收成两步人话（[[ADR-META-003]]；不比 POC 更重）：
 
 ```text
-角色已配置 → IDEA已审核 → CHARTER已审核 → ARCHITECTURE已审核
-→ VERIFICATION已审核 → 可以建立初始主线 → GENESIS已审核
+角色已配置 →（Command 绑内核）→ 派发（写契约 + 复现基线）→ GENESIS已审核
 ```
 
-1. 用户原始 IDEA MUST 原样保存来源；确认后的目标/scope/non-goals 进入产品 Charter，
-   取舍、已知 draft 与 Genesis 绑定进入产品 Genesis 决策。
-2. 无证据的性能数字 MUST 为 draft/TBD/`not-established`，MUST NOT 冒充性能金标。
-3. 收到「可以建立初始主线」后才可通过 **Implementation 角色**（默认 Claude Code ACP；
-   MAY 为 `in_host` / `dual_session` / `custom`）隔离环境建立最小可构建垂直切片。
-4. Implementation 角色 MAY 写初始代码、测试、构建配置与 L2/L3；MUST NOT 修改 L0/L1、
-   Charter、Architecture、Decisions 或 `spec/meta/`。
-5. NDF 图、构建、最低功能验收与三空间追踪均闭合后，Project Genesis 决策 MUST 绑定
-   IDEA 来源、NDF tree SHA、Trunk SHA、verification ref 与 known drafts；
-   收到 `GENESIS已审核` 后项目才进入 `operational`。
+`greenfield` 在「派发」与 `GENESIS已审核` 之间 MAY 插入 `可以建立初始主线` +
+一次 Implementation `genesis-pack`。`adopt` MUST 跳过该代码切片 hop。
 
-项目目标金标（Charter + Genesis 决策 + git SHA）与性能 Golden Baseline 是不同对象。
+1. **内核绑定（Command，不派 OpenClaw）**：MUST 写短
+   `spec/open/project-genesis/FOUNDATION.md`（`bootstrap_mode`、`observed_trunk_sha`、
+   roles SHA）与 `GATES.md` 骨架。MUST NOT 在此步写产品契约长文。
+2. **一次「派发」**：`hop=genesis_design`（对人类仍一句口令）。MUST：
+   (a) Control 对照 Trunk 写满 `spec/00–50`（落盘时可为 draft）及必要
+   `spec/decisions/` / `spec/INDEX.md`；MUST NOT 写 `spec/meta/` stable 正文；
+   (b) 按刚写入的 VER 协议复现测试与金标/ sustained（Implementation 可同包串行），
+   写入 `spec/50-verification/configs/` 与 `baselines/`，数字绑定 `observed_trunk_sha`。
+   成功以磁盘 `ndf-agent-completion/v1` 为准。测不出 MUST 在 completion 标明
+   `baseline_status=deferred` 与原因；欠账用一句「继续」补测，MUST NOT 展开日常
+   promote 长教程。
+3. **`GENESIS已审核`（Command 落地，不另派 OpenClaw）**：非性能骨架条款
+   （CHR/ARCH/BEH/API/非 SLA 约束/VER 协议正文）MUST → `status=stable`，作为后续
+   优化与二次开发的对照目标；已复现且绑定 Trunk SHA 的 baseline 与对应 `CON-SLA-*`
+   MUST → `status=stable`；未复现成功的性能数字 MUST 留 `not-established`。
+   项目进入 `operational`。MUST NOT 要求 GENESIS 后再走一轮日常 promote 才 stable 骨架。
+4. `greenfield`：收到「可以建立初始主线」后 **Implementation 角色** MAY 隔离环境建立
+   最小可构建垂直切片；MUST NOT 改 L0/L1 或 `spec/meta/`。`adopt` MUST NOT 为此再派。
+5. Genesis 决策 MUST 绑定 NDF tree SHA、Trunk SHA、verification/baseline ref。
+6. **Legacy（已废弃）**：CHARTER/ARCHITECTURE/VERIFICATION 连派。新 bootstrap MUST NOT
+   走此路径；`genesis_per_draft_dispatch` fail-closed。
+7. `genesis-status` 下一句：缺 FOUNDATION → 绑内核；骨架未写满 → 「派发」；
+   设计+基线 completion 后 → `GENESIS已审核`（或 greenfield 的 `可以建立初始主线`）。
+8. closeout 失败且无合法磁盘 completion → 同一 hop「继续」；MUST NOT 送下一 hop。
+
+日常优化/二次开发对照 Genesis 冻结的骨架与基线；不把「升 init 骨架 stable」做成多轮口令。
 
 ## 人工门禁回执 {#META-010}
 <!-- ndf: kind=req level=must layer=L1 status=stable since=0.9.13 source=deduced scope=ndf-process -->
@@ -218,6 +234,9 @@ approved_content_sha / source_ref / status
    该路径为 legacy/可选；产品提案「已确认」/「已审核」仍为契约落地门。
 5. 口令仍由人触发；Command Agent / 工具 MUST NOT 静默批准或伪造 `approved_by`。
 6. 本条不要求回填历史 POC；历史主题显示 `legacy/unknown`。
+7. 未收到 `GENESIS已审核` 的 bootstrap MAY 整树作废（删 `spec/open/project-genesis/`、
+   重置 GATES、清 workspace `active_topic`），不必 append-only 续写旧 Foundation 审稿回执。
+   作废后 MUST 按 [[META-009]] 新形状重跑内核绑定与设计 hop。
 
 ### POC 门禁 review slice
 
@@ -318,9 +337,15 @@ pack；POC「派发」仍 MUST 把 `bundle_dispatch` 回执写入 `GATES.md`（[
 ### 成功分层（不得互相冒充）
 
 1. **transport acknowledgement**：CLI / agent exit 0 只表示消息已送达。
-2. **validated completion**：日常 POC 以 pack 钉死的 `completion_receipt_path` 上磁盘
-   `ndf-agent-completion/v1` 为准——`result=success` 且 topic/task/run 身份匹配。
-3. stdout `ndf-dispatch-notify/v1` 仅运输辅助；stdout 中的 completion MUST NOT 冒充磁盘回执。
+2. **validated completion**：以 pack 钉死的 `completion_receipt_path` 上磁盘
+   `ndf-agent-completion/v1` 为准——`result=success` 且 topic/task/hop/run 身份匹配。
+   `dispatch-send` 在 transport_ok 后 MUST 读取该路径。合法磁盘回执即为 hop 成功。
+3. stdout `ndf-dispatch-notify/v1` 仅运输辅助，MAY 用来定位 receipt。stdout 中的
+   completion MUST NOT 冒充磁盘回执。notify 缺失 MUST NOT 单独把已有合法磁盘回执
+   判失败。磁盘回执缺失或身份不匹配 MUST fail-closed（`missing_disk_receipt` /
+   identity mismatch）。
+4. bootstrap hop 的 `completion_receipt_path` MUST 含 `hop`（及 attempt），MUST NOT
+   让不同 Foundation hop 覆盖同一 `*-attempt.json`。
 
 历史 Episode / Replay 缺字段 MUST NOT 单独把实质完成判失败（[[ADR-META-004]]）。
 
@@ -386,7 +411,22 @@ fallback。`roles_unbound` 仍 MUST fail-closed。
 可匹配 sessions store，或本身为合法 UUID）。`session_key`（可含 `:` 的通道路由串）与
 `openclaw agent --session-id`（UUID）MUST 区分。Control `safe_to_dispatch` MUST 要求
 gateway 可达且 session 可派发。`dispatch-send` 对 routing key 走 gateway `sessionKey`；
-仅已解析 UUID 才用 `--session-id`。
+仅已解析 UUID 才用 `--session-id`。OpenClaw `dispatch-send` MUST 在发出本 hop agent
+消息之前对路由 `session_key` 调用 gateway `sessions.reset`（默认开启；
+`NDF_OPENCLAW_RESET_SESSION=0` 关闭），使每 hop 为短对话；`session_key` 路由身份
+MUST 保持不变。reset 失败 MUST `openclaw_session_reset_failed` fail-closed，MUST NOT
+把消息送进旧长对话。`NDF_OPENCLAW_DISPATCH_CMD` 覆盖路径不自动 reset。这与 ACP 默认
+`--fork-session` 对等，不是 completion。
+
+Worker 消息 MUST 携带 pack `request.intent`（若有）。slim JSON MUST 含 `request`。
+intent 声明 `track: bootstrap` 的 hop MUST 标 `track=bootstrap` 且 `hop=genesis_*`，
+MUST NOT 标成新产品 Idea（`track=poc` + `next_human_phrase=已确认`）。缺意图或
+Genesis 被标成 POC 时 `dispatch-send` MUST fail-closed（`worker_intent_stripped` /
+`genesis_pack_labeled_poc` / `genesis_hop_unlabeled`），MUST NOT 把消息送出。
+intent 头部 `hop: genesis_*` MUST 优先于正文子串。无头部时 MUST 按串行顺序、
+以 `CHARTER.md` / `ARCHITECTURE.md` / `VERIFICATION.md` 写目标推断，MUST NOT 因
+「MUST NOT write Architecture」等禁写句跳到 Architecture hop。bootstrap
+`context_plan.topic` MUST 等于 pack `topic`（notify 身份，非 POC `topic_dir`）。
 
 Control 与 Implementation 等待 MUST 用心跳续等（`NDF_OPENCLAW_*` / `NDF_ACP_PING_SEC` /
 `STALL_SEC` / `MAX_SEC`）：有会话或磁盘回执进展则刷新 stall；连续无进展达 stall 阈值才

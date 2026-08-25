@@ -79,7 +79,7 @@ Idea → 提案「已确认」/「已审核」
 | 闸门 | 触发 | 编排 |
 |------|------|------|
 | POC（文字优先） | 产品提案审核 → 整包装订器 → 「派发」 | 契约→实现/测量 |
-| Genesis | 分段门禁 → `可以建立初始主线` → `GENESIS已审核` | IDEA→NDF→初始 Trunk |
+| Genesis | 绑内核 → 一句「派发」→ `GENESIS已审核` | 契约+基线；greenfield 可加 `genesis-pack` |
 | 产品/process 提案 | `已确认` → `已审核` | 契约/流程落地 |
 | promote | R0 Numbers + `ndf_close plan` | 测试空间收敛 |
 
@@ -94,7 +94,7 @@ Idea → 提案「已确认」/「已审核」
 | 层 | 谁 | 入口 | 写界 |
 |----|----|------|------|
 | **Command** | 指挥面（Cursor 等 + ndf-workflow skill） | 五句口令；造 pack；等人审；调 CLI | `tmp/`、触发回执；禁写 worker 实现 |
-| **Control** | 指挥 Agent（OpenClaw 等） | `control-pack` → dispatch | `spec/open/`、`spec/meta/open/`、`poc/<topic>/ndf/`、`.openclaw/state.json` |
+| **Control** | 指挥 Agent（OpenClaw 等） | `control-pack` → dispatch | 提案/装订器；bootstrap `hop=genesis_design` 可写 `spec/00–50` |
 | **Implementation** | 实现 Agent（Claude Code 等） | `poc-dispatch --send`；`genesis-pack`；promote close plan | POC 仅 `poc/<topic>/`；promote 可写 Trunk |
 
 成功 = 磁盘 completion receipt；**不以 transport ACK / stdout 冒充**。
@@ -149,7 +149,7 @@ Command MUST NOT 直接调用外部 chat 发送 API 绕过 pack 纪律。
 
 | track | 已审核之后 |
 |-------|------------|
-| **bootstrap** | Genesis 分段门禁 → `genesis-pack` → 构建验收 → `GENESIS已审核` |
+| **bootstrap** | 绑内核 → 一句「派发」（契约+基线）→ [`genesis-pack` if greenfield] → `GENESIS已审核`（骨架+已测基线 stable） |
 | **poc** | 文字优先装订器 → Human「派发」→ `poc-dispatch`；多轮继续/关闭；**不**跑 Trunk SLA |
 | **promote** | `ndf_close plan` → 干净合入 Trunk → 编译 → 性能/金标 |
 | **process** | 仅 meta + thin + AGENTS；跳过实现委派 |
@@ -229,8 +229,12 @@ Command MUST NOT 直接调用外部 chat 发送 API 绕过 pack 纪律。
 ### 6.2e bootstrap
 
 - `bootstrap_mode=greenfield|adopt`
-- 串行门禁：IDEA → CHARTER → ARCHITECTURE → VERIFICATION → 可以建立初始主线 → GENESIS已审核
-- Implementation 在隔离 worktree 建最小可构建垂直切片；不改 L0/L1
+- **G0** Command 绑内核（不派 OpenClaw）
+- **G1** 一句「派发」：写满 `spec/00–50` + 复现验证/金标基线
+- **G2**（仅 greenfield）「可以建立初始主线」→ `genesis-pack`；adopt 跳过
+- **G3** 「GENESIS已审核」→ 骨架 stable（对照目标）+ 已复现基线/SLA stable → operational
+- 欠基线一句「继续」；MUST NOT 事后再开又臭又长的 promote 教程才升骨架
+- legacy 连派 fail-closed：`genesis_per_draft_dispatch`
 
 ### 6.2d 负结果
 

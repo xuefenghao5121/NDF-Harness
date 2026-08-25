@@ -31,7 +31,7 @@ mixed：两案互相 `depends-on` / 引用；勿混写根。
    - **poc** → 写齐装订器 → 等人「派发」（[poc.md](poc.md)）
    - **process** → 结束（validation/perf = n/a）
    - **promote/bug/…** → [close.md](close.md) / Trunk 路径
-   - **bootstrap** → [genesis.md](genesis.md) 分段门禁
+   - **bootstrap** → [genesis.md](genesis.md) 绑内核 → 一句「派发」→ `GENESIS已审核`
 
 ## 禁止
 

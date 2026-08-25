@@ -36,6 +36,22 @@ class TestInstaller(unittest.TestCase):
             self.assertTrue((repo / "spec/meta/tools/ndf_index.py").is_file())
             self.assertTrue((repo / "spec/meta/tools/ndf_graphcheck.py").is_file())
 
+    def test_dual_track_skips_process_open_proposals(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            repo = Path(tmp)
+            proc = run_install(
+                "install",
+                "--profile",
+                "dual-track",
+                "--runtime",
+                "generic",
+                repo=repo,
+            )
+            self.assertEqual(proc.returncode, 0, proc.stderr or proc.stdout)
+            open_dir = repo / "spec/meta/open"
+            leaked = list(open_dir.glob("proposal-*.md")) if open_dir.is_dir() else []
+            self.assertEqual(leaked, [])
+
     def test_second_install_without_force_skips_agents(self) -> None:
         with tempfile.TemporaryDirectory() as tmp:
             repo = Path(tmp)

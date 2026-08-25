@@ -4,7 +4,9 @@
 
 ## Writable roots
 
-- `spec/open/`（产品提案）
+- `spec/open/`（产品提案、Genesis FOUNDATION/GATES）
+- `spec/00-charter/` … `spec/50-verification/`（**仅** bootstrap `hop=genesis_design`）
+- `spec/decisions/`、`spec/INDEX.md`（**仅** bootstrap `hop=genesis_design`）
 - `spec/meta/open/`（流程提案；land 除外 stable 正文须人审）
 - `poc/<topic>/ndf/`（装订器、GATES 文档面）
 - `.openclaw/state.json` / `ndf.workspace.json`（workspace 绑定）

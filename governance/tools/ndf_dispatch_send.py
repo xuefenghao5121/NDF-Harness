@@ -3,14 +3,14 @@
 
 Command Agent builds pack JSON, waits for human 「派发」, then runs this module:
   1. sends when safe_to_dispatch (or lease-only prepare)
-  2. waits for worker stdout notify (ndf-dispatch-notify/v1)
-  3. reads pack.completion_receipt_path from disk
+  2. reads pack.completion_receipt_path from disk (ndf-agent-completion/v1)
+  3. stdout ndf-dispatch-notify/v1 is optional transport aid to locate the receipt
   4. records disk completion → optional best-effort action-commit/finish →
      write last.json → snapshot
 
-stdout completion JSON and transport acknowledgement MUST NOT count as
-validated success. Episode/Replay/action closeout MUST NOT gate success
-(ADR-META-004). Must not rely on Cursor afterShellExecution to auto-send.
+stdout completion JSON, missing notify, and transport acknowledgement MUST NOT
+count as validated success by themselves. Episode/Replay/action closeout MUST NOT
+gate success (ADR-META-004). Must not rely on Cursor afterShellExecution to auto-send.
 """
 
 from __future__ import annotations
@@ -344,6 +344,12 @@ def _slim_pack_for_acp_worker(pack: Mapping[str, Any]) -> dict[str, Any]:
         "generated_at",
         "contract_preflight_passed",
         "static_preflight_passed",
+        "hop",
+        "next_human_phrase",
+        "idea_plane",
+        "canonical_task",
+        "allowed_write_roots",
+        "request",
     ):
         if key in pack:
             slim[key] = pack[key]
@@ -461,6 +467,105 @@ def _acp_fork_session_enabled() -> bool:
     return raw not in {"0", "false", "no", "off"}
 
 
+def _openclaw_reset_session_enabled() -> bool:
+    raw = str(os.environ.get("NDF_OPENCLAW_RESET_SESSION") or "1").strip().lower()
+    return raw not in {"0", "false", "no", "off"}
+
+
+def _openclaw_sessions_reset_argv(executable: str, session_key: str) -> list[str]:
+    return [
+        executable,
+        "gateway",
+        "call",
+        "sessions.reset",
+        "--json",
+        "--params",
+        json.dumps({"key": session_key, "reason": "reset"}, ensure_ascii=False),
+    ]
+
+
+def _openclaw_reset_failed(
+    *,
+    detail: str | None = None,
+    exit_code: int | None = None,
+    response_text: str | None = None,
+) -> dict[str, Any]:
+    payload: dict[str, Any] = {
+        "ok": False,
+        "transport_ok": False,
+        "state": "failed",
+        "error": "openclaw_session_reset_failed",
+        "response_text": response_text,
+    }
+    if detail:
+        payload["detail"] = detail
+    if exit_code is not None:
+        payload["exit_code"] = exit_code
+    return payload
+
+
+def _gateway_call_payload_ok(text: str) -> bool:
+    """Fail closed unless stdout JSON looks like a successful gateway result."""
+    blob = (text or "").strip()
+    if not blob:
+        return False
+    try:
+        data = json.loads(blob)
+    except json.JSONDecodeError:
+        start = blob.find("{")
+        end = blob.rfind("}")
+        if start < 0 or end <= start:
+            return False
+        try:
+            data = json.loads(blob[start : end + 1])
+        except json.JSONDecodeError:
+            return False
+    if not isinstance(data, dict):
+        return False
+    if data.get("ok") is False:
+        return False
+    err = data.get("error")
+    if err:
+        return False
+    return True
+
+
+def _reset_openclaw_session(*, executable: str, session_key: str) -> dict[str, Any] | None:
+    """Reset the routing session. None means proceed; a dict is a fail-closed send result."""
+    key = str(session_key or "").strip()
+    if not key:
+        return _openclaw_reset_failed(detail="session_key_missing")
+    cmd = _openclaw_sessions_reset_argv(executable, key)
+    try:
+        proc = subprocess.run(
+            cmd,
+            cwd=ROOT,
+            text=True,
+            stdout=subprocess.PIPE,
+            stderr=subprocess.STDOUT,
+            check=False,
+            timeout=30.0,
+        )
+    except subprocess.TimeoutExpired as exc:
+        return _openclaw_reset_failed(detail=f"reset_timeout:{exc}")
+    except OSError as exc:
+        return _openclaw_reset_failed(detail=f"reset_spawn_failed:{exc}")
+    text = proc.stdout or ""
+    if proc.returncode != 0:
+        return _openclaw_reset_failed(
+            detail="reset_nonzero_exit",
+            exit_code=proc.returncode,
+            response_text=text[-4000:],
+        )
+    if not _gateway_call_payload_ok(text):
+        return _openclaw_reset_failed(
+            detail="reset_unusable_result",
+            exit_code=proc.returncode,
+            response_text=text[-4000:],
+        )
+    return None
+
+
 def _build_worker_message(pack: Mapping[str, Any]) -> str:
     provider = str(pack.get("provider") or "")
     topic = pack.get("topic") or ""
@@ -476,7 +581,8 @@ def _build_worker_message(pack: Mapping[str, Any]) -> str:
     manifest = pack.get("manifest_sha") or ""
     plan = pack.get("plan_sha") or (pack.get("context_plan") or {}).get("plan_sha") or ""
     lines = [
-        f"【NDF dispatch-send】provider={provider} task={task} topic={topic}",
+        f"【NDF dispatch-send】provider={provider} task={task} topic={topic} "
+        f"track={pack.get('track') or ''} hop={pack.get('hop') or ''}",
         f"episode_id={episode}",
         f"attempt_id={attempt}",
         f"catalog_action_id={catalog}",
@@ -485,7 +591,8 @@ def _build_worker_message(pack: Mapping[str, Any]) -> str:
         f"context_plan_sha={plan}",
         f"allowed_write_root={pack.get('allowed_write_root') or pack.get('allowed_write_roots')}",
         f"completion_receipt_path={pack.get('completion_receipt_path') or ''}",
-        "Follow the pack JSON binding.",
+        f"next_human_phrase={pack.get('next_human_phrase') or ''}",
+        "Follow request.intent and the pack JSON binding.",
         "Write the full ndf-agent-completion/v1 to pack.completion_receipt_path "
         "(changed_files, changed_file_shas, evidence_paths, evidence_bundle_sha, "
         "reproduce_commands — not 'reproduce', git_commit, post_check_receipts).",
@@ -497,6 +604,17 @@ def _build_worker_message(pack: Mapping[str, Any]) -> str:
         "Bash permission prompt. MUST NOT treat execution_binding_stale as a blocker. "
         "Host sudo is passwordless.",
     ]
+    hop = str(pack.get("hop") or "")
+    if hop.startswith("genesis"):
+        lines.append(
+            "Genesis Foundation hop: execute request.intent only. "
+            "MUST NOT draft a new spec/open/proposal-*.md. "
+            "MUST NOT invent product IDs from the repository name."
+        )
+    request = pack.get("request") if isinstance(pack.get("request"), Mapping) else {}
+    intent = str(request.get("intent") or "").strip()
+    if intent:
+        lines.extend(["BEGIN HUMAN_INTENT", intent, "END HUMAN_INTENT"])
     if provider == "claude-code-acp":
         lines.extend([
             "ACP steps (strict order):",
@@ -522,6 +640,38 @@ def _build_worker_message(pack: Mapping[str, Any]) -> str:
         "END NDF_PACK_JSON",
     ])
     return "\n".join(lines)
+
+
+def _pack_worker_contract_errors(pack: Mapping[str, Any], message: str) -> list[str]:
+    """Fail closed if the worker prompt would drop Genesis intent."""
+    errors: list[str] = []
+    request = pack.get("request") if isinstance(pack.get("request"), Mapping) else {}
+    intent = str(request.get("intent") or "").strip()
+    if not intent:
+        return errors
+    marker = intent[:80]
+    if marker not in message:
+        errors.append("worker_intent_stripped")
+    slim = _slim_pack_for_acp_worker(pack)
+    slim_req = slim.get("request") if isinstance(slim.get("request"), Mapping) else {}
+    if str(slim_req.get("intent") or "").strip() != intent:
+        errors.append("worker_intent_stripped")
+    match = re.search(r"(?im)^track:\s*([a-z0-9_-]+)\s*$", intent)
+    header_track = match.group(1).lower() if match else ""
+    pack_track = str(pack.get("track") or "").lower()
+    if header_track == "bootstrap" and pack_track == "poc":
+        errors.append("genesis_pack_labeled_poc")
+    hop = str(pack.get("hop") or "")
+    if header_track == "bootstrap" and hop in {
+        "genesis_charter",
+        "genesis_architecture",
+        "genesis_verification",
+        "genesis_foundation",
+    }:
+        errors.append("genesis_per_draft_dispatch")
+    if header_track == "bootstrap" and not hop.startswith("genesis"):
+        errors.append("genesis_hop_unlabeled")
+    return errors
 
 
 def _extract_schema_objects(text: str | None, schema: str) -> list[dict[str, Any]]:
@@ -704,6 +854,8 @@ def completion_receipt_path_for_pack(pack: Mapping[str, Any]) -> str:
         return declared
     topic = str(pack.get("topic") or "").strip()
     task = str(pack.get("task") or "task").strip().replace(" ", "_") or "task"
+    hop = str(pack.get("hop") or "").strip().replace(" ", "_")
+    hop_part = f"-{hop}" if hop and hop not in {"draft"} else ""
     attempt = str(
         pack.get("attempt_id")
         or pack.get("action_id")
@@ -712,19 +864,21 @@ def completion_receipt_path_for_pack(pack: Mapping[str, Any]) -> str:
     ).strip() or "attempt"
     workspace = pack.get("workspace") if isinstance(pack.get("workspace"), Mapping) else {}
     topic_ndf = _normalize_relpath(str(workspace.get("topic_ndf_dir") or ""))
-    if not topic_ndf and topic:
+    if not topic_ndf and topic and str(pack.get("track") or "") != "bootstrap":
         topic_ndf = f"poc/{topic}/ndf"
     write_root = _first_write_root(pack)
     if topic_ndf:
-        candidate = _normalize_relpath(f"{topic_ndf.rstrip('/')}/evidence/{task}-completion.json")
+        candidate = _normalize_relpath(
+            f"{topic_ndf.rstrip('/')}/evidence/{task}{hop_part}-completion.json"
+        )
         if not write_root or _under_write_root(candidate, write_root):
             return candidate
-    tmp_candidate = _normalize_relpath(f"tmp/ndf-completion/{attempt}.json")
+    tmp_candidate = _normalize_relpath(f"tmp/ndf-completion/{attempt}{hop_part}.json")
     if write_root and _under_write_root(tmp_candidate, write_root):
         return tmp_candidate
     if write_root:
         return _normalize_relpath(
-            f"{write_root.rstrip('/')}/.ndf-completion/{task}-{attempt}.json"
+            f"{write_root.rstrip('/')}/.ndf-completion/{task}{hop_part}-{attempt}.json"
         )
     return tmp_candidate
 
@@ -802,6 +956,10 @@ def _completion_identity_errors(
     data_base = str(data.get("base_sha") or "").strip()
     if pack_base and data_base and pack_base != data_base:
         errors.append("completion_base_sha_mismatch")
+    pack_hop = str(pack.get("hop") or "").strip()
+    data_hop = str(data.get("hop") or "").strip()
+    if pack_hop and data_hop and pack_hop != data_hop:
+        errors.append("completion_hop_mismatch")
     return errors
 
 
@@ -856,13 +1014,21 @@ def _notify_identity_errors(pack: Mapping[str, Any], notify: Mapping[str, Any]) 
     return errors
 
 
+def load_pack_pinned_completion(
+    pack: Mapping[str, Any],
+) -> tuple[dict[str, Any] | None, list[str]]:
+    """Read ndf-agent-completion/v1 from pack.completion_receipt_path."""
+    expected = completion_receipt_path_for_pack(pack)
+    return load_disk_agent_completion(pack, {"receipt_path": expected})
+
+
 def _task_outcome_from_transport(
     send_result: Mapping[str, Any],
     *,
     pack: Mapping[str, Any],
     lease_only: bool,
 ) -> tuple[str, list[str], str, dict[str, Any] | None]:
-    """Map transport notify + disk receipt → task result.
+    """Map disk receipt (required) + optional notify → task result.
 
     stdout ndf-agent-completion/v1 is ignored. Returns
     (result, blockers, summary, completion_or_None).
@@ -880,33 +1046,32 @@ def _task_outcome_from_transport(
     notify, parse_errors = extract_dispatch_notify(
         text if isinstance(text, str) else None
     )
-    if notify is None:
-        blockers = parse_errors or ["missing_dispatch_notify"]
-        return (
-            "failed",
-            blockers,
-            "transport_acknowledged but no ndf-dispatch-notify/v1",
-            None,
-        )
-    identity_errors = _notify_identity_errors(pack, notify)
-    path_ok = not any(
-        item.startswith("missing_notify:") or item == "illegal_receipt_path"
-        for item in parse_errors
+    notify_missing = notify is None
+    identity_errors: list[str] = []
+    receipt_hint = completion_receipt_path_for_pack(pack)
+    if notify is not None:
+        identity_errors = _notify_identity_errors(pack, notify)
+        notify_path = str(notify.get("receipt_path") or "").strip()
+        if notify_path:
+            receipt_hint = notify_path
+    completion, disk_errors = load_disk_agent_completion(
+        pack, {"receipt_path": receipt_hint}
     )
-    completion = None
-    disk_errors: list[str] = []
-    if path_ok and "missing_notify:receipt_path" not in parse_errors:
-        completion, disk_errors = load_disk_agent_completion(pack, notify)
-    all_errors = list(parse_errors)
-    for item in identity_errors + disk_errors:
+    all_errors: list[str] = []
+    if not notify_missing:
+        all_errors.extend(parse_errors)
+        all_errors.extend(identity_errors)
+    for item in disk_errors:
         if item not in all_errors:
             all_errors.append(item)
     if completion is None:
-        blockers = all_errors or ["missing_disk_receipt"]
+        blockers = [item for item in all_errors if item != "missing_dispatch_notify"]
+        if not blockers:
+            blockers = ["missing_disk_receipt"]
         return (
             "failed",
             blockers,
-            "notify present but disk ndf-agent-completion/v1 unusable",
+            "disk ndf-agent-completion/v1 unusable",
             None,
         )
     provider = str(pack.get("provider") or "")
@@ -915,7 +1080,7 @@ def _task_outcome_from_transport(
         receipt_sid = str(completion.get("session_id") or "").strip()
         if resume_id and receipt_sid and resume_id != receipt_sid:
             all_errors.append("session_id_mismatch")
-    notify_result = str(notify.get("result") or "").lower()
+    notify_result = str((notify or {}).get("result") or "").lower()
     result_raw = str(completion.get("result") or completion.get("status") or "").lower()
     if (
         notify_result
@@ -933,13 +1098,14 @@ def _task_outcome_from_transport(
     summary = str(
         completion.get("summary")
         or completion.get("result_summary")
-        or notify.get("summary")
+        or (notify or {}).get("summary")
         or (text or "")[:240]
     )
-    if result_raw in {"success", "succeeded"} and not worker_blockers and not all_errors:
+    fatal = [item for item in all_errors if item != "missing_dispatch_notify"]
+    if result_raw in {"success", "succeeded"} and not worker_blockers and not fatal:
         return "succeeded", [], summary[:800], completion
     blockers = list(worker_blockers)
-    for item in all_errors:
+    for item in fatal:
         if item not in blockers:
             blockers.append(item)
     if result_raw not in {"success", "succeeded"} and "agent_completion_failed" not in blockers:
@@ -1420,37 +1586,59 @@ def _send_openclaw(
             "error": "openclaw_cli_missing",
             "response_text": None,
         }
-    elif transport == "session_id":
-        session_id = resolved or session_key
-        cmd = [executable, "agent", "--agent", "main", "--message", message]
-        if session_id:
-            cmd.extend(["--session-id", session_id])
-        use_heartbeat = True
     else:
-        import uuid as _uuid
+        if _openclaw_reset_session_enabled():
+            reset_fail = _reset_openclaw_session(
+                executable=executable, session_key=session_key
+            )
+            if reset_fail is not None:
+                return reset_fail
+            # Stale UUID after reset; routing keys stay on sessionKey transport.
+            if session_key and ":" in session_key and not _looks_like_openclaw_uuid(
+                session_key
+            ):
+                transport = "session_key"
+                resolved = ""
+            elif session_key:
+                try:
+                    import ndf_workflow_status as workflow
 
-        ping_sec, stall_sec, max_sec = _openclaw_wait_budgets(timeout_sec)
-        timeout_ms = int(max_sec * 1000) + 60_000
-        params = {
-            "message": message,
-            "agentId": "main",
-            "sessionKey": session_key,
-            "timeout": int(max_sec),
-            "idempotencyKey": str(_uuid.uuid4()),
-        }
-        cmd = [
-            executable,
-            "gateway",
-            "call",
-            "agent",
-            "--expect-final",
-            "--json",
-            "--timeout",
-            str(timeout_ms),
-            "--params",
-            json.dumps(params, ensure_ascii=False),
-        ]
-        use_heartbeat = True
+                    resolution = workflow.resolve_openclaw_dispatch_session(session_key)
+                    resolved = str(resolution.get("resolved_session_id") or "").strip()
+                    transport = str(resolution.get("transport") or transport).strip()
+                except Exception:
+                    return _openclaw_reset_failed(detail="session_reresolve_failed")
+        if transport == "session_id":
+            session_id = resolved or session_key
+            cmd = [executable, "agent", "--agent", "main", "--message", message]
+            if session_id:
+                cmd.extend(["--session-id", session_id])
+            use_heartbeat = True
+        else:
+            import uuid as _uuid
+
+            ping_sec, stall_sec, max_sec = _openclaw_wait_budgets(timeout_sec)
+            timeout_ms = int(max_sec * 1000) + 60_000
+            params = {
+                "message": message,
+                "agentId": "main",
+                "sessionKey": session_key,
+                "timeout": int(max_sec),
+                "idempotencyKey": str(_uuid.uuid4()),
+            }
+            cmd = [
+                executable,
+                "gateway",
+                "call",
+                "agent",
+                "--expect-final",
+                "--json",
+                "--timeout",
+                str(timeout_ms),
+                "--params",
+                json.dumps(params, ensure_ascii=False),
+            ]
+            use_heartbeat = True
 
     if not use_heartbeat:
         # Test / override path: single blocking run with legacy timeout.
@@ -2467,6 +2655,34 @@ def dispatch_send(
     pack = working
 
     message = _build_worker_message(pack)
+    contract_errors = _pack_worker_contract_errors(pack, message)
+    if contract_errors:
+        payload = {
+            "schema": "ndf-dispatch-send/v1",
+            "state": "blocked",
+            "dispatch_state": "blocked",
+            "delegate_to": provider or "unknown",
+            "pack_sha": pack_sha,
+            "request_id": request_id,
+            "blockers": contract_errors,
+            "result_summary": "worker pack contract failed; not sent",
+            "sent": False,
+        }
+        _write_last(payload)
+        close = _closeout(
+            catalog_action_id=catalog_action_id,
+            action_id=action_id,
+            result="failed",
+            blockers=contract_errors,
+            result_summary=payload["result_summary"],
+            pack=pack,
+        )
+        payload["closeout"] = close
+        close["snapshot"] = _run_snapshot(pack)
+        payload["closeout"] = close
+        _write_last(payload)
+        return payload, 1
+
     # Mark sent before waiting — commander may show awaiting_result.
     sent_receipt = {
         "schema": "ndf-dispatch-send/v1",

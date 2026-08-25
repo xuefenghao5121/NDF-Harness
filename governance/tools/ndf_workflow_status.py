@@ -2052,11 +2052,9 @@ def bind_pack_to_episode(
     Success is disk completion + write-root identity, not Replay DAG completeness.
     """
     identifier = episode_id or os.environ.get("NDF_REPLAY_EPISODE")
-    allowed_roots = (
-        payload.get("context_plan", {})
-        .get("privileges", {})
-        .get("allowed_write_roots", [])
-    )
+    plan = payload.get("context_plan") or {}
+    privileges = plan.get("privileges") or {}
+    allowed_roots = privileges.get("allowed_write_roots", [])
     if payload.get("allowed_write_root"):
         allowed_roots = [payload.get("allowed_write_root")]
     will_send = payload.get("safe_to_dispatch") is True or (
@@ -6539,14 +6537,21 @@ def read_openclaw_workspace() -> dict[str, Any] | None:
     return workspace if isinstance(workspace, dict) else None
 
 
-def workspace_binding(topic: str | None) -> dict[str, Any]:
-    topic_dir = f"poc/{topic}/" if topic else None
+def workspace_binding(topic: str | None, *, poc_dir: bool | None = None) -> dict[str, Any]:
+    explicit = (topic or "").strip() or None
+    persisted_topic = None
+    persisted = read_openclaw_workspace()
+    if isinstance(persisted, dict):
+        persisted_topic = str(persisted.get("active_topic") or "").strip() or None
+    active = explicit or persisted_topic
+    use_poc = bool(explicit) if poc_dir is None else bool(poc_dir)
+    topic_dir = f"poc/{active}/" if active and use_poc else None
     return {
         "repo_root": str(ROOT),
         "repo_name": ROOT.name,
         "repo_head": git_head(),
         "state_path": ".openclaw/state.json",
-        "active_topic": topic,
+        "active_topic": active,
         "topic_dir": topic_dir,
         "topic_ndf_dir": f"{topic_dir}ndf/" if topic_dir else None,
     }
@@ -6832,6 +6837,186 @@ def _genesis_roles_summary() -> dict[str, Any]:
         }
 
 
+GENESIS_SERIAL_GATES = (
+    ("roles_bound", "角色已配置"),
+    ("genesis_review", "GENESIS已审核"),
+)
+
+GENESIS_SERIAL_GATES_GREENFIELD = (
+    ("roles_bound", "角色已配置"),
+    ("trunk_approval", "可以建立初始主线"),
+    ("genesis_review", "GENESIS已审核"),
+)
+
+LEGACY_GENESIS_GATE_IDS = frozenset(
+    {
+        "idea_review",
+        "charter_review",
+        "architecture_review",
+        "verification_review",
+    }
+)
+
+LEGACY_GENESIS_HOPS = frozenset(
+    {
+        "genesis_charter",
+        "genesis_architecture",
+        "genesis_verification",
+        "genesis_foundation",
+    }
+)
+
+GENESIS_DESIGN_WRITE_ROOTS = (
+    "spec/open/project-genesis/",
+    "spec/00-charter/",
+    "spec/10-architecture/",
+    "spec/20-behavior/",
+    "spec/30-interfaces/",
+    "spec/40-constraints/",
+    "spec/50-verification/",
+    "spec/decisions/",
+    "spec/INDEX.md",
+)
+
+
+def read_bootstrap_mode() -> str:
+    ws_path = ROOT / "ndf.workspace.json"
+    if ws_path.is_file():
+        try:
+            data = json.loads(ws_path.read_text(encoding="utf-8"))
+            mode = str(data.get("bootstrap_mode") or "").strip().lower()
+            if mode in {"greenfield", "adopt"}:
+                return mode
+        except (OSError, json.JSONDecodeError):
+            pass
+    foundation = genesis_paths()["foundation"]
+    if foundation.is_file():
+        match = re.search(
+            r"(?im)^bootstrap_mode:\s*(greenfield|adopt)\s*$",
+            read_text(foundation),
+        )
+        if match:
+            return match.group(1).lower()
+    has_src = (ROOT / "src").is_dir() and any((ROOT / "src").rglob("*"))
+    return "adopt" if has_src else "greenfield"
+
+
+def active_genesis_serial_gates() -> tuple[tuple[str, str], ...]:
+    if read_bootstrap_mode() == "greenfield":
+        return GENESIS_SERIAL_GATES_GREENFIELD
+    return GENESIS_SERIAL_GATES
+
+
+def product_spec_is_skeleton() -> bool:
+    """True when spec/00–50 has no draft/stable product clauses yet."""
+    for layer in (
+        "00-charter",
+        "10-architecture",
+        "20-behavior",
+        "30-interfaces",
+        "40-constraints",
+    ):
+        layer_dir = SPEC / layer
+        if not layer_dir.is_dir():
+            continue
+        for path in layer_dir.glob("**/*.md"):
+            if path.name in {".gitkeep.md", "README.md"}:
+                continue
+            if re.search(r"\{#[A-Z][A-Z0-9-]+\}", read_text(path)):
+                return False
+            body = read_text(path).strip()
+            if len(body) > 120 and "placeholder" not in body.lower():
+                return False
+    return True
+
+
+def allowed_roots_for_genesis_bootstrap(hop: str | None) -> list[str]:
+    if hop == "genesis_design":
+        return list(GENESIS_DESIGN_WRITE_ROOTS)
+    return list(IDEA_PLANE_ROOTS["product"])
+
+
+def assert_bootstrap_write_roots(hop: str | None, roots: list[str]) -> None:
+    if hop != "genesis_design":
+        return
+    allowed = allowed_roots_for_genesis_bootstrap(hop)
+    normalized: list[str] = []
+    for root in roots:
+        text = str(root).replace("\\", "/")
+        if not text.endswith("/") and Path(text).suffix == "":
+            text = text + "/"
+        normalized.append(text)
+    for root in normalized:
+        if not any(
+            root.startswith(a) or a.startswith(root.rstrip("/"))
+            for a in allowed
+        ):
+            raise ValueError(
+                f"genesis_design write root {root} outside {sorted(allowed)}"
+            )
+
+
+def genesis_serial_next_step(
+    gates_path: Path | None = None,
+    *,
+    rows: list[Mapping[str, str]] | None = None,
+) -> dict[str, str] | None:
+    """First pending Genesis phrase. GATES.md + kernel/design state are SoT."""
+    parsed: list[Mapping[str, str]]
+    if rows is not None:
+        parsed = list(rows)
+    else:
+        path = gates_path or genesis_paths()["gates"]
+        if not path.is_file():
+            roles = _genesis_roles_summary()
+            if not roles.get("roles_bound"):
+                return {
+                    "id": "roles_bound",
+                    "label": "roles_bound",
+                    "phrase": "角色已配置",
+                }
+            return {
+                "id": "kernel_bind",
+                "label": "kernel_bind",
+                "phrase": "绑内核",
+                "action": "command",
+            }
+        parsed = ndf_gate_slices.parse_gates_table(read_text(path))
+    latest: dict[str, Mapping[str, str]] = {}
+    for row in parsed:
+        gate = str(row.get("gate") or "").strip()
+        if gate:
+            latest[gate] = row
+    paths = genesis_paths()
+    foundation_exists = paths["foundation"].is_file()
+    roles_ok = str((latest.get("roles_bound") or {}).get("status") or "").lower() in {
+        "approved",
+        "valid",
+    } or _genesis_roles_summary().get("roles_bound")
+    if not roles_ok:
+        return {"id": "roles_bound", "label": "roles_bound", "phrase": "角色已配置"}
+    if not foundation_exists:
+        return {
+            "id": "kernel_bind",
+            "label": "kernel_bind",
+            "phrase": "绑内核",
+            "action": "command",
+        }
+    if product_spec_is_skeleton():
+        return {
+            "id": "design_dispatch",
+            "label": "design_dispatch",
+            "phrase": "派发",
+            "action": "dispatch",
+        }
+    serial = active_genesis_serial_gates()
+    for gate_id, phrase in serial:
+        status = str((latest.get(gate_id) or {}).get("status") or "").lower()
+        if status not in {"approved", "valid"}:
+            return {"id": gate_id, "label": gate_id, "phrase": phrase}
+    return None
+
+
 def genesis_status() -> dict[str, Any]:
     paths = genesis_paths()
     decision_text = read_text(paths["decision"])
@@ -6864,37 +7049,58 @@ def genesis_status() -> dict[str, Any]:
     elif maturity == "operational_legacy":
         rail_state = ("legacy", "legacy", "legacy", "legacy")
     elif maturity == "trunk_candidate":
-        rail_state = ("completed", "completed", "in_progress", "pending")
+        rail_state = ("completed", "completed", "completed", "in_progress")
     elif maturity == "ndf_foundation":
         rail_state = ("completed", "in_progress", "pending", "pending")
     elif maturity == "idea_review":
         rail_state = ("in_progress", "pending", "pending", "pending")
     else:
         rail_state = ("pending", "pending", "pending", "pending")
+    serial = genesis_serial_next_step(paths["gates"]) if maturity != "operational_legacy" else None
+    foundation_phrase = "派发"
+    trunk_phrase = "可以建立初始主线"
+    if serial:
+        sid = serial["id"]
+        if sid == "roles_bound":
+            rail_state = ("pending", "pending", "pending", "pending")
+        elif sid == "kernel_bind":
+            rail_state = ("completed", "in_progress", "pending", "pending")
+            foundation_phrase = "绑内核"
+        elif sid == "design_dispatch":
+            rail_state = ("completed", "completed", "in_progress", "pending")
+            foundation_phrase = "派发"
+        elif sid == "trunk_approval":
+            rail_state = ("completed", "completed", "completed", "in_progress")
+            trunk_phrase = serial["phrase"]
+        elif sid == "genesis_review":
+            rail_state = ("completed", "completed", "completed", "in_progress")
+        else:
+            foundation_phrase = serial.get("phrase", foundation_phrase)
+    mode = read_bootstrap_mode()
     rail = [
         {
             "id": "G0",
-            "label": "IDEA",
+            "label": "Roles",
             "state": rail_state[0],
-            "path": rel(paths["idea"]),
-            "content_sha": file_sha(paths["idea"]),
-            "next_phrase": "IDEA已审核",
+            "path": rel(ROOT / "ndf.workflow.yaml"),
+            "content_sha": file_sha(ROOT / "ndf.workflow.yaml"),
+            "next_phrase": "角色已配置",
         },
         {
             "id": "G1",
-            "label": "Foundation",
+            "label": "Kernel",
             "state": rail_state[1],
             "path": rel(paths["foundation"]),
             "content_sha": file_sha(paths["foundation"]),
-            "next_phrase": "VERIFICATION已审核",
+            "next_phrase": foundation_phrase,
         },
         {
             "id": "G2",
-            "label": "Trunk Candidate",
+            "label": "Design",
             "state": rail_state[2],
-            "path": rel(paths["gates"]),
-            "content_sha": file_sha(paths["gates"]),
-            "next_phrase": "可以建立初始主线",
+            "path": rel(SPEC / "00-charter"),
+            "content_sha": None,
+            "next_phrase": "派发",
         },
         {
             "id": "G3",
@@ -6905,6 +7111,38 @@ def genesis_status() -> dict[str, Any]:
             "next_phrase": "GENESIS已审核",
         },
     ]
+    if mode == "greenfield":
+        rail.insert(
+            3,
+            {
+                "id": "G2b",
+                "label": "Trunk",
+                "state": (
+                    "completed"
+                    if serial and serial["id"] == "genesis_review"
+                    else (
+                        "in_progress"
+                        if serial and serial["id"] == "trunk_approval"
+                        else rail_state[3]
+                        if maturity == "trunk_candidate"
+                        else "pending"
+                    )
+                ),
+                "path": rel(paths["gates"]),
+                "content_sha": file_sha(paths["gates"]),
+                "next_phrase": trunk_phrase,
+            },
+        )
+    next_step = serial
+    if next_step is None and maturity not in {"operational", "operational_legacy"}:
+        next_step = next(
+            (
+                {"id": item["id"], "label": item["label"], "phrase": item["next_phrase"]}
+                for item in rail
+                if item["state"] in {"pending", "in_progress"}
+            ),
+            None,
+        )
     return {
         "project_maturity": maturity,
         "accepted": accepted,
@@ -6916,14 +7154,7 @@ def genesis_status() -> dict[str, Any]:
         "roles_bound": _genesis_roles_summary().get("roles_bound"),
         "roles": _genesis_roles_summary().get("roles"),
         "roles_sha": _genesis_roles_summary().get("roles_sha"),
-        "next_step": next(
-            (
-                {"id": item["id"], "label": item["label"], "phrase": item["next_phrase"]}
-                for item in rail
-                if item["state"] in {"pending", "in_progress"}
-            ),
-            None,
-        ),
+        "next_step": next_step,
         "warning": "Genesis provenance missing; legacy operational project"
         if maturity == "operational_legacy"
         else (
@@ -8669,8 +8900,16 @@ def control_proposal_idea_pack(
         raise ValueError(f"idea hop task must be product/process proposal, got {task}")
     plane = "product" if canonical == "product_proposal" else "process"
     normalized_intent = normalize_human_intent(intent)
-    allowed_roots = allowed_roots_for_idea_plane(plane)
-    assert_idea_write_roots(canonical, allowed_roots)
+    declared_track = intent_header_track(normalized_intent)
+    genesis_hop = infer_genesis_hop(normalized_intent) if declared_track == "bootstrap" else None
+    allowed_roots = (
+        allowed_roots_for_genesis_bootstrap(genesis_hop)
+        if declared_track == "bootstrap" and genesis_hop == "genesis_design"
+        else allowed_roots_for_idea_plane(plane)
+    )
+    if not (declared_track == "bootstrap" and genesis_hop == "genesis_design"):
+        assert_idea_write_roots(canonical, allowed_roots)
+    assert_bootstrap_write_roots(genesis_hop, allowed_roots)
     pack_task = (
         "ndf_improvement_proposal"
         if canonical == "process_proposal"
@@ -8683,9 +8922,32 @@ def control_proposal_idea_pack(
     elif canonical == "product_proposal":
         wire_task = "product_proposal"
     role = "project-control" if plane == "process" else "openclaw"
-    track = "process" if plane == "process" else "poc"
+    bootstrap_blockers: list[str] = []
+    pack_topic: str | None = None
+    if plane == "process":
+        track = "process"
+        hop = "draft"
+        next_phrase = "已确认"
+        binding = workspace_binding(None)
+    elif declared_track == "bootstrap":
+        track = "bootstrap"
+        binding = workspace_binding(None, poc_dir=False)
+        pack_topic = binding.get("active_topic") or "project-genesis"
+        hop = genesis_hop
+        next_phrase = GENESIS_NEXT_PHRASE.get(hop or "", "派发")
+        if hop is None:
+            bootstrap_blockers.append("genesis_hop_unlabeled")
+            hop = "genesis_design"
+            next_phrase = "派发"
+        elif hop in LEGACY_GENESIS_HOPS:
+            bootstrap_blockers.append("genesis_per_draft_dispatch")
+    else:
+        track = "poc"
+        hop = "draft"
+        next_phrase = "已确认"
+        binding = workspace_binding(None)
     context = context_binding(
-        topic=None,
+        topic=pack_topic if track == "bootstrap" else None,
         role=role,
         task=pack_task if plane == "process" else "product_proposal",
         track=track,
@@ -8706,6 +8968,9 @@ def control_proposal_idea_pack(
     role_blockers = roles_dispatch_blockers()
     blockers.extend(role_blockers)
     if role_blockers:
+        safe = False
+    if bootstrap_blockers:
+        blockers.extend(bootstrap_blockers)
         safe = False
     intent_sha = (
         hashlib.sha256(normalized_intent.encode("utf-8")).hexdigest()
@@ -8734,14 +8999,14 @@ def control_proposal_idea_pack(
         "schema": schema,
         "compatibility": {"legacy_schema": "ndf-control-pack/v1"},
         "generated_at": now_iso(),
-        "topic": None,
+        "topic": pack_topic,
         "track": track,
         "task": wire_task,
         "idea_plane": plane,
         "canonical_task": canonical,
         "pipeline": PIPELINE_PROCESS if plane == "process" else None,
         "pipeline_plan": None,
-        "hop": "draft",
+        "hop": hop,
         "resume": False,
         "active_episode_id": None,
         "provider": "openclaw",
@@ -8749,8 +9014,8 @@ def control_proposal_idea_pack(
         "resolved_session_id": control_runtime.get("resolved_session_id"),
         "session_transport": control_runtime.get("session_transport"),
         "base_sha": git_head(),
-        "workspace": workspace_binding(None),
-        "workspace_truth": workspace_truth_view(None),
+        "workspace": binding,
+        "workspace_truth": workspace_truth(binding, read_openclaw_workspace()),
         "request": {
             "origin": "human_intent",
             "intent": normalized_intent or None,
@@ -8760,12 +9025,16 @@ def control_proposal_idea_pack(
             ),
             "idea_plane": plane,
         },
-        "required_reads": required_reads_for_task(canonical, None),
+        "required_reads": (
+            list(GENESIS_REQUIRED_READS)
+            if track == "bootstrap"
+            else required_reads_for_task(canonical, None)
+        ),
         "allowed_write_roots": allowed_roots,
         "allowed_write_paths": allowed_roots,
         "forbidden": forbidden,
         "required_proposal_status": REQUIRED_PROCESS_PROPOSAL_STATUS,
-        "next_human_phrase": "已确认",
+        "next_human_phrase": next_phrase,
         "safe_to_delegate": static_ready,
         "safe_to_dispatch": safe,
         "static_preflight_passed": static_ready,
@@ -8773,6 +9042,24 @@ def control_proposal_idea_pack(
         **context,
         "blockers": blockers,
     }
+    payload["track"] = track
+    payload["hop"] = hop
+    payload["topic"] = pack_topic
+    payload["next_human_phrase"] = next_phrase
+    payload["workspace"] = binding
+    if track == "bootstrap":
+        payload["required_reads"] = list(GENESIS_REQUIRED_READS)
+        if pack_topic:
+            plan = payload.get("context_plan")
+            if isinstance(plan, dict):
+                plan = dict(plan)
+                plan["topic"] = pack_topic
+                workspace_plan = plan.get("workspace")
+                if isinstance(workspace_plan, dict):
+                    workspace_plan = dict(workspace_plan)
+                    workspace_plan["topic"] = pack_topic
+                    plan["workspace"] = workspace_plan
+                payload["context_plan"] = plan
     bound = bind_pack_to_episode(
         _with_completion_receipt_path(payload),
         episode_id=episode_id,
@@ -9204,6 +9491,63 @@ def normalize_human_intent(intent: str | None) -> str:
             f"human intent exceeds {MAX_PROCESS_INTENT_BYTES} UTF-8 bytes"
         )
     return value
+
+
+def intent_header_track(intent: str | None) -> str | None:
+    match = re.search(r"(?im)^track:\s*([a-z0-9_-]+)\s*$", intent or "")
+    return match.group(1).lower() if match else None
+
+
+def _intent_mentions_file(text: str, filename: str) -> bool:
+    for line in (text or "").splitlines():
+        if re.search(r"MUST NOT", line, re.I):
+            continue
+        if re.search(re.escape(filename), line, re.I):
+            return True
+    return False
+
+
+def infer_genesis_hop(intent: str | None) -> str | None:
+    """Pick Genesis hop from intent. Only genesis_design / genesis_trunk are valid dispatches."""
+    text = intent or ""
+    header = re.search(
+        r"(?im)^hop:\s*(genesis_(?:design|kernel|trunk|charter|architecture|verification|foundation))\s*$",
+        text,
+    )
+    if header:
+        return header.group(1).lower()
+    if re.search(r"(?im)(spec/00-charter/|spec/10-architecture/|genesis_design)", text):
+        legacy_target = any(
+            _intent_mentions_file(text, name)
+            for name in ("CHARTER.md", "ARCHITECTURE.md", "VERIFICATION.md")
+        )
+        if not legacy_target:
+            return "genesis_design"
+    if "可以建立初始主线" in text:
+        return "genesis_trunk"
+    if _intent_mentions_file(text, "ARCHITECTURE.md"):
+        return "genesis_architecture"
+    if _intent_mentions_file(text, "VERIFICATION.md"):
+        return "genesis_verification"
+    if _intent_mentions_file(text, "CHARTER.md"):
+        return "genesis_charter"
+    return None
+
+
+GENESIS_NEXT_PHRASE = {
+    "genesis_design": "GENESIS已审核",
+    "genesis_trunk": "可以建立初始主线",
+    "genesis_kernel": "派发",
+}
+
+GENESIS_REQUIRED_READS = [
+    "AGENTS.md",
+    "spec/open/project-genesis/FOUNDATION.md",
+    "spec/open/project-genesis/GATES.md",
+    "spec/10-architecture/README.md",
+    "META-009",
+    "META-011",
+]
 
 
 def normalize_process_intent(intent: str | None) -> str:

@@ -34,7 +34,7 @@ Command MUST NOT：写 worker 边界内的实现/测量；直接 `openclaw.chat_
 
 | 人说 | Command 做 | 等人一句 | 委派谁 |
 |------|----------|----------|--------|
-| **初始化项目** | 角色向导 → `genesis-status`；写 IDEA 提案 | `角色已配置` + Genesis 分段口令 | Control（Foundation）→ Implementation（`genesis-pack`） |
+| **初始化项目** | 角色向导 → 绑内核 → 一句「派发」（契约+基线）→ `GENESIS已审核` 骨架/基线 stable | `角色已配置` / `派发` / `GENESIS已审核` | Control + 同句测量；greenfield 另可 `genesis-pack` |
 | **提交Idea** | [intake.md](intake.md) 分流 → [proposal.md](proposal.md) | 「已确认」「已审核」 | Control |
 | **派发** | 写 `bundle_dispatch`（POC）+ 造 pack | 本聊天已确认「派发」 | Control 或 Implementation（按平面） |
 | **继续** | 修订装订器再造 pack | 「派发」 | Control（文档）→ Implementation（实现） |
@@ -60,8 +60,10 @@ Init/adopt/govern/sync：[install.md](install.md) / [adopt.md](adopt.md) / [gove
 
 ## 硬规则
 
-- 成功 = 磁盘 `ndf-agent-completion/v1`；transport ACK / stdout ≠ success
+- 成功 = 磁盘 `ndf-agent-completion/v1`；transport ACK / stdout ≠ success。
+  stdout notify 缺失 MUST NOT 单独否定合法磁盘回执。
 - 口令回执写 `GATES.md`（人、时间、内容 SHA）；文件存在 ≠ 已批准
+- Genesis：绑内核 → 一句派发（写 `00–50` + 复现基线）→ `GENESIS已审核` 将骨架与已测基线标 stable；欠基线「继续」
 - Context Compiler 只在 pack 内部跑；失败只报 `context_verify_failed` + SHA
 - `roles_unbound` → 不得派发；先跑 [genesis.md](genesis.md) G-1 角色向导
 

@@ -14,7 +14,7 @@ The harness package is a seed; after install the **consumer repo wins**.
 
 | Phrase | Command agent action | Wait for human | Delegates to |
 |--------|---------------------|----------------|--------------|
-| **初始化项目** | Genesis status + IDEA proposal | Genesis gate phrases | OpenClaw → Claude genesis-pack |
+| **初始化项目** | 绑内核 → 一句派发（契约+基线）→ `GENESIS已审核` | `角色已配置` / `派发` / `GENESIS已审核` | Control + 同句测量；greenfield 另可 genesis-pack |
 | **提交Idea** | Plane split + draft proposal | 已确认 · 已审核 | OpenClaw |
 | **派发** | Gate receipt + build pack | 派发 (this chat) | OpenClaw or Claude by plane |
 | **继续** | Amend binder + new pack | 派发 again | OpenClaw → Claude |
@@ -70,8 +70,13 @@ new topics use text-first bundle dispatch after proposal 已审核.
 
 ### Genesis gates (bootstrap)
 
-Serial: `IDEA已审核` → `CHARTER已审核` → `ARCHITECTURE已审核` →
-`VERIFICATION已审核` → `可以建立初始主线` → `GENESIS已审核`.
+```text
+角色已配置 →（Command 绑内核）→ 派发（写 spec/00–50 + 复现基线）→ GENESIS已审核
+```
+
+`GENESIS已审核` freezes non-SLA skeleton as `stable` (optimization baseline) and
+measured baselines/SLA as `stable`. `greenfield` MAY insert `可以建立初始主线` +
+one `genesis-pack`. Legacy CHARTER/ARCHITECTURE/VERIFICATION serial hops are retired.
 
 ## POC lifecycle
 

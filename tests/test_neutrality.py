@@ -21,7 +21,8 @@ TEXT_SUFFIXES = {
 
 FORBIDDEN = (
     re.compile(r"DiskHNSW"),
-    re.compile(r"hnsw-predictor-ndf"),
+    re.compile(r"hnsw-predictor"),
+    re.compile(r"pageann", re.I),
     re.compile(r"hotspot-optimization"),
     re.compile(r"ou_[0-9a-f]{8,}"),
     re.compile(r"/home/huawei/"),

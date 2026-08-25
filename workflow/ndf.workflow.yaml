@@ -3,7 +3,7 @@
 # Customize roots/adapters for this repo; no secrets.
 
 version: "1"
-harness_version: "1.0.0"
+harness_version: "1.0.2"
 project: "⟨TBD: project-name⟩"
 
 roots:
@@ -29,8 +29,17 @@ roles:
     adapter: openclaw
     fallback: in-host
     model: null
+    # Product-tree roots: pack builder hop-gates to bootstrap hop=genesis_design.
     writable:
       - spec/open/
+      - spec/00-charter/
+      - spec/10-architecture/
+      - spec/20-behavior/
+      - spec/30-interfaces/
+      - spec/40-constraints/
+      - spec/50-verification/
+      - spec/decisions/
+      - spec/INDEX.md
       - spec/meta/open/
       - poc/*/ndf/
       - .openclaw/state.json
@@ -67,7 +76,12 @@ write_roots_by_track:
       - spec/open/
       - spec/00-charter/
       - spec/10-architecture/
+      - spec/20-behavior/
+      - spec/30-interfaces/
+      - spec/40-constraints/
       - spec/50-verification/
+      - spec/decisions/
+      - spec/INDEX.md
       - src/
       - include/
       - tests/

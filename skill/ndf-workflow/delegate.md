@@ -29,7 +29,8 @@ OpenClaw / Claude Code 是**默认** adapter，不是唯一路径。Command MUST
 **可写**：见 [roles/control.md](roles/control.md) 或 `ndf.workflow.yaml` `roles.control.writable`。  
 **禁止**：`src/`、`include/`、`tests/`；静默写 `GATES.md` 的 `approved_by`；未人审写 `spec/meta/` 稳定正文。
 
-`adapter=openclaw` 时走 `dispatch-send` gateway 路径；`in_host` / `dual_session` 时见
+`adapter=openclaw` 时走 `dispatch-send` gateway 路径；默认每 hop 先 `sessions.reset`
+再发消息（`NDF_OPENCLAW_RESET_SESSION=0` 关闭）。`in_host` / `dual_session` 时见
 spawn 文件或 dual-session prompt（仍等磁盘 completion）。
 
 ```bash
@@ -45,7 +46,8 @@ python3 spec/meta/tools/ndf_dispatch_send.py \
 | 用途 | CLI |
 |------|-----|
 | POC 实现 / 测量 | `poc-dispatch --topic <t> --intent implement\|measure --send` |
-| Genesis Trunk candidate | `genesis-pack --mode greenfield\|adopt --json`（Foundation 闸过后）→「派发」→ `dispatch-send` |
+| Genesis 产品 NDF（一次） | `control-pack --task product_proposal --intent-file tmp/intent-genesis-design.md`（`hop: genesis_design`）→「派发」 |
+| Genesis Trunk candidate（仅 greenfield） | `genesis-pack --mode greenfield --json` →「派发」→ `dispatch-send` |
 | promote / bug 合入 | 按 `ndf_close.py plan` 的 ACP 路径 |
 
 **可写**：见 [roles/implementation.md](roles/implementation.md)；POC 仅 `poc/<topic>/`。  
@@ -63,8 +65,10 @@ python3 spec/meta/tools/ndf_workflow_status.py poc-dispatch \
 1. `roles_unbound=false` 且 pack `safe_to_dispatch=true`（否则取消，报告 blockers）
 2. 本聊天等人确认「派发」/「继续」（可写 pack 不自动送；POC「派发」另写 `GATES.md` `bundle_dispatch`）
 3. `dispatch-send` 或 `poc-dispatch --send` 送 worker + 心跳等待
-4. 读 `completion_receipt_path`：磁盘 completion + closeout succeeded
+4. 读 `completion_receipt_path`：磁盘 `ndf-agent-completion/v1` 身份匹配即为成功。
+   stdout `ndf-dispatch-notify/v1` 可选。notify 缺失 MUST NOT 单独判失败。
 5. MUST NOT 用手抄 Numbers、transport ACK、stdout JSON 冒充成功
+6. Genesis：closeout 失败 → 同一 hop「继续」；设计 hop 写 `spec/00–50` draft，非 stable 自动晋升
 
 在途问进展 → `dispatch-probe`（探活，不重派）。
 

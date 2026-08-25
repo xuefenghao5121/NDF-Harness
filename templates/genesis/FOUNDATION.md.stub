@@ -1,39 +1,24 @@
-# Project Genesis Foundation Matrix
+# Project Genesis — Kernel Bind Record
 
 > track: bootstrap
 > bootstrap_mode: greenfield | adopt
-> project_maturity: ndf_foundation
+> project_maturity: kernel_bound
 
-## Design space
+## Kernel
 
-| Artifact | Path | Status | Gate SHA | Gaps |
-|----------|------|--------|----------|------|
-| Charter | `spec/00-charter/` | draft | | |
-| Architecture | `spec/10-architecture/` | draft | | |
-| Behavior | `spec/20-behavior/` | draft | | |
-| Interfaces | `spec/30-interfaces/` | draft | | |
+| Field | Value |
+|-------|-------|
+| `observed_trunk_sha` | |
+| `roles_sha` | |
+| `bootstrap_mode` | greenfield \| adopt |
+| `perf_status` | not-established |
 
-## Implementation space
+## Product tree
 
-| Slice | Target paths | Depends on clauses | Candidate status |
-|-------|--------------|--------------------|------------------|
-| minimal vertical slice | | | not-started |
-
-## Test space
-
-| Contract | Verification path | Baseline | Status |
-|----------|-------------------|----------|--------|
-| minimum functional acceptance | `spec/50-verification/` | not-established | draft |
-
-Performance values without evidence MUST remain `draft`, `TBD`, or `not-established`.
-
-## Initial traceability
-
-| Goal / clause | Design | Implementation slice | Verification | Gap |
-|---------------|--------|----------------------|--------------|-----|
-| | | | | |
+Design hop (`hop=genesis_design`) writes draft NDF under `spec/00–50`.
+Until then, product tree remains skeleton.
 
 ## Gates
 
-`CHARTER已审核` → `ARCHITECTURE已审核` → `VERIFICATION已审核` →
-`可以建立初始主线`.
+`角色已配置` →（Command bind）→ `派发` → [`可以建立初始主线` if greenfield] →
+`GENESIS已审核`.
