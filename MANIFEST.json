@@ -1,8 +1,8 @@
 {
   "schema": "ndf-harness-manifest/v1",
   "version": "1.0.2",
-  "source_commit": "adc5a6ace3a147dc235977597e095411f2eeb7d9",
-  "generated_at": "2026-08-25T17:19:21+00:00",
+  "source_commit": "19c930b6d409c7adc070654579db7f738d2a4d24",
+  "generated_at": "2026-08-25T17:39:34+00:00",
   "files": [
     {
       "path": ".gitignore",
@@ -116,8 +116,8 @@
     },
     {
       "path": "docs/INTRO.md",
-      "sha256": "8ee9209d377c000604d03a9bac0672f5346c8115121f6ddb0397be3f983f6cf5",
-      "bytes": 13442
+      "sha256": "31049694e518be2d4c45477f7fd23375a7125005ec4b58e791d247961e864c39",
+      "bytes": 11874
     },
     {
       "path": "docs/MIGRATION-1.0.md",
