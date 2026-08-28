@@ -5,6 +5,11 @@
 > status: draft
 > source_ref: <conversation-or-document>
 
+**Greenfield design hop:** do **not** use this short IDEA as `hop=genesis_design`
+`source_ref`. Fill [`TASK_ORDER.md.stub`](TASK_ORDER.md.stub)
+(`schema: ndf-genesis-idea/v1`, one `cycle_id`) and check with
+`ndf_genesis_idea.py`. See [`TASK_ORDER.RULES.md`](TASK_ORDER.RULES.md).
+
 ## Verbatim idea
 
 > <Copy the user's original wording verbatim. Do not improve or paraphrase it.>

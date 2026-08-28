@@ -57,7 +57,7 @@ FULL_TOOL_SCRIPTS = (
     "ndf_dispatch_send.py",
     "ndf_role_binding.py",
     "ndf_acp_session_bootstrap.py",
-    "ndf_role_binding.py",
+    "ndf_genesis_idea.py",
     "ndf_replay.py",
 )
 
@@ -74,6 +74,7 @@ SMOKE_TOOLS = (
     "ndf_context.py",
     "ndf_poc_dispatch.py",
     "ndf_workflow_status.py",
+    "ndf_genesis_idea.py",
 )
 
 RUNTIME_SKILL_DIRS: dict[str, str | None] = {

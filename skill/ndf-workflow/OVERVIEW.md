@@ -71,7 +71,7 @@ flowchart TB
 
 | 人说 | 内部模块 | 等人一句 | 委派谁 |
 |------|----------|----------|--------|
-| 初始化项目 | genesis → delegate | `角色已配置` / `派发` / `GENESIS已审核` | Control + 同句测量；greenfield 另可 `genesis-pack` |
+| 初始化项目 | genesis → delegate | `角色已配置` / `派发` / `GENESIS已审核` | Control 写骨架 `00–50`；greenfield 先 `ndf_genesis_idea.py check`；另可 `genesis-pack` |
 | 提交Idea | intake → proposal → delegate | 「已确认」「已审核」 | OpenClaw |
 | 派发 | poc + delegate | 「派发」+ `GATES` bundle | POC→Claude；Control→OpenClaw |
 | 继续 | poc + delegate | 再「派发」 | OpenClaw 改装订器 → Claude |

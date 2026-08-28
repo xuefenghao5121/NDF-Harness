@@ -27,7 +27,18 @@ python3 spec/meta/tools/ndf_workflow_status.py genesis-status --json
 
 `hop=genesis_design`：
 
-1. Control：对照 Trunk 写满 `spec/00–50`（及必要 decisions/INDEX）
+Greenfield `source_ref` MUST 为填写完整的 `ndf-genesis-idea/v1`
+（`TASK_ORDER.md.stub` / `docs/cycles/cycle-<id>.md`）。多阶段散文路书 MUST NOT
+当设计 hop 输入。造 pack 前：
+
+```bash
+python3 spec/meta/tools/ndf_genesis_idea.py check docs/cycles/cycle-<id>.md
+```
+
+非法 → fail-closed，不得派发。
+
+1. Control：按 Mapping 表写 **骨架** `spec/00–50`（及必要 decisions/INDEX）；
+   条款预算 ≤20；默认 `draft` / L0。Guidance MUST NOT 进 BEH/API/CON-SLA must。
 2. 同句：复现 `make test` + VER 金标/sustained → `configs/` + `baselines/`（绑 Trunk SHA）
 
 测不出：completion 标 `baseline_status=deferred`；人说 **继续** 补测。

@@ -1,0 +1,59 @@
+# <短标题：一周期一事>
+
+> schema: ndf-genesis-idea/v1
+> track: bootstrap
+> bootstrap_mode: greenfield
+> cycle_id: <kebab-case，全仓唯一>
+> maps_to: skeleton
+> status: draft
+
+## Verbatim intent
+
+> <Copy the human's original wording verbatim. Do not improve or paraphrase.>
+
+## Problem and user
+
+- Problem:
+- Target user:
+- Existing alternative:
+
+## In-scope (this cycle)
+
+1. <L0 goal for this cycle only; no subtask IDs; no "then do phase N">
+2.
+3.
+
+## Out-of-scope (this cycle)
+
+1. <sibling cycle_id: …> — <one-line why deferred>
+2. <sibling cycle_id: …> — <one-line why deferred>
+
+## Success (not SLA)
+
+| Condition | Measure | Status |
+|-----------|---------|--------|
+| | | draft |
+
+## Hard constraints
+
+- Platform:
+- Language/runtime:
+- Performance comparison target (name only, no numeric SLA):
+- Other:
+
+## Guidance (non-normative)
+
+本栏不是契约。Control MUST NOT 将本栏写入 BEH/API/CON-SLA must。
+
+- <optional algorithm hints, links, deferred detail>
+
+## Mapping
+
+| 输入栏目 | 允许写入 | 禁止 |
+|----------|----------|------|
+| Verbatim + In-scope | `00-charter` 目标 | 拆成任务清单 BEH |
+| Out-of-scope | `00-charter` 非目标 | 忽略 sibling 周期 |
+| Success | `40-constraints/sla.md` 且 `level=tbd` | `must` SLA 数字 |
+| Hard constraints | `40-constraints/constraints.md` | 把 Guidance 里的 ISA 细节当 must |
+| Guidance | **不落条款**（可 `info` 一句「详见 cycle 文件」） | 复制公式/代码/子任务 |
+| （无对应栏） | 至多 1–2 条 `20-behavior` 正确性 L0 | 接口实现步骤 |

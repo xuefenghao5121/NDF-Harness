@@ -22,6 +22,11 @@ python3 packages/ndf-harness/install.py install --repo . --profile dual-track \
 4. Verify: `install.py verify --json`.
 5. Baseline: `ndf_index index` + `ndf_graphcheck --meta`.
 6. Start Genesis via command agent: **初始化项目**.
+7. Greenfield design hop input: copy
+   `spec/meta/templates/genesis/TASK_ORDER.md.stub` →
+   `docs/cycles/cycle-<id>.md`, fill all sections, then
+   `python3 spec/meta/tools/ndf_genesis_idea.py check docs/cycles/cycle-<id>.md`.
+   Multi-phase prose roadmaps MUST NOT be `source_ref`.
 
 ## Brownfield (adopt)
 

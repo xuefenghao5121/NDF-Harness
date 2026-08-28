@@ -63,7 +63,7 @@ Init/adopt/govern/sync：[install.md](install.md) / [adopt.md](adopt.md) / [gove
 - 成功 = 磁盘 `ndf-agent-completion/v1`；transport ACK / stdout ≠ success。
   stdout notify 缺失 MUST NOT 单独否定合法磁盘回执。
 - 口令回执写 `GATES.md`（人、时间、内容 SHA）；文件存在 ≠ 已批准
-- Genesis：绑内核 → 一句派发（写 `00–50` + 复现基线）→ `GENESIS已审核` 将骨架与已测基线标 stable；欠基线「继续」
+- Genesis：绑内核 → 一句派发（`ndf-genesis-idea/v1` 骨架 `00–50` + 复现基线）→ `GENESIS已审核` 将骨架与已测基线标 stable；欠基线「继续」
 - Context Compiler 只在 pack 内部跑；失败只报 `context_verify_failed` + SHA
 - `roles_unbound` → 不得派发；先跑 [genesis.md](genesis.md) G-1 角色向导
 
@@ -85,6 +85,7 @@ python3 spec/meta/tools/ndf_dispatch_send.py \
 
 # Genesis / Close / Health
 python3 spec/meta/tools/ndf_workflow_status.py genesis-status --json
+python3 spec/meta/tools/ndf_genesis_idea.py check docs/cycles/cycle-<id>.md
 python3 spec/meta/tools/ndf_workflow_status.py genesis-pack --mode greenfield|adopt --json
 python3 spec/meta/tools/ndf_close.py plan --topic <topic> --mode promote|partial|reject
 python3 spec/meta/tools/ndf_workflow_status.py topic-health --topic <topic> --json

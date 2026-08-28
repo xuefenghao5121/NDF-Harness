@@ -71,8 +71,13 @@ new topics use text-first bundle dispatch after proposal 已审核.
 ### Genesis gates (bootstrap)
 
 ```text
-角色已配置 →（Command 绑内核）→ 派发（写 spec/00–50 + 复现基线）→ GENESIS已审核
+角色已配置 →（Command 绑内核）→ 派发（骨架 spec/00–50 + 复现基线）→ GENESIS已审核
 ```
+
+Greenfield `source_ref` MUST be a filled `ndf-genesis-idea/v1` cycle file
+([`TASK_ORDER.md.stub`](../templates/genesis/TASK_ORDER.md.stub)); Command checks
+it with `ndf_genesis_idea.py` before pack. Control writes a **skeleton** (≤20
+draft L0 clauses via the Mapping table), not a transcription of a prose roadmap.
 
 `GENESIS已审核` freezes non-SLA skeleton as `stable` (optimization baseline) and
 measured baselines/SLA as `stable`. `greenfield` MAY insert `可以建立初始主线` +

@@ -1,5 +1,20 @@
 # Changelog
 
+## 1.0.3 — 2026-08-28
+
+Distill greenfield Genesis **input gate** from consumer validation
+(one cycle = one project; prose roadmaps are not `source_ref`):
+
+- **META-009**: `hop=genesis_design` MUST use a filled `ndf-genesis-idea/v1`
+  (`TASK_ORDER.md.stub`); `maps_to: skeleton`; Mapping-table landing only;
+  clause budget ≤20; Guidance MUST NOT become BEH/API/CON-SLA must;
+  `ndf_genesis_idea.py check` fail-closed before pack.
+- **Templates**: `templates/genesis/TASK_ORDER.md.stub` + `TASK_ORDER.RULES.md`;
+  `IDEA.md.stub` points greenfield design hop at the cycle file.
+- **Tool**: `ndf_genesis_idea.py` + `test_ndf_genesis_idea.py`.
+- **Skill / AGENTS / docs**: genesis.md G1, SKILL CLI, OVERVIEW, INIT, WORKFLOW,
+  INTRO, TOOLS, governance tools README.
+
 ## 1.0.2 — 2026-08-25
 
 Distill Genesis init-freeze workflow from consumer validation:

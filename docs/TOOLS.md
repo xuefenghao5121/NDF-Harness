@@ -27,6 +27,7 @@ live at `spec/meta/tools/` in the consumer repo.
 | [`ndf_dispatch_send.py`](#ndf_dispatch_sendpy) | Pack transport + completion wait |
 | [`ndf_acp_session_bootstrap.py`](#ndf_acp_session_bootstrappy) | ACP session bootstrap |
 | [`ndf_role_binding.py`](#ndf_role_bindingpy) | Role adapter bind / probe / resolve |
+| [`ndf_genesis_idea.py`](#ndf_genesis_ideapy) | Greenfield cycle-file (`ndf-genesis-idea/v1`) fail-closed check |
 | [`ndf_replay.py`](#ndf_replaypy) | **Retired tombstone** |
 
 ---
@@ -287,6 +288,22 @@ python3 ndf_role_binding.py bind --repo . \
 ```
 
 **Exit codes:** `0` roles bound / probe ok; `1` unbound; `2` bind args error.
+
+---
+
+## ndf_genesis_idea.py
+
+**Purpose:** Fail-closed structural check for greenfield cycle files
+(`schema: ndf-genesis-idea/v1`). Command MUST run this before
+`control-pack` for `hop=genesis_design`.
+
+**Commands:**
+
+```bash
+python3 ndf_genesis_idea.py check docs/cycles/cycle-<id>.md
+```
+
+**Exit codes:** `0` OK; `1` ILLEGAL (prints error codes); `2` missing file / usage.
 
 ---
 

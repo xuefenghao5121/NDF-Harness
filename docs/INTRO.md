@@ -1,6 +1,6 @@
 # NDF Harness：人跟 Agent 怎么一起改复杂系统
 
-版本 1.0.2。装包、CLI、排障看文末。这篇讲 Harness 自己在干什么。
+版本 1.0.3。装包、CLI、排障看文末。这篇讲 Harness 自己在干什么。
 
 先说内核，别绕：
 
@@ -111,7 +111,7 @@ Agent 写哪有硬边界：
 |------|-----------|--------------|------------|
 | 角色向导 | **角色已配置** | `ndf.workflow.yaml` 三角色；Genesis `GATES.md` 回执 | `roles_unbound=false` |
 | 绑内核 | Command 写，不另派 | `FOUNDATION.md` + `GATES.md` 骨架 | mode、Trunk SHA、roles SHA；不写产品长文 |
-| 一次派发 | **派发** | Control 写满 `spec/00-50`（多为 draft），复现测试/金标进 configs / baselines | 磁盘 completion；测不出则 `baseline_status=deferred`，「继续」补测 |
+| 一次派发 | **派发** | 合法 `ndf-genesis-idea/v1` 后 Control 写 **骨架** `spec/00-50`（draft，≤20 条款），复现测试/金标进 configs / baselines | 磁盘 completion；测不出则 `baseline_status=deferred`，「继续」补测 |
 | 仅 greenfield | **可以建立初始主线** | 一次 `genesis-pack` | adopt 跳过 |
 | 冻结 | **GENESIS已审核** | 非 SLA 骨架升 `stable`；已复现基线/SLA 升 `stable` | 项目进入 operational |
 

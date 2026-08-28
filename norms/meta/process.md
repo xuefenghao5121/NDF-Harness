@@ -206,6 +206,14 @@ NDF 工作流 MUST 在日常 Proposal/POC 前支持一次性 `track=bootstrap`�
 7. `genesis-status` 下一句：缺 FOUNDATION → 绑内核；骨架未写满 → 「派发」；
    设计+基线 completion 后 → `GENESIS已审核`（或 greenfield 的 `可以建立初始主线`）。
 8. closeout 失败且无合法磁盘 completion → 同一 hop「继续」；MUST NOT 送下一 hop。
+9. **绿地输入（一周期一事）**：`greenfield` 的 `hop=genesis_design` `source_ref`
+   MUST 为填写完整的 `ndf-genesis-idea/v1`（模板
+   `spec/meta/templates/genesis/TASK_ORDER.md.stub`）。一个 `cycle_id` = 一个项目周期。
+   多阶段散文路书 MUST NOT 作为设计 hop 的 `source_ref`。`maps_to` MUST 为 `skeleton`。
+   Control MUST 仅按该文件 Mapping 表写 `spec/00–50` 骨架（条款预算 ≤20，默认
+   `status=draft`、`layer=L0`）；Guidance 栏 MUST NOT 写入 BEH/API/CON-SLA must。
+   Command 造 pack 前 MUST 跑 `ndf_genesis_idea.py check`；非法输入 fail-closed。
+   性能数字 MUST 以 `level=tbd` / `not-established` 入 SLA 栏，直到有 Trunk 测量。
 
 日常优化/二次开发对照 Genesis 冻结的骨架与基线；不把「升 init 骨架 stable」做成多轮口令。
 
