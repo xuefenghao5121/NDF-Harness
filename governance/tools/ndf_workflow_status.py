@@ -6844,6 +6844,7 @@ GENESIS_SERIAL_GATES = (
 
 GENESIS_SERIAL_GATES_GREENFIELD = (
     ("roles_bound", "角色已配置"),
+    ("architecture_review", "架构已确认"),
     ("trunk_approval", "可以建立初始主线"),
     ("genesis_review", "GENESIS已审核"),
 )
@@ -6852,7 +6853,6 @@ LEGACY_GENESIS_GATE_IDS = frozenset(
     {
         "idea_review",
         "charter_review",
-        "architecture_review",
         "verification_review",
     }
 )
@@ -6877,6 +6877,118 @@ GENESIS_DESIGN_WRITE_ROOTS = (
     "spec/decisions/",
     "spec/INDEX.md",
 )
+
+GENESIS_SYNTHESIS_WRITE_ROOTS = (
+    "spec/open/project-genesis/",
+)
+
+
+def genesis_design_map_path() -> Path:
+    return genesis_paths()["foundation"].parent / "DESIGN_MAP.md"
+
+
+def _gate_latest_status(latest: Mapping[str, Mapping[str, str]], gate_id: str) -> str:
+    return str((latest.get(gate_id) or {}).get("status") or "").lower()
+
+
+def _gate_is_approved(status: str) -> bool:
+    return status in {"approved", "valid"}
+
+
+def architecture_review_approved(
+    gates_path: Path | None = None,
+    *,
+    rows: list[Mapping[str, str]] | None = None,
+) -> bool:
+    parsed: list[Mapping[str, str]]
+    if rows is not None:
+        parsed = list(rows)
+    else:
+        path = gates_path or genesis_paths()["gates"]
+        if not path.is_file():
+            return False
+        parsed = ndf_gate_slices.parse_gates_table(read_text(path))
+    latest: dict[str, Mapping[str, str]] = {}
+    for row in parsed:
+        gate = str(row.get("gate") or "").strip()
+        if gate:
+            latest[gate] = row
+    return _gate_is_approved(_gate_latest_status(latest, "architecture_review"))
+
+
+def synthesis_dispatch_approved(
+    gates_path: Path | None = None,
+    *,
+    rows: list[Mapping[str, str]] | None = None,
+) -> bool:
+    parsed: list[Mapping[str, str]]
+    if rows is not None:
+        parsed = list(rows)
+    else:
+        path = gates_path or genesis_paths()["gates"]
+        if not path.is_file():
+            return False
+        parsed = ndf_gate_slices.parse_gates_table(read_text(path))
+    latest: dict[str, Mapping[str, str]] = {}
+    for row in parsed:
+        gate = str(row.get("gate") or "").strip()
+        if gate:
+            latest[gate] = row
+    return _gate_is_approved(_gate_latest_status(latest, "synthesis_dispatch"))
+
+
+def build_design_evidence_payload(
+    hop: str | None,
+    *,
+    architecture_review_ok: bool | None = None,
+) -> dict[str, str] | None:
+    mode = read_bootstrap_mode()
+    if mode == "adopt":
+        trunk_sha = git_head()
+        has_src = (ROOT / "src").is_dir() and any((ROOT / "src").rglob("*"))
+        if not has_src:
+            return None
+        return {
+            "kind": "trunk_observation",
+            "ref": f"observed_trunk_sha:{trunk_sha}",
+            "content_sha": trunk_sha,
+            "source_tag": "observed",
+            "baseline_policy": "required",
+        }
+    design_map = genesis_design_map_path()
+    if not design_map.is_file():
+        return None
+    text = read_text(design_map)
+    bundle_sha = hashlib.sha256(text.encode("utf-8")).hexdigest()
+    arch_ok = (
+        architecture_review_ok
+        if architecture_review_ok is not None
+        else architecture_review_approved()
+    )
+    if hop == "genesis_design" and not arch_ok:
+        return {
+            "kind": "approved_design_map",
+            "ref": rel(design_map),
+            "content_sha": bundle_sha,
+            "source_tag": "deduced",
+            "baseline_policy": "deferred",
+            "blocked": "architecture_review_pending",
+        }
+    if arch_ok:
+        return {
+            "kind": "approved_design_map",
+            "ref": rel(design_map),
+            "content_sha": bundle_sha,
+            "source_tag": "deduced",
+            "baseline_policy": "deferred",
+        }
+    return {
+        "kind": "design_map_draft",
+        "ref": rel(design_map),
+        "content_sha": bundle_sha,
+        "source_tag": "deduced",
+        "baseline_policy": "deferred",
+    }
 
 
 def read_bootstrap_mode() -> str:
@@ -6931,13 +7043,15 @@ def product_spec_is_skeleton() -> bool:
 
 
 def allowed_roots_for_genesis_bootstrap(hop: str | None) -> list[str]:
+    if hop == "genesis_synthesis":
+        return list(GENESIS_SYNTHESIS_WRITE_ROOTS)
     if hop == "genesis_design":
         return list(GENESIS_DESIGN_WRITE_ROOTS)
     return list(IDEA_PLANE_ROOTS["product"])
 
 
 def assert_bootstrap_write_roots(hop: str | None, roots: list[str]) -> None:
-    if hop != "genesis_design":
+    if hop not in {"genesis_design", "genesis_synthesis"}:
         return
     allowed = allowed_roots_for_genesis_bootstrap(hop)
     normalized: list[str] = []
@@ -7002,12 +7116,42 @@ def genesis_serial_next_step(
             "phrase": "绑内核",
             "action": "command",
         }
-    if product_spec_is_skeleton():
+    mode = read_bootstrap_mode()
+    design_map = genesis_design_map_path()
+    if mode == "greenfield":
+        synth_ok = synthesis_dispatch_approved(rows=parsed)
+        arch_ok = architecture_review_approved(rows=parsed)
+        if not synth_ok and not design_map.is_file():
+            return {
+                "id": "synthesis_dispatch",
+                "label": "synthesis_dispatch",
+                "phrase": "派发",
+                "action": "dispatch",
+                "hop": "genesis_synthesis",
+            }
+        if not arch_ok:
+            return {
+                "id": "architecture_review",
+                "label": "architecture_review",
+                "phrase": "架构已确认",
+                "action": "human",
+            }
+        design_status = _gate_latest_status(latest, "design_dispatch")
+        if not _gate_is_approved(design_status):
+            return {
+                "id": "design_dispatch",
+                "label": "design_dispatch",
+                "phrase": "派发",
+                "action": "dispatch",
+                "hop": "genesis_design",
+            }
+    elif product_spec_is_skeleton():
         return {
             "id": "design_dispatch",
             "label": "design_dispatch",
             "phrase": "派发",
             "action": "dispatch",
+            "hop": "genesis_design",
         }
     serial = active_genesis_serial_gates()
     for gate_id, phrase in serial:
@@ -7069,6 +7213,12 @@ def genesis_status() -> dict[str, Any]:
         elif sid == "design_dispatch":
             rail_state = ("completed", "completed", "in_progress", "pending")
             foundation_phrase = "派发"
+        elif sid == "synthesis_dispatch":
+            rail_state = ("completed", "completed", "in_progress", "pending")
+            foundation_phrase = "派发"
+        elif sid == "architecture_review":
+            rail_state = ("completed", "completed", "in_progress", "pending")
+            foundation_phrase = "架构已确认"
         elif sid == "trunk_approval":
             rail_state = ("completed", "completed", "completed", "in_progress")
             trunk_phrase = serial["phrase"]
@@ -7112,8 +7262,26 @@ def genesis_status() -> dict[str, Any]:
         },
     ]
     if mode == "greenfield":
+        map_path = genesis_design_map_path()
         rail.insert(
-            3,
+            2,
+            {
+                "id": "G1b",
+                "label": "Synthesis",
+                "state": (
+                    "completed"
+                    if serial and serial["id"] in {"architecture_review", "design_dispatch", "trunk_approval", "genesis_review"}
+                    else "in_progress"
+                    if serial and serial["id"] in {"synthesis_dispatch", "architecture_review"}
+                    else "pending"
+                ),
+                "path": rel(map_path),
+                "content_sha": file_sha(map_path),
+                "next_phrase": "架构已确认",
+            },
+        )
+        rail.insert(
+            4,
             {
                 "id": "G2b",
                 "label": "Trunk",
@@ -8904,10 +9072,14 @@ def control_proposal_idea_pack(
     genesis_hop = infer_genesis_hop(normalized_intent) if declared_track == "bootstrap" else None
     allowed_roots = (
         allowed_roots_for_genesis_bootstrap(genesis_hop)
-        if declared_track == "bootstrap" and genesis_hop == "genesis_design"
+        if declared_track == "bootstrap"
+        and genesis_hop in {"genesis_design", "genesis_synthesis"}
         else allowed_roots_for_idea_plane(plane)
     )
-    if not (declared_track == "bootstrap" and genesis_hop == "genesis_design"):
+    if not (
+        declared_track == "bootstrap"
+        and genesis_hop in {"genesis_design", "genesis_synthesis"}
+    ):
         assert_idea_write_roots(canonical, allowed_roots)
     assert_bootstrap_write_roots(genesis_hop, allowed_roots)
     pack_task = (
@@ -8971,6 +9143,23 @@ def control_proposal_idea_pack(
         safe = False
     if bootstrap_blockers:
         blockers.extend(bootstrap_blockers)
+        safe = False
+    if declared_track == "bootstrap" and genesis_hop == "genesis_design":
+        if read_bootstrap_mode() == "greenfield" and not architecture_review_approved():
+            blockers.append("architecture_review_pending")
+            safe = False
+    design_evidence = (
+        build_design_evidence_payload(genesis_hop)
+        if declared_track == "bootstrap"
+        else None
+    )
+    if (
+        declared_track == "bootstrap"
+        and genesis_hop == "genesis_design"
+        and design_evidence
+        and design_evidence.get("blocked")
+    ):
+        blockers.append(str(design_evidence["blocked"]))
         safe = False
     intent_sha = (
         hashlib.sha256(normalized_intent.encode("utf-8")).hexdigest()
@@ -9042,6 +9231,8 @@ def control_proposal_idea_pack(
         **context,
         "blockers": blockers,
     }
+    if design_evidence is not None:
+        payload["design_evidence"] = design_evidence
     payload["track"] = track
     payload["hop"] = hop
     payload["topic"] = pack_topic
@@ -9508,14 +9699,16 @@ def _intent_mentions_file(text: str, filename: str) -> bool:
 
 
 def infer_genesis_hop(intent: str | None) -> str | None:
-    """Pick Genesis hop from intent. Only genesis_design / genesis_trunk are valid dispatches."""
+    """Pick Genesis hop from intent. genesis_synthesis / genesis_design / genesis_trunk."""
     text = intent or ""
     header = re.search(
-        r"(?im)^hop:\s*(genesis_(?:design|kernel|trunk|charter|architecture|verification|foundation))\s*$",
+        r"(?im)^hop:\s*(genesis_(?:design|synthesis|kernel|trunk|charter|architecture|verification|foundation))\s*$",
         text,
     )
     if header:
         return header.group(1).lower()
+    if re.search(r"(?im)(genesis_synthesis|DESIGN_MAP)", text):
+        return "genesis_synthesis"
     if re.search(r"(?im)(spec/00-charter/|spec/10-architecture/|genesis_design)", text):
         legacy_target = any(
             _intent_mentions_file(text, name)
@@ -9535,6 +9728,7 @@ def infer_genesis_hop(intent: str | None) -> str | None:
 
 
 GENESIS_NEXT_PHRASE = {
+    "genesis_synthesis": "架构已确认",
     "genesis_design": "GENESIS已审核",
     "genesis_trunk": "可以建立初始主线",
     "genesis_kernel": "派发",
@@ -9544,6 +9738,7 @@ GENESIS_REQUIRED_READS = [
     "AGENTS.md",
     "spec/open/project-genesis/FOUNDATION.md",
     "spec/open/project-genesis/GATES.md",
+    "spec/open/project-genesis/DESIGN_MAP.md",
     "spec/10-architecture/README.md",
     "META-009",
     "META-011",

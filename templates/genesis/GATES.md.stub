@@ -7,18 +7,18 @@ Do not edit or delete old receipts. Append `invalidated` when bound content chan
 
 | gate | phrase | approved_by | approved_at | approved_content_sha | source_ref | status |
 |------|--------|-------------|-------------|----------------------|------------|--------|
-| idea_review | IDEA已审核 | | | | | pending |
-| charter_review | CHARTER已审核 | | | | | pending |
-| architecture_review | ARCHITECTURE已审核 | | | | | pending |
-| verification_review | VERIFICATION已审核 | | | | | pending |
+| roles_bound | 角色已配置 | | | | | pending |
+| synthesis_dispatch | 派发 | | | | genesis_synthesis completion | pending |
+| architecture_review | 架构已确认 | | | | cycle + DESIGN_MAP bundle | pending |
+| design_dispatch | 派发 | | | | genesis_design completion | pending |
 | trunk_approval | 可以建立初始主线 | | | | | pending |
 | genesis_review | GENESIS已审核 | | | | | pending |
 
 ## Canonical bundles
 
-- `idea_review`: IDEA + bootstrap proposal
-- `charter_review`: IDEA + Charter
-- `architecture_review`: Charter + Architecture + core behavior/interfaces
-- `verification_review`: constraints + verification protocol
-- `trunk_approval`: all Foundation artifacts
+- `roles_bound`: normalized `ndf.workflow.yaml` roles block
+- `synthesis_dispatch`: valid cycle + DESIGN_MAP draft
+- `architecture_review`: cycle SHA + DESIGN_MAP SHA
+- `design_dispatch`: approved DESIGN_MAP → spec/00–50
+- `trunk_approval`: Foundation + draft spec + baseline refs (greenfield)
 - `genesis_review`: Genesis DEC + NDF tree SHA + Trunk SHA + verification evidence

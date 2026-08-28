@@ -1,0 +1,72 @@
+# Design Map — architecture synthesis (greenfield)
+
+> schema: ndf-genesis-design-map/v1
+> track: bootstrap
+> bootstrap_mode: greenfield
+> cycle_id: <kebab-case>
+> source_ref: docs/cycles/cycle-<cycle_id>.md
+> source_content_sha: <sha256 of source_ref at synthesis time>
+> hop: genesis_synthesis
+> status: draft
+
+## Product scope (from Idea)
+
+### In scope
+
+- <product capability distilled from cycle In-scope; no task IDs>
+
+### Out of scope
+
+- <sibling cycles and exclusions from cycle Out-of-scope>
+
+## Module decomposition
+
+| Module / path | Responsibility | Depends on |
+|---------------|----------------|------------|
+| `include/` | | |
+| `src/host/` | | |
+| `src/jit/` | | |
+| `src/twiddle/` | | |
+
+## Runtime data flow
+
+<plan/generate once → execute many; buffer ownership; major call sequence>
+
+## Algorithm and invariants
+
+- <core algorithm choice, e.g. DIF/DIT, fixed N, output ordering>
+- <twiddle strategy, fusion seams, etc.>
+
+## Interfaces and ownership
+
+- <C ABI: plan vs execute; who owns buffers; error boundaries>
+
+## Verification properties
+
+| Property | Mathematical meaning | Maps to (hint) |
+|----------|---------------------|----------------|
+| linearity | | VER-* |
+| impulse | | VER-* |
+| shift | | VER-* |
+
+## Assumptions and open questions
+
+| Item | Assumption / question | Blocks spec? |
+|------|----------------------|--------------|
+| | | yes/no |
+
+## Trace rows
+
+| source_section | source_excerpt | target_layer | target_path | clause_id_hint | source_tag |
+|----------------|----------------|--------------|-------------|----------------|------------|
+| In-scope #1 | | ARCH | spec/10-architecture/ | ARCH-* | deduced |
+| Hard constraints | | CON | spec/40-constraints/ | CON-* | deduced |
+
+## Exclusions (Guidance MUST NOT become must)
+
+- <roadmap tasks, ISA cheat sheets, numeric SLA from Guidance>
+
+## Budget
+
+- clause_budget: ≤20
+- guidance_landed_in_must: false

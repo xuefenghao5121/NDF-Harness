@@ -58,6 +58,7 @@ FULL_TOOL_SCRIPTS = (
     "ndf_role_binding.py",
     "ndf_acp_session_bootstrap.py",
     "ndf_genesis_idea.py",
+    "ndf_genesis_design_map.py",
     "ndf_replay.py",
 )
 
@@ -75,6 +76,7 @@ SMOKE_TOOLS = (
     "ndf_poc_dispatch.py",
     "ndf_workflow_status.py",
     "ndf_genesis_idea.py",
+    "ndf_genesis_design_map.py",
 )
 
 RUNTIME_SKILL_DIRS: dict[str, str | None] = {

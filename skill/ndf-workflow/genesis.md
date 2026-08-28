@@ -1,63 +1,62 @@
-# Genesis — 初始化（绑内核 → 一次派发 → 审核冻结）
+# Genesis — 初始化（DESIGN_MAP 映射层）
 
 [[META-009]] / track=`bootstrap`。`greenfield` | `adopt`。
 已 accepted 的 operational 项目 **MUST NOT** 重跑。
 
 ```bash
 python3 spec/meta/tools/ndf_workflow_status.py genesis-status --json
+python3 spec/meta/tools/ndf_genesis_idea.py check docs/cycles/cycle-<id>.md
+python3 spec/meta/tools/ndf_genesis_design_map.py check spec/open/project-genesis/DESIGN_MAP.md
 ```
 
-## 人话（尽量少）
+## 人话
+
+**Adopt（有源码）：**
 
 ```text
-角色已配置 → 派发 → GENESIS已审核
+角色已配置 → 绑内核 → 派发(genesis_design) → GENESIS已审核
 ```
 
-（greenfield 可多一句：`可以建立初始主线`。）
+Control 从 Trunk @ SHA 归纳 observed design evidence。
+
+**Greenfield（无源码）：**
+
+```text
+角色已配置 → 绑内核 → 派发(genesis_synthesis) → 架构已确认 → 派发(genesis_design) → 可以建立初始主线 → GENESIS已审核
+```
+
+Idea cycle 只进 synthesis；`DESIGN_MAP.md` 承担 adopt 中源码提供的信息面。
 
 ## G-1 角色向导
 
-三角色写入 `ndf.workflow.yaml` → 人 **角色已配置**。`roles_unbound` 不得派发。
+三角色 → 人 **角色已配置**。`roles_unbound` 不得派发。
 
 ## G0 绑内核（Command）
 
-写 `FOUNDATION.md` + `GATES.md`。不写产品契约长文。
+`FOUNDATION.md` + `GATES.md`。不写产品契约长文。
 
-## G1 一次「派发」
+## G1a synthesis（greenfield）
 
-`hop=genesis_design`：
+`hop=genesis_synthesis`：Control **只**写 `spec/open/project-genesis/DESIGN_MAP.md`。
+派发前 Command MUST `ndf_genesis_idea.py check` cycle 文件。
 
-Greenfield `source_ref` MUST 为填写完整的 `ndf-genesis-idea/v1`
-（`TASK_ORDER.md.stub` / `docs/cycles/cycle-<id>.md`）。多阶段散文路书 MUST NOT
-当设计 hop 输入。造 pack 前：
+## G1b 架构已确认（greenfield）
 
-```bash
-python3 spec/meta/tools/ndf_genesis_idea.py check docs/cycles/cycle-<id>.md
-```
+人审 DESIGN_MAP bundle（cycle SHA + map SHA）→ **架构已确认** 写入 GATES。
 
-非法 → fail-closed，不得派发。
+## G1c design
 
-1. Control：按 Mapping 表写 **骨架** `spec/00–50`（及必要 decisions/INDEX）；
-   条款预算 ≤20；默认 `draft` / L0。Guidance MUST NOT 进 BEH/API/CON-SLA must。
-2. 同句：复现 `make test` + VER 金标/sustained → `configs/` + `baselines/`（绑 Trunk SHA）
-
-测不出：completion 标 `baseline_status=deferred`；人说 **继续** 补测。
+`hop=genesis_design`：Control 从 **已审核** DESIGN_MAP（greenfield）或 Trunk observation（adopt）
+物化 `spec/00–50`。greenfield 未 `架构已确认` → pack fail-closed。
 
 ## G2 仅 greenfield
 
-「可以建立初始主线」→ 一次 `genesis-pack`。adopt 跳过。
+「可以建立初始主线」→ `genesis-pack`。adopt 跳过。
 
-## G3 「GENESIS已审核」
+## G3 GENESIS已审核
 
-Command 落地（不另派）：
-
-- 骨架（非 SLA）→ **stable** = 优化/二次开发对照目标
-- 已复现基线与对应 SLA → **stable**
-- 未复现 SLA → 留 `not-established`
-- 项目 → operational
-
-MUST NOT 再教用户走一轮日常 promote 才 stable 骨架。
+Command 冻结骨架 stable；基线欠账用 **继续**。
 
 ## Legacy
 
-CHARTER/ARCHITECTURE/VERIFICATION 连派已废弃；`genesis_per_draft_dispatch` fail-closed。
+CHARTER/ARCHITECTURE 连派废弃；`genesis_per_draft_dispatch` fail-closed。

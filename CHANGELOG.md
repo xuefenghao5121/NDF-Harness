@@ -1,5 +1,18 @@
 # Changelog
 
+## 1.1.0 — 2026-08-28
+
+Greenfield Genesis **DESIGN_MAP mapping layer** (align with adopt's observed-code evidence):
+
+- **META-009 §9**: greenfield rail = synthesis → **架构已确认** → design → trunk → freeze.
+  Idea (`ndf-genesis-idea/v1`) feeds synthesis only; `DESIGN_MAP.md` (`ndf-genesis-design-map/v1`)
+  carries module/data-flow/algorithm/ABI/verification surface before spec materialization.
+- **Adopt unchanged**: `design_evidence.kind=trunk_observation` @ SHA; one `genesis_design` hop.
+- **Tools**: `ndf_genesis_design_map.py` + tests; `ndf_workflow_status.py` — `genesis_synthesis`,
+  `architecture_review` gate, `design_evidence` in pack, fail-closed design dispatch.
+- **Templates**: `DESIGN_MAP.md.stub`; updated `TASK_ORDER` (synthesis inputs only), `GATES.md.stub`.
+- **Skill / AGENTS / docs**: genesis.md adopt vs greenfield rails; install ships design-map checker.
+
 ## 1.0.3 — 2026-08-28
 
 Distill greenfield Genesis **input gate** from consumer validation

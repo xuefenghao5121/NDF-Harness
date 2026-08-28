@@ -41,6 +41,7 @@
 | [`ndf_acp_session_bootstrap.py`](ndf_acp_session_bootstrap.py) | Claude Code ACP 会话 bootstrap / resume 工件 |
 | [`ndf_role_binding.py`](ndf_role_binding.py) | 三角色 adapter 绑定 / probe |
 | [`ndf_genesis_idea.py`](ndf_genesis_idea.py) | 绿地 cycle 文件 `ndf-genesis-idea/v1` fail-closed 检查 |
+| [`ndf_genesis_design_map.py`](ndf_genesis_design_map.py) | DESIGN_MAP `ndf-genesis-design-map/v1` 结构/trace 检查 |
 | [`ndf_replay.py`](ndf_replay.py) | **已退役** tombstone（ADR-META-004；exit 2） |
 
 日常：见 [`GOVERNANCE.md`](GOVERNANCE.md) §2 主链。  

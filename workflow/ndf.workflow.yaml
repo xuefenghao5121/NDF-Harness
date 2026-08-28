@@ -3,7 +3,7 @@
 # Customize roots/adapters for this repo; no secrets.
 
 version: "1"
-harness_version: "1.0.3"
+harness_version: "1.1.0"
 project: "⟨TBD: project-name⟩"
 
 roots:

@@ -1,8 +1,8 @@
 {
   "schema": "ndf-harness-manifest/v1",
-  "version": "1.0.3",
-  "source_commit": "4dcd4f6edd3afc85740f0806464ebbec615f9447",
-  "generated_at": "2026-08-28T11:49:16+00:00",
+  "version": "1.1.0",
+  "source_commit": "acd42a24df9f0d5aab2bc76a01a190ba3607ae7f",
+  "generated_at": "2026-08-28T14:49:03+00:00",
   "files": [
     {
       "path": ".gitignore",
@@ -11,17 +11,17 @@
     },
     {
       "path": "CHANGELOG.md",
-      "sha256": "21c81e2251cece399d2e93d84a64d8aa7c64af461f36805f8eaf9f7f2b4c63d8",
-      "bytes": 5114
+      "sha256": "603d5b16ba79e2c9666e95b6e896dc238819438bae5dbdaf8d718a0309732d83",
+      "bytes": 6015
     },
     {
       "path": "README.md",
-      "sha256": "3263bdae2e0e4607a2b5e73181f001a6eefc95516d2fbb2b17cf6c60145a2345",
+      "sha256": "6ad9a279bd4be6b1f56a6cf627df23c87a31abaeb1aa693070dc36c6fe5c79e1",
       "bytes": 6532
     },
     {
       "path": "VERSION",
-      "sha256": "f5e5c9534532840fcd45bb002e69ed85c61dba2753450e26b448b7df1481e24d",
+      "sha256": "1575e1af4a95f12f70b4ee6a6adce8160953d93ea17dc2611b90883ccc3ad3b8",
       "bytes": 6
     },
     {
@@ -176,8 +176,8 @@
     },
     {
       "path": "governance/tools/README.md",
-      "sha256": "27b39659ee3ce0beb4fd8b6ba9fb2180836a7b88d1589000e0bdb223139fd3d0",
-      "bytes": 11419
+      "sha256": "86fe1b162f9b946a1ce4b97d17fb8d8da3cca7e4314d5c0c771621ea280f64a7",
+      "bytes": 11541
     },
     {
       "path": "governance/tools/VENDOR.md",
@@ -223,6 +223,11 @@
       "path": "governance/tools/ndf_gate_slices.py",
       "sha256": "a6027f0ea46d424a58acff9c3cd8b429005d43f2d80b22d34ec08d874b666748",
       "bytes": 26990
+    },
+    {
+      "path": "governance/tools/ndf_genesis_design_map.py",
+      "sha256": "1f34256f0f649aa361d31453412ad9fab071e5f5658fa001a24bc5327c713f26",
+      "bytes": 5292
     },
     {
       "path": "governance/tools/ndf_genesis_idea.py",
@@ -276,13 +281,18 @@
     },
     {
       "path": "governance/tools/ndf_workflow_status.py",
-      "sha256": "92094487452fe0998299f5e13fa921c0b173dc295ecbc5cb412f9b30170e7485",
-      "bytes": 424979
+      "sha256": "d78382c33425c6f86489b8ac82b310b914b1e29cb856ede603964ffda6dffd12",
+      "bytes": 431736
     },
     {
       "path": "governance/tools/test_ndf_dispatch_disk_first.py",
       "sha256": "ee0a32278b23193418a185e97852584270d8650a76ca4b0128299ee74175bc0c",
       "bytes": 2129
+    },
+    {
+      "path": "governance/tools/test_ndf_genesis_design_map.py",
+      "sha256": "3d8d19f30c266e48f7accaf3b5162bee2e7373e3a3b93a8b39447fc3192ba2f5",
+      "bytes": 2927
     },
     {
       "path": "governance/tools/test_ndf_genesis_idea.py",
@@ -311,8 +321,8 @@
     },
     {
       "path": "install.py",
-      "sha256": "97d3a3a839aeeee84e629c4261804339b3e54fafde8a91a332d37ba8b1f03ec6",
-      "bytes": 28447
+      "sha256": "2a3d2e3eebc4994d54d3cd858c21dab452cf58b4243255e56979dbedaf85c0b3",
+      "bytes": 28513
     },
     {
       "path": "migration/README.md",
@@ -406,8 +416,8 @@
     },
     {
       "path": "norms/meta/process.md",
-      "sha256": "1fd33a32b32203967b85502bf5dbc6103d49e39c49f6bc9bb77244a4047efcf8",
-      "bytes": 50241
+      "sha256": "bca642ca72eece250d2beb2ecdeb751564fcbf5e298163a4c0586d0b3067a7dc",
+      "bytes": 50324
     },
     {
       "path": "norms/ndf.yaml.stub",
@@ -521,8 +531,8 @@
     },
     {
       "path": "skill/ndf-workflow/genesis.md",
-      "sha256": "32c9f4194d2eccd29d7d54fa02d6d38613363dfdd418a9fae3ef33b7e4ade67f",
-      "bytes": 1915
+      "sha256": "22682b334c06458abbf3c3ff84d5a199ed912f24826ea50307305a96b1e4f5c5",
+      "bytes": 1889
     },
     {
       "path": "skill/ndf-workflow/govern.md",
@@ -580,14 +590,19 @@
       "bytes": 284
     },
     {
+      "path": "templates/genesis/DESIGN_MAP.md.stub",
+      "sha256": "7661c1bf2acb5519e4daeb50f6f4873b899a7fc51159048aedf55a0ddf51d6f8",
+      "bytes": 1903
+    },
+    {
       "path": "templates/genesis/FOUNDATION.md.stub",
       "sha256": "c43cddb7cd9bb8f5c2e2d1cf51f95fcabee6fb4b55df9a2b0536bd83185be0f7",
       "bytes": 571
     },
     {
       "path": "templates/genesis/GATES.md.stub",
-      "sha256": "02fef9f78c535c36a9cc44bb52289895f979157735f32b527f522159a228dee8",
-      "bytes": 1064
+      "sha256": "feccf48962e1022bf134ee50f81129d6eaff81b1723f7476f97a733a53454b56",
+      "bytes": 1155
     },
     {
       "path": "templates/genesis/GENESIS_DEC.md.stub",
@@ -601,13 +616,13 @@
     },
     {
       "path": "templates/genesis/TASK_ORDER.RULES.md",
-      "sha256": "cb6149fc9686c61bc2300e87b8b98ec7c53b21e796edc6d4fadad7160b34d748",
-      "bytes": 2936
+      "sha256": "463c059720d59655e67bc3fbb2da0aeb428e044131f7f641b97e2db3b8ecba88",
+      "bytes": 1709
     },
     {
       "path": "templates/genesis/TASK_ORDER.md.stub",
-      "sha256": "7b0da329faed810f93e894a392706794cf5bf96c613a1fea92843aaa26434c0b",
-      "bytes": 1586
+      "sha256": "ba213cb32053324a55e8c47f2cdbd46f878fb68f6bcebfc10347d90edc7af5df",
+      "bytes": 1637
     },
     {
       "path": "templates/implementer-boundaries.md",
@@ -731,12 +746,12 @@
     },
     {
       "path": "workflow/AGENTS.md",
-      "sha256": "71364bbc76f9205c3d046931739c989bd2555e26bfb8b62f539bfe8835fab347",
-      "bytes": 12513
+      "sha256": "98f5720f0320641577775124d39c75c8f12a2a040dd41c44360c1548038cd4ac",
+      "bytes": 12643
     },
     {
       "path": "workflow/ndf.workflow.yaml",
-      "sha256": "fcd2751e9b3272b0d5f83cec6b1773404839f5730fe64323a281891944a29dd5",
+      "sha256": "f69e05ac0f2d57bd7f66305ab369c9994974973f28a3d776f956fda7814150cb",
       "bytes": 3651
     },
     {

@@ -230,10 +230,13 @@ Command MUST NOT 直接调用外部 chat 发送 API 绕过 pack 纪律。
 
 - `bootstrap_mode=greenfield|adopt`
 - **G0** Command 绑内核（不派 OpenClaw）
-- **G1** 一句「派发」：`ndf-genesis-idea/v1` 合法后写 **骨架** `spec/00–50`（≤20 条款）+ 复现验证/金标基线；散文路书不得当 `source_ref`
+- **Adopt**：`hop=genesis_design` 从 Trunk @ SHA 归纳 observed design → `spec/00–50` + 基线
+- **Greenfield**：`hop=genesis_synthesis` → DESIGN_MAP → 人 **架构已确认** →
+  `hop=genesis_design` 物化 spec（Idea 不直接进 spec）
 - **G2**（仅 greenfield）「可以建立初始主线」→ `genesis-pack`；adopt 跳过
-- **G3** 「GENESIS已审核」→ 骨架 stable（对照目标）+ 已复现基线/SLA stable → operational
-- 欠基线一句「继续」；MUST NOT 事后再开又臭又长的 promote 教程才升骨架
+- **G3** 「GENESIS已审核」→ 骨架 stable + 已复现基线/SLA stable → operational
+- 派发前 greenfield MUST `ndf_genesis_idea.py check`；DESIGN_MAP MUST
+  `ndf_genesis_design_map.py check`；未 `架构已确认` 不得 genesis_design pack
 - legacy 连派 fail-closed：`genesis_per_draft_dispatch`
 
 ### 6.2d 负结果
