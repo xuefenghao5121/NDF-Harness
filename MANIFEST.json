@@ -1,8 +1,8 @@
 {
   "schema": "ndf-harness-manifest/v1",
   "version": "1.1.1",
-  "source_commit": "a665340b5092774dfcef1cc8c59b289261aeb710",
-  "generated_at": "2026-08-29T11:14:18+00:00",
+  "source_commit": "7d74c3f6d557251fab271613b3733cc40afd32a3",
+  "generated_at": "2026-08-29T11:14:30+00:00",
   "files": [
     {
       "path": ".gitignore",
@@ -756,7 +756,7 @@
     },
     {
       "path": "workflow/ndf.workflow.yaml",
-      "sha256": "f69e05ac0f2d57bd7f66305ab369c9994974973f28a3d776f956fda7814150cb",
+      "sha256": "c6fb4d4e952ac465eca0a7737eebb701afd0eba8018a8fd721fd0d595a9e4b84",
       "bytes": 3651
     },
     {
