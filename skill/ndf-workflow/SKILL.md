@@ -27,8 +27,16 @@ is a portable seed; the installed repo is authoritative after init/adopt.
 | **Control** | Design agent | OpenClaw | 提案、装订器、门禁文档（见 [delegate.md](delegate.md)） |
 | **Implementation** | Implementation agent | Claude Code ACP | `poc/` 实现/测量；Genesis / promote 代码（见 [delegate.md](delegate.md)） |
 
-Command MUST NOT：写 worker 边界内的实现/测量；直接 `openclaw.chat_send`；打开面板。
+Command MUST NOT：写 worker 边界内的实现/测量；写 `poc/<topic>/ndf/` 装订器 SoT 正文；
+直接 `openclaw.chat_send`；打开面板。产品提案「已审核」后只造 Control `binder_pipeline`
+pack，等人「派发」；OpenClaw 不可用时走配置的 fallback，MUST NOT 手写装订器赶进度。
 三角色绑定见 `ndf.workflow.yaml`；缺绑定 → `roles_unbound`。
+
+**MUST NOT 在 Cursor 沙箱里委派**：gateway 探测、`control-pack` / `poc-dispatch` /
+`dispatch-send`、角色 spawn 一律在宿主机网络（`required_permissions: ["all"]`）执行。
+沙箱连不上本机 gateway 会误判 `runtime_unavailable` 并错误落到 `in-host`；
+沙箱 `ECONNREFUSED` MUST NOT 当作 gateway 已挂（[[META-017]]）。见 adapter
+`rules/ndf-no-sandbox-dispatch.mdc`。
 
 ## Human cognitive contract
 
@@ -66,6 +74,8 @@ Init/adopt/govern/sync：[install.md](install.md) / [adopt.md](adopt.md) / [gove
 - Genesis：绑内核 → 一句派发（`ndf-genesis-idea/v1` 骨架 `00–50` + 复现基线）→ `GENESIS已审核` 将骨架与已测基线标 stable；欠基线「继续」
 - Context Compiler 只在 pack 内部跑；失败只报 `context_verify_failed` + SHA
 - `roles_unbound` → 不得派发；先跑 [genesis.md](genesis.md) G-1 角色向导
+- promote 合入与 TOPIC 归档分 hop（[[META-018]]）；发前 MOVE 活回执
+- CLI 已 `sessions.reset` 后本次 `dispatch-send` MUST `NDF_OPENCLAW_RESET_SESSION=0`
 
 ## CLI（Command 内部）
 

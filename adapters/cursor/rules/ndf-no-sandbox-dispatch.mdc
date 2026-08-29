@@ -1,0 +1,23 @@
+---
+description: Never probe or dispatch OpenClaw/NDF roles from Cursor sandbox
+alwaysApply: true
+---
+
+# No sandbox dispatch
+
+Command MUST NOT run OpenClaw reachability probes, `control-pack` / `poc-dispatch` /
+`dispatch-send`, or any Control/Implementation delegation from a **Cursor sandbox**
+shell (default sandbox / limited network).
+
+Sandbox loopback cannot reach the host gateway (commonly `127.0.0.1:18789`), which
+falsely reports `runtime_unavailable` and wrongly selects `in-host`.
+
+Required:
+
+- Host-network (or `required_permissions: ["all"]`) for gateway health, sessions,
+  pack build that chooses `provider`, and every `dispatch-send` / role spawn.
+- If a probe only ran under sandbox and said unreachable, re-probe outside sandbox
+  before accepting fallback `in-host`.
+- Do not treat sandbox `ECONNREFUSED` on OpenClaw as proof the gateway is down.
+
+See [[META-017]].

@@ -4,11 +4,12 @@
 
 ## 装订一次
 
-产品提案「已审核」后，**OpenClaw** 一次写齐 `poc/<topic>/ndf/`：
+产品提案「已审核」后，**OpenClaw（或合法 Control fallback）** 一次写齐 `poc/<topic>/ndf/`：
 
 `TOPIC` → `DESIGN` → `PERF_BASELINE`（金标绑定头）→ `DELTA` 骨架 → `INTERFACE`
 
 开题填 `explore_surface`；扫活跃 exploring 相交则 depends/conflicts。
+Command MUST NOT 预写装订器正文；`binder_pipeline` 在尚无 `TOPIC.md` 时可自已审提案开题。
 
 > POC 装订器已写好：`poc/<topic>/ndf/`。请审阅契约；确认无误后回复「派发」。
 

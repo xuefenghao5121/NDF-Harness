@@ -2796,18 +2796,51 @@ def dispatch_send(
 
     if provider == "openclaw":
         send_result = _send_openclaw(pack, message=message, timeout_sec=timeout)
+        openclaw_fallback_errors = {
+            "openclaw_cli_missing",
+            "openclaw_session_reset_failed",
+            "openclaw_spawn_failed",
+            "openclaw_nonzero_exit",
+            "openclaw_timeout",
+            "openclaw_stalled",
+            "openclaw_heartbeat_error",
+            "runtime_unavailable",
+        }
         if (
             not send_result.get("transport_ok")
-            and send_result.get("error") == "openclaw_cli_missing"
+            and send_result.get("error") in openclaw_fallback_errors
         ):
-            fb = role_resolution.get("provider")
-            if fb in {"in-host", "dual-session", "custom"}:
-                send_result = _send_spawn_provider(
-                    pack,
-                    provider=str(fb),
-                    role_resolution=role_resolution,
-                    timeout_sec=timeout,
-                )
+            # Prefer yaml fallback when primary OpenClaw transport fails.
+            # Do not silently demote Implementation to in-host when pack asked
+            # openclaw — authorship collapse (META-017).
+            import ndf_role_binding as role_binding
+
+            mapped = str(
+                role_resolution.get("mapped_role")
+                or role_resolution.get("role")
+                or "control"
+            )
+            if mapped == "implementation" and str(pack.get("provider") or "") == "openclaw":
+                pass  # keep send_result failure; caller reports openclaw error
+            else:
+                cfg = role_binding.role_config(ROOT, mapped)
+                fb_raw = (cfg.get("fallback") or "").strip().lower().replace("_", "-")
+                fb = None
+                if fb_raw in {"in-host", "in_host"}:
+                    fb = "in-host"
+                elif fb_raw == "dual-session":
+                    fb = "dual-session"
+                elif fb_raw == "custom" and cfg.get("command"):
+                    fb = "custom"
+                if fb is None:
+                    fb = role_resolution.get("provider")
+                if fb in {"in-host", "dual-session", "custom"}:
+                    send_result = _send_spawn_provider(
+                        pack,
+                        provider=str(fb),
+                        role_resolution={**role_resolution, "provider": fb},
+                        timeout_sec=timeout,
+                    )
     elif provider == "claude-code-acp":
         send_result = _send_acp(
             pack, message=message, timeout_sec=timeout, lease_only=lease_only

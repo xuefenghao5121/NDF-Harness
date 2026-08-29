@@ -1,5 +1,24 @@
 # Changelog
 
+## 1.1.2 — 2026-08-29
+
+Distill **META-017** / **META-018** from DiskHNSW operational promote/close validation
+(consumer `hnsw-predictor-pageann` @ `068cdb7`):
+
+- **META-017**: host-network only for gateway probe / provider selection / dispatch;
+  sandbox `ECONNREFUSED` MUST NOT select `in-host`. Implementation + `provider=openclaw`
+  MUST NOT silently collapse to `in-host` on transport failure.
+- **META-018**: promote = Implementation `promote_land` (§5) then Control
+  `close_finalize` (§4); MUST NOT `poc-dispatch --send` for trunk land; MOVE live
+  completion receipts before send; after CLI `sessions.reset` set
+  `NDF_OPENCLAW_RESET_SESSION=0`.
+- **Seed**: `adapters/cursor/rules/ndf-no-sandbox-dispatch.mdc`; skill
+  SKILL/delegate/close/poc; `workflow/AGENTS.md` Command write-boundary table.
+- **Tools**: `ndf_dispatch_send.py` Implementation openclaw no in-host collapse;
+  `test_meta017_018_dispatch.py`.
+- Does **not** regress Genesis DESIGN_MAP / META-016; does **not** embed project
+  session_key literals.
+
 ## 1.1.1 — 2026-08-29
 
 Distill **META-016** (heartbeat must not negate disk completion) from consumer

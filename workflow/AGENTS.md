@@ -11,7 +11,7 @@
 1. 本文件 `AGENTS.md`
 2. **流程 SoT**：`spec/meta/README.md`、`spec/meta/language.md`、`spec/meta/process.md`
    （[[CHR-008]]、[[BEH-018]]…[[BEH-020]]、[[BEH-025]]、[[META-006]]、[[META-007]]、
-   [[META-009]]…[[META-012]]、[[META-014]]；[[META-013]]/[[META-015]] 已 deprecated）
+   [[META-009]]…[[META-012]]、[[META-014]]、[[META-016]]…[[META-018]]；[[META-013]]/[[META-015]] 已 deprecated）
 3. 当前相关**产品**契约：`spec/00–50` 与 `spec/open/` 提案
 
 若存在 `SOUL.md` / `MEMORY.md`，一并重读；不存在则跳过。
@@ -27,7 +27,8 @@
 
 模板：`spec/meta/templates/openclaw/state.json.example`。
 
-**角色**：指挥 Agent 依据 NDF 判定 track、写 L0/L1；可执行实现委托 Implementation Agent。
+**角色**：指挥 Agent 依据 NDF 判定 track、造 pack、等人审、调 CLI；Control / Implementation
+写界内产物 MUST 经委派 + 磁盘 completion。指挥面 MUST NOT 代写装订器正文或 `poc/` 实现/测量。
 新项目走 **bootstrap / Project Genesis**；operational 项目按 track 运作。
 
 **Meta 自洽**：meta 条款 MUST NOT `depends-on` 产品 ID；must 正文 MUST NOT 写产品功能专名。
@@ -95,9 +96,12 @@ Idea → 提案「已确认」/「已审核」
 |----|----|------|------|
 | **Command** | 指挥面（Cursor 等 + ndf-workflow skill） | 五句口令；造 pack；等人审；调 CLI | `tmp/`、触发回执；禁写 worker 实现 |
 | **Control** | 指挥 Agent（OpenClaw 等） | `control-pack` → dispatch | 提案/装订器；bootstrap `hop=genesis_design` 可写 `spec/00–50` |
-| **Implementation** | 实现 Agent（Claude Code 等） | `poc-dispatch --send`；`genesis-pack`；promote close plan | POC 仅 `poc/<topic>/`；promote 可写 Trunk |
+| **Implementation** | 实现 Agent（Claude Code 等） | `poc-dispatch --send`；`genesis-pack`；promote `promote_land` | POC 仅 `poc/<topic>/`；promote 可写 Trunk |
 
-成功 = 磁盘 completion receipt；**不以 transport ACK / stdout 冒充**。
+成功 = 磁盘 completion receipt；**不以 transport ACK / stdout 冒充**。stdout
+`ndf-dispatch-notify/v1` 缺失或心跳 stall MUST NOT 单独否定合法磁盘回执（[[META-016]]）。
+Command：hop closeout 失败且无合法磁盘回执 → 同一 hop「继续」；人类说未落地 → MUST NOT
+送下一串行 hop。委派 MUST 宿主网络（[[META-017]]）。promote 合入与归档分 hop（[[META-018]]）。
 
 ### 委派 pack 类型
 
@@ -159,6 +163,14 @@ Command MUST NOT 直接调用外部 chat 发送 API 绕过 pack 纪律。
 
 ## 4. 写入边界
 
+### Command Agent
+
+| 可以写 | 绝不写 |
+|--------|--------|
+| `tmp/` pack / 触发回执 CLI | `poc/<topic>/ndf/` 装订器 SoT 正文 |
+| process 提案起草（[[META-014]]） | `poc/<topic>/` 实现与测量 |
+| 人类口令回执（经工具、不伪造 approved_by） | Trunk `src/`/`include/`/`tests/`（代 Implementation） |
+
 ### Control Agent
 
 | 可以写 | 绝不写 |
@@ -207,7 +219,8 @@ Command MUST NOT 直接调用外部 chat 发送 API 绕过 pack 纪律。
 
 ### 6.2a poc（文字优先）
 
-- 产品提案审核后一次写齐 TOPIC/DESIGN/PERF_BASELINE/DELTA/INTERFACE
+- 产品提案审核后由 **Control** 一次写齐 TOPIC/DESIGN/PERF_BASELINE/DELTA/INTERFACE
+  （Command 只造 `binder_pipeline` pack；MUST NOT 代写装订器正文；无 `TOPIC.md` 亦可开题）
 - 收到「派发」：写 `GATES.md` `bundle_dispatch`（绑定 bundle SHA）→ `poc-dispatch --send`
 - 开题填 `explore_surface`；禁写 Trunk；MUST NOT stable SLA
 - R0 后：`baseline_trunk_sha` + `PERF_BASELINE.md` Numbers（[[META-007]]）
@@ -219,6 +232,8 @@ Command MUST NOT 直接调用外部 chat 发送 API 绕过 pack 纪律。
 
 - MUST：`python3 spec/meta/tools/ndf_close.py plan --topic <t> --mode promote|partial|reject`
 - 干净合入；`Promotes: <topic>`；语义核决策
+- Implementation `promote_land`（§5）→ Control `close_finalize`（§4）；MUST NOT
+  `poc-dispatch --send`（[[META-018]]）
 - 编译 + 性能对照 stable SLA + 金标（[[META-006]]）
 - §4c 基线 stale / §4d 表面冲突清单 MUST 执行
 

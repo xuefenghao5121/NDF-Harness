@@ -3,6 +3,10 @@
 Command Agent 只造 pack、等人审、调 `dispatch-send` / `poc-dispatch`。
 成功只认磁盘 `ndf-agent-completion/v1`。
 
+**MUST NOT 在 Cursor 沙箱里委派**（探测 / pack 选 `provider` / `dispatch-send` /
+`poc-dispatch` / 角色 spawn）：一律宿主机网络。沙箱 `ECONNREFUSED` on gateway
+loopback MUST NOT 触发 `in-host` fallback（[[META-017]]）。
+
 ## 角色解析
 
 委派前 MUST 读 `ndf.workflow.yaml` 或：
@@ -15,7 +19,11 @@ python3 spec/meta/tools/ndf_role_binding.py resolve --role control|implementatio
 prompt → `custom` command → `role_adapter_unsupported`。
 
 OpenClaw / Claude Code 是**默认** adapter，不是唯一路径。Command MUST NOT 塌缩为
-自己写 Control/Implementation 边界内的实现/测量。
+自己写 Control/Implementation 边界内的实现/测量，亦 MUST NOT 代写
+`poc/<topic>/ndf/` 装订器 facet 正文。产品提案「已审核」后只造 `binder_pipeline` pack；
+无 `TOPIC.md` 时仍可开题（已审提案钉死 seed）；主 adapter `runtime_unavailable` 且
+已配 fallback 时 MUST 派 fallback（**Control**），不得手写装订器。Implementation +
+`provider=openclaw` 运输失败 MUST NOT 静默塌到 `in-host`（[[META-017]]）。
 
 ## 委派 Control（Design agent）
 
@@ -24,14 +32,19 @@ OpenClaw / Claude Code 是**默认** adapter，不是唯一路径。Command MUST
 | 产品 Idea | `control-pack --task product_proposal --intent-file tmp/intent.md --json` |
 | 流程 Idea / land | `project-control-pack --task ndf_improvement_proposal\|ndf_improvement_land … --json` |
 | 装订器 / 门禁文档 | `control-pack --topic <t> --task binder_pipeline\|gate_pipeline … --json` |
+| promote 收口 §4 | Control `binder_amend` + intent `close_finalize`（[[META-018]]） |
 | 送出 | 人回「派发」/「继续」→ `dispatch-send --pack-file tmp/ndf-dispatch-last-pack.json` |
 
 **可写**：见 [roles/control.md](roles/control.md) 或 `ndf.workflow.yaml` `roles.control.writable`。  
 **禁止**：`src/`、`include/`、`tests/`；静默写 `GATES.md` 的 `approved_by`；未人审写 `spec/meta/` 稳定正文。
 
 `adapter=openclaw` 时走 `dispatch-send` gateway 路径；默认每 hop 先 `sessions.reset`
-再发消息（`NDF_OPENCLAW_RESET_SESSION=0` 关闭）。`in_host` / `dual_session` 时见
-spawn 文件或 dual-session prompt（仍等磁盘 completion）。
+再发消息（`NDF_OPENCLAW_RESET_SESSION=0` 关闭）。若指挥面**已**用 CLI 对同一
+`session_key` 做过 reset，本次 `dispatch-send` MUST `NDF_OPENCLAW_RESET_SESSION=0`。
+`in_host` / `dual_session` 时见 spawn 文件或 dual-session prompt（仍等磁盘 completion）。
+
+发 hop 前：目标 `completion_receipt_path` 与会假成功的活回执 MUST **MOVE**（`mv`）；
+仅 `cp` 留原路径 = 假成功（[[META-018]]）。
 
 ```bash
 python3 spec/meta/tools/ndf_workflow_status.py control-pack \
@@ -48,7 +61,7 @@ python3 spec/meta/tools/ndf_dispatch_send.py \
 | POC 实现 / 测量 | `poc-dispatch --topic <t> --intent implement\|measure --send` |
 | Genesis 产品 NDF（一次） | `control-pack --task product_proposal --intent-file tmp/intent-genesis-design.md`（`hop: genesis_design`）→「派发」 |
 | Genesis Trunk candidate（仅 greenfield） | `genesis-pack --mode greenfield --json` →「派发」→ `dispatch-send` |
-| promote / bug 合入 | 按 `ndf_close.py plan` 的 ACP 路径 |
+| promote / bug 合入 | 自定义 `promote_land` pack + `dispatch-send`（[[META-018]]）；**禁止** `poc-dispatch --send` |
 
 **可写**：见 [roles/implementation.md](roles/implementation.md)；POC 仅 `poc/<topic>/`。  
 **禁止**：L0/L1、`spec/meta/` 正文、越界写根。
@@ -76,7 +89,8 @@ python3 spec/meta/tools/ndf_workflow_status.py poc-dispatch \
 硬安全门（fail-closed）
 
 错仓库、越界写根、缺人审 bundle、同 topic 并发写 run、上下文漂移、伪造 completion、
-ACP 预算溢出、`openclaw_session_invalid`、`roles_unbound`、`role_adapter_unsupported`。
+ACP 预算溢出、`openclaw_session_invalid`、`roles_unbound`、`role_adapter_unsupported`、
+沙箱选 provider（[[META-017]]）。
 
 因 bundle SHA 漂移硬阻塞时：先展示 `gate_drift_markdown`（slice diff），再请人「派发」；
 MUST NOT 只输出不透明哈希。

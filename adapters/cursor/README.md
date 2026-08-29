@@ -21,6 +21,12 @@ cp -a packages/ndf-harness/skill/ndf-workflow/* .cursor/skills/ndf-workflow/
 
 Do **not** fork process prose into a second copy; refresh from package on sync.
 
+## Rules seed
+
+Copy [`rules/ndf-no-sandbox-dispatch.mdc`](rules/ndf-no-sandbox-dispatch.mdc) into the
+consumer `.cursor/rules/` (or keep alwaysApply via install). Enforces [[META-017]]:
+host-network only for gateway probe / provider selection / `dispatch-send`.
+
 ## Modes
 
 Same workflow as skill core（初始化 / Idea / 派发 / 继续 / 关闭）. Internal init/adopt/govern/sync

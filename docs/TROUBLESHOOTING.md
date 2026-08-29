@@ -15,6 +15,37 @@ Operational fixes for NDF Harness 1.0 workflows. Reports belong in `tmp/` only.
 
 **Prevent:** call `persist_gate_slice_snapshot` when recording 派发 receipt.
 
+## Sandbox false `runtime_unavailable` / wrong `in-host`
+
+**Symptoms:** pack `provider=in-host` or `using_fallback=true` though OpenClaw gateway
+is up on the host; Cursor sandbox `ECONNREFUSED` on `127.0.0.1:<gateway>`.
+
+**Fix:**
+
+1. Re-probe / rebuild pack / `dispatch-send` on **host network** (`required_permissions: ["all"]`)
+2. Do not treat sandbox probe failure as gateway down ([[META-017]])
+3. Implementation packs with `provider=openclaw` MUST NOT silently fall back to in-host
+
+**Prevent:** install `adapters/cursor/rules/ndf-no-sandbox-dispatch.mdc`.
+
+## Live completion false success
+
+**Symptoms:** `dispatch-send` returns succeeded immediately; receipt hop/task mismatches
+current pack.
+
+**Fix:**
+
+1. `mv` (not only `cp`) prior `*-completion.json` and `tmp/ndf-agent-completion.json`
+   off the live path before send ([[META-018]])
+2. Confirm receipt `hop` / `task` / `topic` match the pack
+
+## CLI reset then double reset
+
+**Symptoms:** Feishu/OpenClaw session empty or mid-hop context lost right after send.
+
+**Fix:** after Command CLI `sessions.reset`, run `dispatch-send` with
+`NDF_OPENCLAW_RESET_SESSION=0` ([[META-018]]).
+
 ## context verify failed
 
 **Symptoms:** `context_verify_failed`, `manifest_sha` / `context_plan_sha` mismatch in pack.

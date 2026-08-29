@@ -2,7 +2,7 @@
 
 > scope: ndf-process  
 > 条款索引: `CHR-008`, `BEH-018`, `BEH-019`, `BEH-020`, `BEH-025`, `BEH-026`,
-> `META-006`, `META-007`, `META-009`, `META-010`, `META-011`, `META-012`, `META-013`, `META-014`, `META-015`, `META-016`
+> `META-006`, `META-007`, `META-009`, `META-010`, `META-011`, `META-012`, `META-013`, `META-014`, `META-015`, `META-016`, `META-017`, `META-018`
 > 目录边界: [[ARCH-008]]；SLA 隔离: [[CON-POC-001]]  
 > 术语: [[DEF-020]], [[DEF-021]], [[DEF-022]], [[DEF-023]], [[DEF-NDF-GRAPH]]  
 > 缺陷分类: [[DEF-NDF-CYCLE]]…[[DEF-NDF-BINDER-DUAL-HEAD]]（见 `meta/glossary.md`）
@@ -568,6 +568,46 @@ argv/version、真实退出码与结构化输出；任意 evidence bytes 加自�
 5. `genesis-status` MUST NOT 因仅有 `src/.ndf-completion/` 判定已有 Trunk。
 
 > rationale: greenfield vendor hop 上运输会话空转 + 实做写盘会导致假 stall。
+
+## 宿主网络委派（沙箱不得选 provider） {#META-017}
+<!-- ndf: kind=req level=must layer=L1 status=stable since=1.1.2 source=stated scope=ndf-process -->
+<!-- ndf: depends-on=META-011,META-014 -->
+
+Command 面的网关探活与委派 MUST 在 **宿主网络**（或等价全权限 shell）执行。
+
+1. Command MUST NOT 在受限沙箱 / 无宿主 loopback 的环境里：做 gateway 探活、
+   造会选定 `provider` 的 pack、或执行 `dispatch-send` / `poc-dispatch --send` /
+   角色 spawn。
+2. 沙箱对 `127.0.0.1:<gateway>` 的 `ECONNREFUSED` 或 `runtime_unavailable`
+   MUST NOT 单独证明 gateway 已挂，MUST NOT 因此选定 `in-host`。
+3. 若探活仅在沙箱失败：MUST 在宿主网络重探后再判定 fallback。
+4. pack `provider=openclaw` 且角色为 Implementation 时，运输失败 MUST NOT 静默塌到
+   `in-host`（避免指挥面/实现面作者身份塌缩）。Control 仍可按 yaml `fallback` 降级。
+
+> rationale: 沙箱 loopback 连不上本机 gateway 会假报不可达并错误选 in-host。
+
+## promote 合入与收口分 hop {#META-018}
+<!-- ndf: kind=req level=must layer=L1 status=stable since=1.1.2 source=stated scope=ndf-process -->
+<!-- ndf: depends-on=META-006,META-010,META-011 -->
+
+`trunk_src_writes=required` 的 promote MUST 拆成合入 hop 与收口 hop；成功仍只认磁盘
+`ndf-agent-completion/v1`。
+
+1. **Implementation** hop（建议名 `promote_land`）：合入 Trunk / 工具 / L1–L3 与
+   [[META-006]] 金标等 close-plan §5 检查。MUST NOT 用 `poc-dispatch --send`
+  （其写界钉死在 `poc/<topic>/`）。
+2. §5 全绿之后，**Control** hop（建议名 `close_finalize`）才执行 close-plan §4：
+   `TOPIC`→`promoted`、COMMITS、`spec/archive/…` 指针（或物理迁）、提案薄注。
+   MUST NOT 在 §5 未绿时标 `promoted`。
+3. 同审查切片 SHA 再「派发」：GATES 旧 `approved` → `invalidated`，再 append 同行
+   SHA 新批（[[META-010]]）。文件存在 MUST NOT 推断已批准。
+4. 发 hop 前：目标 `completion_receipt_path` 与会假成功的活回执 MUST **MOVE** 走
+   （`mv`）。仅 `cp` 而原路径仍在 = 假成功。
+5. 指挥面已对同一 `session_key` 做过 `sessions.reset` 后，本次 `dispatch-send`
+   MUST 设 `NDF_OPENCLAW_RESET_SESSION=0`，避免二次 reset 冲掉短会话。
+
+> rationale: DiskHNSW promote 验证——合入绿与 TOPIC 归档分 hop；活回执与二次 reset
+> 会导致假成功 / 假失败。
 
 ## Agent Episode、事件链与回放等级 {#META-013}
 <!-- ndf: kind=req level=must layer=L1 status=deprecated since=0.9.15 source=deduced scope=ndf-process -->
