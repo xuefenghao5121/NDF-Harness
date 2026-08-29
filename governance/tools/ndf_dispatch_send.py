@@ -832,6 +832,14 @@ def _pack_evidence_roots(pack: Mapping[str, Any]) -> list[Path]:
         roots.append(path)
 
     _add(_pack_repo_root(pack))
+    declared_wt = str(pack.get("worktree") or "").strip()
+    if declared_wt:
+        _add(Path(declared_wt))
+    wt_root = _pack_repo_root(pack) / ".worktrees"
+    if wt_root.is_dir():
+        for child in wt_root.iterdir():
+            if child.is_dir():
+                _add(child)
     topic = str(pack.get("topic") or "").strip()
     if topic:
         try:
@@ -1036,6 +1044,28 @@ def _task_outcome_from_transport(
     transport_ok = bool(send_result.get("transport_ok") or send_result.get("ok"))
     text = send_result.get("response_text")
     if not transport_ok:
+        receipt_hint = completion_receipt_path_for_pack(pack)
+        completion, disk_errors = load_disk_agent_completion(
+            pack, {"receipt_path": receipt_hint}
+        )
+        result_raw = str(
+            (completion or {}).get("result") or (completion or {}).get("status") or ""
+        ).lower()
+        worker_blockers = [
+            str(item)
+            for item in (completion or {}).get("blockers") or []
+            if str(item).strip()
+        ]
+        if (
+            completion
+            and result_raw in {"success", "succeeded"}
+            and not worker_blockers
+            and not disk_errors
+        ):
+            summary = str(
+                completion.get("result_summary") or completion.get("summary") or ""
+            )
+            return "succeeded", [], summary[:800] or "disk receipt after transport fail", completion
         err = str(send_result.get("error") or send_result.get("state") or "transport_failed")
         return "failed", [err], err, None
     if lease_only:
@@ -1157,15 +1187,25 @@ def _looks_like_openclaw_uuid(value: str) -> bool:
     return bool(_OPENCLAW_UUID_RE.fullmatch(str(value or "").strip()))
 
 
+def _vendor_hop_stall(pack: Mapping[str, Any] | None) -> bool:
+    if not pack:
+        return False
+    hop = str(pack.get("hop") or "")
+    task = str(pack.get("task") or "")
+    return hop == "genesis_trunk" or task == "project_genesis"
+
+
 def _openclaw_wait_budgets(
     timeout_sec: int | None = None,
+    pack: Mapping[str, Any] | None = None,
 ) -> tuple[float, float, float]:
     """Return (ping_sec, stall_sec, max_sec) for OpenClaw heartbeat wait."""
     ping = float(
         os.environ.get("NDF_OPENCLAW_PING_SEC") or DEFAULT_OPENCLAW_PING_SEC
     )
+    default_stall = 3600 if _vendor_hop_stall(pack) else DEFAULT_OPENCLAW_STALL_SEC
     stall = float(
-        os.environ.get("NDF_OPENCLAW_STALL_SEC") or DEFAULT_OPENCLAW_STALL_SEC
+        os.environ.get("NDF_OPENCLAW_STALL_SEC") or default_stall
     )
     # Absolute ceiling: explicit MAX, else at least legacy timeout, else default max.
     legacy = float(timeout_sec or DEFAULT_TIMEOUT_SEC)
@@ -1179,10 +1219,14 @@ def _openclaw_wait_budgets(
     return ping, stall, max_sec
 
 
-def _acp_wait_budgets(timeout_sec: int | None = None) -> tuple[float, float, float]:
+def _acp_wait_budgets(
+    timeout_sec: int | None = None,
+    pack: Mapping[str, Any] | None = None,
+) -> tuple[float, float, float]:
     """Return (ping_sec, stall_sec, max_sec) for ACP heartbeat wait."""
     ping = float(os.environ.get("NDF_ACP_PING_SEC") or DEFAULT_ACP_PING_SEC)
-    stall = float(os.environ.get("NDF_ACP_STALL_SEC") or DEFAULT_ACP_STALL_SEC)
+    default_stall = 3600 if _vendor_hop_stall(pack) else DEFAULT_ACP_STALL_SEC
+    stall = float(os.environ.get("NDF_ACP_STALL_SEC") or default_stall)
     legacy = float(timeout_sec or DEFAULT_TIMEOUT_SEC)
     max_sec = float(
         os.environ.get("NDF_ACP_MAX_SEC") or max(DEFAULT_ACP_MAX_SEC, legacy)
@@ -1256,6 +1300,35 @@ def _progress_signature(row: Mapping[str, Any] | None) -> tuple[Any, Any]:
     if not row:
         return (None, None)
     return (row.get("updatedAt"), row.get("totalTokens"))
+
+
+def _artifact_progress_signature(pack: Mapping[str, Any]) -> tuple[Any, ...]:
+    """Receipt size/mtime and worktree HEAD — progress without adapter tokens."""
+    parts: list[Any] = []
+    rel = completion_receipt_path_for_pack(pack)
+    for root in _pack_evidence_roots(pack):
+        path = root / rel
+        try:
+            if path.is_file():
+                st = path.stat()
+                parts.append((str(path), st.st_size, st.st_mtime_ns))
+        except OSError:
+            pass
+        try:
+            if (root / ".git").exists():
+                proc = subprocess.run(
+                    ["git", "-C", str(root), "rev-parse", "HEAD"],
+                    text=True,
+                    stdout=subprocess.PIPE,
+                    stderr=subprocess.DEVNULL,
+                    check=False,
+                    timeout=5,
+                )
+                if proc.returncode == 0 and proc.stdout.strip():
+                    parts.append(("head", str(root), proc.stdout.strip()))
+        except (OSError, subprocess.TimeoutExpired):
+            pass
+    return tuple(parts)
 
 
 def _disk_completion_present(pack: Mapping[str, Any]) -> bool:
@@ -1358,12 +1431,13 @@ def _wait_spawn_provider_with_heartbeat(
     timeout_sec: int,
 ) -> dict[str, Any]:
     """Write spawn file and heartbeat-wait for disk completion (no transport ACK)."""
-    ping_sec, stall_sec, max_sec = _acp_wait_budgets(timeout_sec)
+    ping_sec, stall_sec, max_sec = _acp_wait_budgets(timeout_sec, pack)
     pack_sha = _pack_sha(pack)
     request_id = str(pack.get("request_id") or f"req-{pack_sha[:16]}")
     started = time.time()
     hard_deadline = started + max_sec
     last_progress_at = started
+    last_art = _artifact_progress_signature(pack)
     ping_count = 0
     last_ping_at = 0.0
     summary = (
@@ -1388,6 +1462,10 @@ def _wait_spawn_provider_with_heartbeat(
     while True:
         now = time.time()
         disk_done = _disk_completion_present(pack)
+        art = _artifact_progress_signature(pack)
+        if art != last_art and art != ():
+            last_art = art
+            last_progress_at = time.time()
         if disk_done:
             receipt_rel = completion_receipt_path_for_pack(pack)
             notify = {
@@ -1617,7 +1695,7 @@ def _send_openclaw(
         else:
             import uuid as _uuid
 
-            ping_sec, stall_sec, max_sec = _openclaw_wait_budgets(timeout_sec)
+            ping_sec, stall_sec, max_sec = _openclaw_wait_budgets(timeout_sec, pack)
             timeout_ms = int(max_sec * 1000) + 60_000
             params = {
                 "message": message,
@@ -1704,7 +1782,7 @@ def _wait_openclaw_with_heartbeat(
     executable: str | None,
     timeout_sec: int,
 ) -> dict[str, Any]:
-    ping_sec, stall_sec, max_sec = _openclaw_wait_budgets(timeout_sec)
+    ping_sec, stall_sec, max_sec = _openclaw_wait_budgets(timeout_sec, pack)
     pack_sha = _pack_sha(pack)
     request_id = str(pack.get("request_id") or f"req-{pack_sha[:16]}")
     provider = str(pack.get("provider") or "openclaw")
@@ -1714,6 +1792,7 @@ def _wait_openclaw_with_heartbeat(
     last_sig = _progress_signature(
         _openclaw_session_progress(session_key, executable=executable)
     )
+    last_art = _artifact_progress_signature(pack)
     ping_count = 0
     try:
         proc = subprocess.Popen(
@@ -1787,10 +1866,15 @@ def _wait_openclaw_with_heartbeat(
                 ping_count += 1
                 row = _openclaw_session_progress(session_key, executable=executable)
                 sig = _progress_signature(row)
+                art = _artifact_progress_signature(pack)
                 progressed = sig != last_sig and sig != (None, None)
+                artifact_progressed = art != last_art and art != ()
                 disk_done = _disk_completion_present(pack)
                 if progressed:
                     last_sig = sig
+                    last_progress_at = now
+                if artifact_progressed:
+                    last_art = art
                     last_progress_at = now
                 if disk_done:
                     last_progress_at = now
@@ -1801,7 +1885,7 @@ def _wait_openclaw_with_heartbeat(
                     "stall_sec": stall_sec,
                     "max_sec": max_sec,
                     "session": row,
-                    "progressed": progressed,
+                    "progressed": progressed or artifact_progressed,
                     "disk_completion_present": disk_done,
                 }
                 _write_openclaw_heartbeat(
@@ -2198,7 +2282,7 @@ def _wait_acp_with_heartbeat(
     timeout_sec: int,
 ) -> dict[str, Any]:
     """Wait for ACP without a hard wall-clock subprocess timeout."""
-    ping_sec, stall_sec, max_sec = _acp_wait_budgets(timeout_sec)
+    ping_sec, stall_sec, max_sec = _acp_wait_budgets(timeout_sec, pack)
     pack_sha = _pack_sha(pack)
     request_id = str(pack.get("request_id") or f"req-{pack_sha[:16]}")
     provider = str(pack.get("provider") or "claude-code-acp")
@@ -2206,6 +2290,7 @@ def _wait_acp_with_heartbeat(
     hard_deadline = started + max_sec
     last_progress_at = started
     last_sig = _acp_resume_signature(session_id)
+    last_art = _artifact_progress_signature(pack)
     ping_count = 0
     try:
         proc = subprocess.Popen(
@@ -2278,11 +2363,16 @@ def _wait_acp_with_heartbeat(
                 last_ping_at = now
                 ping_count += 1
                 sig = _acp_resume_signature(session_id)
+                art = _artifact_progress_signature(pack)
                 progressed = sig != last_sig and sig != (None, None)
+                artifact_progressed = art != last_art and art != ()
                 disk_done = _disk_completion_present(pack)
                 notify, _ = extract_dispatch_notify(text if text else None)
                 if progressed:
                     last_sig = sig
+                    last_progress_at = now
+                if artifact_progressed:
+                    last_art = art
                     last_progress_at = now
                 if disk_done or notify is not None:
                     last_progress_at = now

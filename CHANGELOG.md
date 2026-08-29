@@ -1,5 +1,23 @@
 # Changelog
 
+## 1.1.1 — 2026-08-29
+
+Distill **META-016** (heartbeat must not negate disk completion) from consumer
+validation of a greenfield vendor hop:
+
+- **META-016 / META-011 §5**: closeout re-reads `completion_receipt_path` after
+  `openclaw_stalled` / ACP stall / transport fail; identity-matched
+  `ndf-agent-completion/v1` with `result=success` is hop success.
+- **Progress**: heartbeat treats session tokens, receipt growth, or worktree
+  `git HEAD` advance as progress. `genesis_trunk` / `project_genesis` stall
+  default ≥ 3600s (env override).
+- **genesis-pack**: write `session_key` / `session_transport`; `provider` from
+  `roles.implementation`; `hop=genesis_trunk`. Genesis hops map to Implementation.
+- **genesis-status**: `src/.ndf-completion/` alone is not Trunk (`trunk_src_present`).
+- **Tools / skill**: `ndf_dispatch_send.py`, `ndf_workflow_status.py`,
+  `ndf_role_binding.py`; `test_meta016_dispatch.py`; AGENTS / delegate / SKILL
+  one-line pointers.
+
 ## 1.1.0 — 2026-08-28
 
 Greenfield Genesis **DESIGN_MAP mapping layer** (align with adopt's observed-code evidence):

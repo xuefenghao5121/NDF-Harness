@@ -281,7 +281,7 @@ Command MUST NOT 直接调用外部 chat 发送 API 绕过 pack 纪律。
 3. **双轨**：探索在 `poc/` + draft；晋升才 stable + Trunk（[[CHR-008]]）
 4. **先收口，再 POC**；open/ 不堆 Implemented
 5. **验证闭环**：仅 Trunk 代码路径必须编译/性能验证
-6. **磁盘 completion** 为唯一成功信号；无 Replay 义务
+6. **磁盘 completion** 为唯一成功信号；心跳 / stall MUST NOT 单独否定合法回执（[[META-016]]）
 
 ### 禁止行为
 

@@ -242,6 +242,8 @@ python3 ndf_workflow_status.py lease-record …
 ## ndf_dispatch_send.py
 
 **Purpose:** Send approved pack to OpenClaw or Claude ACP; wait; validate disk completion.
+Closeout re-reads the receipt after stall/transport fail ([[META-016]]); heartbeat
+also treats receipt growth and worktree HEAD as progress.
 
 **Commands:**
 

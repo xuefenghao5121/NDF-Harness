@@ -108,7 +108,7 @@ Checks: VERSION, AGENTS, workflow yaml, tool `--help` smoke, skill entry paths, 
 
 ## Version / compatibility
 
-- Current: **1.1.0** ([`CHANGELOG.md`](CHANGELOG.md))
+- Current: **1.1.1** ([`CHANGELOG.md`](CHANGELOG.md))
 - 0.2.x repos: run [`migration/detect_0_2.py`](migration/detect_0_2.py)
 - Installed consumer `spec/meta/` wins over package after adopt
 

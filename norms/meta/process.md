@@ -2,7 +2,7 @@
 
 > scope: ndf-process  
 > 条款索引: `CHR-008`, `BEH-018`, `BEH-019`, `BEH-020`, `BEH-025`, `BEH-026`,
-> `META-006`, `META-007`, `META-009`, `META-010`, `META-011`, `META-012`, `META-013`, `META-014`, `META-015`
+> `META-006`, `META-007`, `META-009`, `META-010`, `META-011`, `META-012`, `META-013`, `META-014`, `META-015`, `META-016`
 > 目录边界: [[ARCH-008]]；SLA 隔离: [[CON-POC-001]]  
 > 术语: [[DEF-020]], [[DEF-021]], [[DEF-022]], [[DEF-023]], [[DEF-NDF-GRAPH]]  
 > 缺陷分类: [[DEF-NDF-CYCLE]]…[[DEF-NDF-BINDER-DUAL-HEAD]]（见 `meta/glossary.md`）
@@ -355,6 +355,7 @@ pack；POC「派发」仍 MUST 把 `bundle_dispatch` 回执写入 `GATES.md`（[
    identity mismatch）。
 4. bootstrap hop 的 `completion_receipt_path` MUST 含 `hop`（及 attempt），MUST NOT
    让不同 Foundation hop 覆盖同一 `*-attempt.json`。
+5. 心跳 / stall 与磁盘回执：见 [[META-016]]。
 
 历史 Episode / Replay 缺字段 MUST NOT 单独把实质完成判失败（[[ADR-META-004]]）。
 
@@ -546,6 +547,27 @@ argv/version、真实退出码与结构化输出；任意 evidence bytes 加自�
 
 > rationale: 同一 manifest SHA 装订 OpenClaw 与 Claude Code；硬门只保留执行安全与
 > 磁盘合同，软检查不得伪装成日常派发仪式。
+
+## 心跳不得否定磁盘 completion {#META-016}
+<!-- ndf: kind=req level=must layer=L1 status=stable since=1.1 source=stated scope=ndf-process -->
+<!-- ndf: depends-on=META-011,META-009,META-010 -->
+
+`dispatch-send` 心跳是探活，不是成功合同。
+
+1. closeout MUST 再读 `completion_receipt_path`（含 pack/lease **worktree** 根）。
+   身份匹配且 `result=success` 的磁盘 `ndf-agent-completion/v1` MUST 将 hop 判成功。
+   `openclaw_stalled` / ACP stall / transport 非零 MUST NOT 单独否定该回执。
+2. 心跳 progress MUST 认：会话 token/`updatedAt`、**回执文件出现或增大**、
+   worktree **git HEAD 前进**。MUST NOT 只盯单一 adapter 的 token。
+3. `genesis-pack` MUST 写入 `session_key` / `session_transport`（OpenClaw 运输时）；
+   `provider` MUST 从 `roles.implementation.adapter` 解析。`task=project_genesis` /
+   `hop=genesis_*` 的 pack MUST 映射 Implementation 角色，MUST NOT 因
+   `provider=openclaw` 误派 Control。
+4. `hop=genesis_trunk` / `task=project_genesis` 的 stall MUST ≥ 3600s，或
+   `NDF_OPENCLAW_STALL_SEC` / `NDF_ACP_STALL_SEC` 覆盖。900s 仅 POC 默认。
+5. `genesis-status` MUST NOT 因仅有 `src/.ndf-completion/` 判定已有 Trunk。
+
+> rationale: greenfield vendor hop 上运输会话空转 + 实做写盘会导致假 stall。
 
 ## Agent Episode、事件链与回放等级 {#META-013}
 <!-- ndf: kind=req level=must layer=L1 status=deprecated since=0.9.15 source=deduced scope=ndf-process -->

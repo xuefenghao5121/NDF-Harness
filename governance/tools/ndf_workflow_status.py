@@ -6887,6 +6887,24 @@ def genesis_design_map_path() -> Path:
     return genesis_paths()["foundation"].parent / "DESIGN_MAP.md"
 
 
+def trunk_src_present(root: Path | None = None) -> bool:
+    """True when src/ has implementation files. `.ndf-completion/` alone is not Trunk."""
+    src = (root or ROOT) / "src"
+    if not src.is_dir():
+        return False
+    for path in src.rglob("*"):
+        if not path.is_file():
+            continue
+        try:
+            rel = path.relative_to(src)
+        except ValueError:
+            continue
+        if rel.parts and rel.parts[0] == ".ndf-completion":
+            continue
+        return True
+    return False
+
+
 def _gate_latest_status(latest: Mapping[str, Mapping[str, str]], gate_id: str) -> str:
     return str((latest.get(gate_id) or {}).get("status") or "").lower()
 
@@ -6945,7 +6963,7 @@ def build_design_evidence_payload(
     mode = read_bootstrap_mode()
     if mode == "adopt":
         trunk_sha = git_head()
-        has_src = (ROOT / "src").is_dir() and any((ROOT / "src").rglob("*"))
+        has_src = trunk_src_present()
         if not has_src:
             return None
         return {
@@ -7009,7 +7027,7 @@ def read_bootstrap_mode() -> str:
         )
         if match:
             return match.group(1).lower()
-    has_src = (ROOT / "src").is_dir() and any((ROOT / "src").rglob("*"))
+    has_src = trunk_src_present()
     return "adopt" if has_src else "greenfield"
 
 
@@ -7171,7 +7189,7 @@ def genesis_status() -> dict[str, Any]:
         code, _ = git("rev-parse", "--verify", f"{bound_sha}^{{commit}}")
         resolvable = code == 0
     has_charter = (SPEC / "00-charter").is_dir() and any((SPEC / "00-charter").glob("*.md"))
-    has_src = (ROOT / "src").is_dir() and any((ROOT / "src").rglob("*"))
+    has_src = trunk_src_present()
     clause_count = 0
     for path in SPEC.glob("[0-5][0-9]-*/**/*.md"):
         clause_count += len(re.findall(r"\{#[A-Z][A-Z0-9-]+\}", read_text(path)))
@@ -10153,24 +10171,37 @@ def genesis_pack(mode: str, episode_id: str | None = None) -> tuple[dict[str, An
         and re.fullmatch(r"[0-9a-f]{64}", approval.get("approved_content_sha", ""))
         and foundation_sha == approval.get("approved_content_sha")
     )
+    import ndf_role_binding as role_binding
+
+    impl = role_binding.resolve_role(ROOT, "implementation")
+    provider = str(impl.get("provider") or "claude-code-acp")
+    if provider not in {"openclaw", "claude-code-acp", "in-host", "dual-session", "custom"}:
+        provider = "claude-code-acp"
+    context_role = "openclaw" if provider == "openclaw" else "claude-code"
     context = context_binding(
         topic=None,
-        role="claude-code",
+        role=context_role,
         task="project_genesis",
         track="bootstrap",
     )
     context_valid = bool(context["context_verify"].get("valid"))
     static_ready = gate_valid and context_valid
-    runtime, runtime_ready, _lease = implementation_dispatch_runtime(None)
-    runtime_ready = bool(runtime.get("pipeline_reachable"))
+    if provider == "claude-code-acp":
+        runtime, runtime_ready, _lease = implementation_dispatch_runtime(None)
+        runtime_ready = bool(runtime.get("pipeline_reachable"))
+    else:
+        runtime_ready = bool(impl.get("available"))
     payload = {
         "schema": "ndf-genesis-pack/v2",
         "compatibility": {"legacy_schema": "ndf-genesis-pack/v1"},
         "generated_at": now_iso(),
         "track": "bootstrap",
         "task": "project_genesis",
+        "hop": "genesis_trunk",
         "bootstrap_mode": mode,
-        "provider": "claude-code-acp",
+        "provider": provider,
+        "session_key": openclaw_session_key(),
+        "session_transport": "session_key",
         "base_sha": git_head(),
         "workspace": workspace_binding(None),
         "workspace_truth": workspace_truth_view(None),

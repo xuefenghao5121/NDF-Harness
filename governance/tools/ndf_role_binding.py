@@ -391,9 +391,13 @@ def resolve_pack_provider(
 ) -> dict[str, Any]:
     """Map pack provider → role resolution (may override transport provider)."""
     provider = str(pack.get("provider") or "")
-    role = PACK_PROVIDER_ROLE.get(provider)
+    task = str(pack.get("task") or "")
+    hop = str(pack.get("hop") or "")
+    if task == "project_genesis" or hop.startswith("genesis_"):
+        role = "implementation"
+    else:
+        role = PACK_PROVIDER_ROLE.get(provider)
     if role is None:
-        task = str(pack.get("task") or "")
         if task.startswith("poc_") or task in {"implement", "poc_measurement", "prepare_acp_lease"}:
             role = "implementation"
         elif provider == "openclaw" or "control" in task or "proposal" in task:

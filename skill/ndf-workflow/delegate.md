@@ -66,7 +66,8 @@ python3 spec/meta/tools/ndf_workflow_status.py poc-dispatch \
 2. 本聊天等人确认「派发」/「继续」（可写 pack 不自动送；POC「派发」另写 `GATES.md` `bundle_dispatch`）
 3. `dispatch-send` 或 `poc-dispatch --send` 送 worker + 心跳等待
 4. 读 `completion_receipt_path`：磁盘 `ndf-agent-completion/v1` 身份匹配即为成功。
-   stdout `ndf-dispatch-notify/v1` 可选。notify 缺失 MUST NOT 单独判失败。
+   stdout `ndf-dispatch-notify/v1` 可选。notify 缺失或 `openclaw_stalled` MUST NOT
+   单独否定合法磁盘回执（[[META-016]]）。
 5. MUST NOT 用手抄 Numbers、transport ACK、stdout JSON 冒充成功
 6. Genesis：closeout 失败 → 同一 hop「继续」；设计 hop 写 `spec/00–50` draft，非 stable 自动晋升
 
