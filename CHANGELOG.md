@@ -1,9 +1,26 @@
 # Changelog
 
+## 1.1.3 — 2026-08-29
+
+Distill **META-019** from consumer greenfield POC dispatch (text-first pack
+blocked after a valid `bundle_dispatch`):
+
+- **META-019**: context verify MUST accept a SHA-aligned `bundle_dispatch`
+  (phrase=`派发`) as the gate-3 substitute already allowed by [[META-010]];
+  inline lease MUST NOT fail closed on missing `episode_id` / Replay DAG.
+  Synthesize `lease-<topic>-<stamp>` only as a lease row id; MUST NOT
+  `init_episode`.
+- **Tools**: `ndf_context.py` includes `bundle_dispatch` in gate receipts and
+  `valid_implement_license_receipt`; `ndf_dispatch_send.py`
+  `isolated_lease_missing_fields` + jsonl lease without Replay;
+  `ndf_poc_dispatch.py` comment; `test_meta019_dispatch.py`.
+- **Seed**: `norms/meta/process.md` + AGENTS / delegate / SKILL one-line pointers.
+- Does **not** renumber Harness [[META-017]] (host-network) or [[META-018]]
+  (promote split). Consumer-local IDs may differ; this package uses 019.
+
 ## 1.1.2 — 2026-08-29
 
-Distill **META-017** / **META-018** from DiskHNSW operational promote/close validation
-(consumer `hnsw-predictor-pageann` @ `068cdb7`):
+Distill **META-017** / **META-018** from consumer operational promote/close validation:
 
 - **META-017**: host-network only for gateway probe / provider selection / dispatch;
   sandbox `ECONNREFUSED` MUST NOT select `in-host`. Implementation + `provider=openclaw`

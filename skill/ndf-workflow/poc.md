@@ -28,7 +28,8 @@ python3 spec/meta/tools/ndf_workflow_status.py poc-dispatch \
 ```
 
 `--send` 内联租约 + 送 Claude Code（硬门见 META-011）。成功只认磁盘
-`ndf-agent-completion/v1`。
+`ndf-agent-completion/v1`。`bundle_dispatch` 可替闸 3；租约不以 Episode
+为成功条件（[[META-019]]）。
 
 若被 `missing_human_dispatch` / SHA 拦住：先读 pack 的 `gate_drift_markdown` 或
 `tmp/ndf-gate-drift-<topic>.md`（slice unified diff），再请人重审后「派发」。

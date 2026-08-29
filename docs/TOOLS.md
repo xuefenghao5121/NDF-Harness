@@ -178,6 +178,7 @@ python3 ndf_perf_baseline.py check --topic <topic>
 ## ndf_context.py
 
 **Purpose:** Compile task manifest + role-specific bounded contexts; verify manifest/plan SHA.
+Implement/measure hops accept SHA-aligned `bundle_dispatch` as the gate-3 license ([[META-019]]).
 
 **Commands:**
 
@@ -243,7 +244,8 @@ python3 ndf_workflow_status.py lease-record …
 
 **Purpose:** Send approved pack to OpenClaw or Claude ACP; wait; validate disk completion.
 Closeout re-reads the receipt after stall/transport fail ([[META-016]]); heartbeat
-also treats receipt growth and worktree HEAD as progress.
+also treats receipt growth and worktree HEAD as progress. Text-first inline lease
+MUST NOT require `episode_id` ([[META-019]]).
 
 **Commands:**
 

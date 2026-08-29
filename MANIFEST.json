@@ -1,8 +1,8 @@
 {
   "schema": "ndf-harness-manifest/v1",
-  "version": "1.1.2",
-  "source_commit": "509851ecf102822300fd2d0ea9f726fb473e2464",
-  "generated_at": "2026-08-29T11:49:38+00:00",
+  "version": "1.1.3",
+  "source_commit": "caeeaeb55a3990d5d80460c3bdf9a39b09af89ba",
+  "generated_at": "2026-08-29T14:02:12+00:00",
   "files": [
     {
       "path": ".gitignore",
@@ -11,17 +11,17 @@
     },
     {
       "path": "CHANGELOG.md",
-      "sha256": "72ce9a234c6faee06b8896b75d08ec4d33dac50d83fad49be1a1ba2a92a8df92",
-      "bytes": 8013
+      "sha256": "a782ab9d1d91ab5881f3add9ad2ae4ff6987ef409e43e08bb063fe43ee282693",
+      "bytes": 8920
     },
     {
       "path": "README.md",
-      "sha256": "edc2245d61bef890df465b4499129e064e307f635733ac82c95ff95cc7b30a05",
+      "sha256": "47731852e0db630dd8a06099a7edaf239891e7d7504c5805950d515ba054a9a2",
       "bytes": 6532
     },
     {
       "path": "VERSION",
-      "sha256": "77123b8e4bdbd54505bf6e8021527ac60281602a06fe307564532c4dba39dbca",
+      "sha256": "5dae0c0a5ed3cdaa78704e25bb38d72c31018311e933283d06ed4f93360bfc6c",
       "bytes": 6
     },
     {
@@ -141,13 +141,13 @@
     },
     {
       "path": "docs/TOOLS.md",
-      "sha256": "2f2f7a8843ac035d4ce09afa7808f230ab1b2d14b6701a6a1045e7a08a50a0da",
-      "bytes": 9449
+      "sha256": "c157a49eb1d4f359795224f91552bc1926adf439bcc6300341c92fba358f5f65",
+      "bytes": 9617
     },
     {
       "path": "docs/TROUBLESHOOTING.md",
-      "sha256": "47f0901b624ed1f4f334ce382cc473066699fee76c130ed781fe2e6d9b18b6a6",
-      "bytes": 4779
+      "sha256": "27622a490d3ef0f3355af663b7dd2b80ba8ff68d11a2abdcc604dec22b279c98",
+      "bytes": 5405
     },
     {
       "path": "docs/WORKFLOW-FEATURES.md",
@@ -216,13 +216,13 @@
     },
     {
       "path": "governance/tools/ndf_context.py",
-      "sha256": "52d474a1164f56cf3f524bd5218c796764be2dd8357e785b8c909da22b6e1a8a",
-      "bytes": 76829
+      "sha256": "d8fa3c93e7aac063d7c5f2c4f929f51f1966a28460237e5316ebbb11d51b0baf",
+      "bytes": 77355
     },
     {
       "path": "governance/tools/ndf_dispatch_send.py",
-      "sha256": "809531e6632bc1bce1bc1c6b6073779aabbc412cdf4fffd2ad2757cb6f6e8b7e",
-      "bytes": 115886
+      "sha256": "537f154906e44c5535288714b663bc1f7475252340477f2a09cd36f513270b2e",
+      "bytes": 116980
     },
     {
       "path": "governance/tools/ndf_gate_slices.py",
@@ -256,8 +256,8 @@
     },
     {
       "path": "governance/tools/ndf_poc_dispatch.py",
-      "sha256": "bfb972ae14992451fa13fc361167a94e4446b4067f5710f35c7c7e05d1b96cc4",
-      "bytes": 18674
+      "sha256": "350610f2d9673049b18e9b2841453ac2da91e0f335b9f5a39afce9b827a47641",
+      "bytes": 18685
     },
     {
       "path": "governance/tools/ndf_poc_isolation.py",
@@ -298,6 +298,11 @@
       "path": "governance/tools/test_meta017_018_dispatch.py",
       "sha256": "77dc28af3432a33524785bc21a29e6f682df0cc1fe520a44a6c0ff90d1203fba",
       "bytes": 1788
+    },
+    {
+      "path": "governance/tools/test_meta019_dispatch.py",
+      "sha256": "4f3271adc6d745c76840ea7939d799443d8fb919caa1e5ffbcea8eb8f3cab5f4",
+      "bytes": 2433
     },
     {
       "path": "governance/tools/test_ndf_dispatch_disk_first.py",
@@ -371,7 +376,7 @@
     },
     {
       "path": "norms/meta/README.md",
-      "sha256": "6bb1bb09517c7a87aee345d67d5f6449d2d948dbce4e7de6736341f7b140d017",
+      "sha256": "f674263e7fb699e264a738953d2c4753214ba3e579c8fd7677bd5d14209c2595",
       "bytes": 5181
     },
     {
@@ -431,8 +436,8 @@
     },
     {
       "path": "norms/meta/process.md",
-      "sha256": "1b54036867a7bdd58ce9cf1cd7a7021290fe01d2a698afe2f8219f473d1b686f",
-      "bytes": 54257
+      "sha256": "fe8fa50246c67dcce8b1982fabb265b06ab1ae1c012cb294d4ada1f8b4b638ce",
+      "bytes": 55555
     },
     {
       "path": "norms/ndf.yaml.stub",
@@ -526,8 +531,8 @@
     },
     {
       "path": "skill/ndf-workflow/SKILL.md",
-      "sha256": "24102153ba72faa5b49fd42dcd81781c77edfddc88f1d988c2fd8efba3c4af0c",
-      "bytes": 5881
+      "sha256": "2e78acdb0771e9565a17560cfc15d83491d1dc9620ebdcd998660651a6f9ffd9",
+      "bytes": 5973
     },
     {
       "path": "skill/ndf-workflow/adopt.md",
@@ -541,8 +546,8 @@
     },
     {
       "path": "skill/ndf-workflow/delegate.md",
-      "sha256": "2829e69e0589b6088d17fc342242230b4a6e8058b12c0797b85016aa3269a0f3",
-      "bytes": 5435
+      "sha256": "c358f16aa10624049250b21f28bcb76c353f36f7c2a00670a29cfe918a9eee5e",
+      "bytes": 5527
     },
     {
       "path": "skill/ndf-workflow/genesis.md",
@@ -571,8 +576,8 @@
     },
     {
       "path": "skill/ndf-workflow/poc.md",
-      "sha256": "37a2871cfe95ded961fa026ef65574a1cf139df3cc6f2fa6f5798d5069772818",
-      "bytes": 2022
+      "sha256": "cb9b31ac6e4bfb2261be28442bd50883ecc6a475d5e1f36624de71f8070b0991",
+      "bytes": 2111
     },
     {
       "path": "skill/ndf-workflow/proposal.md",
@@ -761,12 +766,12 @@
     },
     {
       "path": "workflow/AGENTS.md",
-      "sha256": "4bc7c00af55ae201ba8f76d0d281c877dce71699be890fcbc5e430405f170410",
-      "bytes": 13791
+      "sha256": "5f0f0dd5a782ccdf35c70a70214630849e8fc74f6302b12395f81dddbb1840f7",
+      "bytes": 13871
     },
     {
       "path": "workflow/ndf.workflow.yaml",
-      "sha256": "5d84b8bdc803541d84dd7bf877db0ba5ddaf690d5c80726a1385203625a6f32e",
+      "sha256": "3121aee6f512723b3f3598199c5d3b59b5720c6a43764dca7756c0cc437d0a1e",
       "bytes": 3651
     },
     {

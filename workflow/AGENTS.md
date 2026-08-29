@@ -11,7 +11,7 @@
 1. 本文件 `AGENTS.md`
 2. **流程 SoT**：`spec/meta/README.md`、`spec/meta/language.md`、`spec/meta/process.md`
    （[[CHR-008]]、[[BEH-018]]…[[BEH-020]]、[[BEH-025]]、[[META-006]]、[[META-007]]、
-   [[META-009]]…[[META-012]]、[[META-014]]、[[META-016]]…[[META-018]]；[[META-013]]/[[META-015]] 已 deprecated）
+   [[META-009]]…[[META-012]]、[[META-014]]、[[META-016]]…[[META-019]]；[[META-013]]/[[META-015]] 已 deprecated）
 3. 当前相关**产品**契约：`spec/00–50` 与 `spec/open/` 提案
 
 若存在 `SOUL.md` / `MEMORY.md`，一并重读；不存在则跳过。
@@ -221,7 +221,7 @@ Command MUST NOT 直接调用外部 chat 发送 API 绕过 pack 纪律。
 
 - 产品提案审核后由 **Control** 一次写齐 TOPIC/DESIGN/PERF_BASELINE/DELTA/INTERFACE
   （Command 只造 `binder_pipeline` pack；MUST NOT 代写装订器正文；无 `TOPIC.md` 亦可开题）
-- 收到「派发」：写 `GATES.md` `bundle_dispatch`（绑定 bundle SHA）→ `poc-dispatch --send`
+- 收到「派发」：写 `GATES.md` `bundle_dispatch`（绑定 bundle SHA）→ `poc-dispatch --send`（[[META-019]]：该回执可替闸 3；租约不以 Episode 为成功条件）
 - 开题填 `explore_surface`；禁写 Trunk；MUST NOT stable SLA
 - R0 后：`baseline_trunk_sha` + `PERF_BASELINE.md` Numbers（[[META-007]]）
 - 比性能 MUST 只读 TOPIC→PERF_BASELINE 与 DELTA；MUST NOT 抄 SLA 观测表

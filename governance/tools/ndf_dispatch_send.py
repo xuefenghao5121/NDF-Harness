@@ -2081,14 +2081,28 @@ def link_lease_worktree_local_deps(
     return linked
 
 
+def isolated_lease_missing_fields(pack: Mapping[str, Any]) -> list[str]:
+    """Handshake fields required to start a text-first lease (META-019).
+
+    ``episode_id`` is optional; Replay / Episode MUST NOT be required.
+    """
+    return [
+        name
+        for name, value in (
+            ("topic", str(pack.get("topic") or "").strip()),
+            ("base_sha", str(pack.get("base_sha") or "").strip()),
+            ("allowed_write_root", str(pack.get("allowed_write_root") or "").strip()),
+        )
+        if not value
+    ]
+
+
 def _prepare_isolated_lease(
     pack: Mapping[str, Any],
     *,
     session_id: str,
 ) -> dict[str, Any]:
     """Create an isolated worktree and record the runtime lease. No implementation."""
-    from types import SimpleNamespace
-
     import ndf_workflow_status as workflow
 
     topic = str(pack.get("topic") or "").strip()
@@ -2096,16 +2110,7 @@ def _prepare_isolated_lease(
     base_sha = str(pack.get("base_sha") or "").strip()
     allowed = str(pack.get("allowed_write_root") or "").strip()
     repo_root = Path(str((pack.get("workspace") or {}).get("repo_root") or ROOT))
-    missing = [
-        name
-        for name, value in (
-            ("topic", topic),
-            ("episode_id", episode_id),
-            ("base_sha", base_sha),
-            ("allowed_write_root", allowed),
-        )
-        if not value
-    ]
+    missing = isolated_lease_missing_fields(pack)
     if missing:
         return {
             "ok": False,
@@ -2163,27 +2168,45 @@ def _prepare_isolated_lease(
         if after != command_branch:
             raise RuntimeError(f"command_branch_replaced:{after}")
         local_links = link_lease_worktree_local_deps(repo_root, worktree)
-        args = SimpleNamespace(
-            file=None,
-            task=str(pack.get("task") or "poc_implementation"),
-            topic=topic,
-            mode=str(pack.get("track") or "poc"),
-            step="start",
-            run_id=run_id,
-            session_id=session_id,
-            base_sha=base_sha,
-            worktree=str(worktree),
-            branch=branch,
-            allowed_write_root=allowed,
-            result="active",
-            command_text="runtime lease",
-            started_at=None,
-            evidence_path=[],
-            blocker=[],
-            episode=episode_id,
-            action_id=str(pack.get("action_id") or pack.get("attempt_id") or "") or None,
-        )
-        lease = workflow.record_runtime_lease(args)
+        if not episode_id:
+            episode_id = f"lease-{topic}-{stamp}"
+        seed = {
+            "run_id": run_id,
+            "topic": topic,
+            "base_sha": base_sha,
+            "worktree": str(worktree),
+        }
+        now = time.strftime("%Y-%m-%dT%H:%M:%SZ", time.gmtime())
+        identity = workflow.canonical_json_sha(seed)
+        lease_row = {
+            "schema": "ndf-runtime-lease/v1",
+            "task": str(pack.get("task") or "poc_implementation"),
+            "topic": topic,
+            "mode": str(pack.get("track") or "poc"),
+            "step": "start",
+            "repo_head": base_sha,
+            "source_generation_sha": identity,
+            "manifest_sha": identity,
+            "context_plan_sha": identity,
+            "command": "runtime lease",
+            "input_sha": identity,
+            "output_sha": workflow.canonical_json_sha({**seed, "state": "active"}),
+            "evidence_paths": [],
+            "started_at": now,
+            "finished_at": None,
+            "result": "active",
+            "blockers": [],
+            "run_id": run_id,
+            "session_id": session_id,
+            "base_sha": base_sha,
+            "worktree": str(worktree),
+            "branch": branch,
+            "repo_root": str(repo_root),
+            "allowed_write_root": allowed,
+            "pack_sha": identity,
+            "episode_id": episode_id,
+        }
+        workflow.append_lease(workflow.LEASE_LOG, lease_row, root=workflow.ROOT)
         return {
             "ok": True,
             "transport_ok": True,
@@ -2194,8 +2217,9 @@ def _prepare_isolated_lease(
             "worktree": str(worktree),
             "branch": branch,
             "episode_id": episode_id,
-            "action_id": args.action_id,
-            "lease_result": lease.get("result"),
+            "action_id": str(pack.get("action_id") or pack.get("attempt_id") or "")
+            or None,
+            "lease_result": "active",
             "local_deps_linked": local_links,
             "response_text": "lease_recorded_no_implementation_start",
         }

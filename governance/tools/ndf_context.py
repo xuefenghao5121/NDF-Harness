@@ -48,7 +48,33 @@ GATE_PHRASES = {
     "topic_review": "TOPIC已审核",
     "design_review": "DESIGN已审核",
     "implementation_approval": "可以开始实现",
+    "bundle_dispatch": "派发",
 }
+IMPLEMENT_TASKS = frozenset(
+    {
+        "poc_measurement",
+        "implement",
+        "poc_implementation",
+        "poc_prepare_baseline",
+    }
+)
+
+
+def valid_implement_license_receipt(item: Mapping[str, Any] | None) -> bool:
+    """True when a GATES row licenses implement/measure (META-010 / META-019)."""
+    if not isinstance(item, Mapping):
+        return False
+    if item.get("gate") not in {"implementation_approval", "bundle_dispatch"}:
+        return False
+    if str(item.get("status") or "").lower() not in {"approved", "valid"}:
+        return False
+    approved = item.get("approved_content_sha") or ""
+    expected = item.get("expected_content_sha") or ""
+    return (
+        len(approved) == 64
+        and approved == expected
+        and ndf_gate_slices.receipt_mode_aligned(item)
+    )
 PROCESS_TASKS = frozenset(
     {
         "ndf_improvement_proposal",
@@ -547,7 +573,12 @@ def _gate_info(root: Path, topic: str | None) -> dict[str, Any]:
         latest_by_gate[str(receipt.get("gate"))] = receipt
     receipts = [
         latest_by_gate[gate]
-        for gate in ("topic_review", "design_review", "implementation_approval")
+        for gate in (
+            "topic_review",
+            "design_review",
+            "implementation_approval",
+            "bundle_dispatch",
+        )
         if gate in latest_by_gate
     ]
     for receipt in receipts:
@@ -915,7 +946,9 @@ def compile_plan(
         for item in plan["gates"]["receipts"]
         if item.get("status", "").lower() in {"approved", "valid"}
     }
-    if task in {"poc_measurement", "implement", "poc_implementation", "poc_prepare_baseline"} and "implementation_approval" not in approved:
+    if task in IMPLEMENT_TASKS and not any(
+        valid_implement_license_receipt(item) for item in approved.values()
+    ):
         plan["human_phrase"] = "可以开始实现"
     plan["plan_sha"] = canonical_json_sha(plan)
     return plan
@@ -1280,7 +1313,9 @@ def role_plan(
         for item in plan["gates"].get("receipts", [])
         if item.get("status", "").lower() in {"approved", "valid"}
     }
-    if task in {"poc_measurement", "implement", "poc_implementation", "poc_prepare_baseline"} and "implementation_approval" not in approved:
+    if task in IMPLEMENT_TASKS and not any(
+        valid_implement_license_receipt(item) for item in approved.values()
+    ):
         plan["human_phrase"] = "可以开始实现"
     plan["plan_sha"] = canonical_json_sha(plan)
     return plan
@@ -1623,19 +1658,13 @@ def verify_plan(
             else:
                 errors.append(finding)
     required_gate = (
-        plan.get("task")
-        in {"poc_measurement", "implement", "poc_implementation", "poc_prepare_baseline"}
-        and plan.get("role") != "canvas"
+        plan.get("task") in IMPLEMENT_TASKS and plan.get("role") != "canvas"
     )
     if required_gate:
         implementation = [
             item
             for item in plan.get("gates", {}).get("receipts", [])
-            if item.get("gate") == "implementation_approval"
-            and item.get("status", "").lower() in {"approved", "valid"}
-            and item.get("approved_content_sha") == item.get("expected_content_sha")
-            and len(item.get("approved_content_sha") or "") == 64
-            and ndf_gate_slices.receipt_mode_aligned(item)
+            if valid_implement_license_receipt(item)
         ]
         if not implementation:
             errors.append({"kind": "required_gate_not_valid", "gate": "implementation_approval"})

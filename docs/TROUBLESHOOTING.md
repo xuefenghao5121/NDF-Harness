@@ -28,6 +28,20 @@ is up on the host; Cursor sandbox `ECONNREFUSED` on `127.0.0.1:<gateway>`.
 
 **Prevent:** install `adapters/cursor/rules/ndf-no-sandbox-dispatch.mdc`.
 
+## `required_gate_not_valid` / `lease_pack_incomplete:episode_id`
+
+**Symptoms:** `poc-dispatch --intent implement` fails after a valid `bundle_dispatch`
+(phrase=`派发`) or with an empty `episode_id` on a text-first pack.
+
+**Fix:**
+
+1. Context verify MUST treat SHA-aligned `bundle_dispatch` as the gate-3 substitute ([[META-019]])
+2. Inline lease MUST NOT require `episode_id`; synthesize `lease-<topic>-<stamp>` only as a row id
+3. MUST NOT `init_episode` or treat Replay as success
+
+**Prevent:** keep `ndf_context.py` receipts including `bundle_dispatch`; do not add
+`episode_id` back to `isolated_lease_missing_fields`.
+
 ## Live completion false success
 
 **Symptoms:** `dispatch-send` returns succeeded immediately; receipt hop/task mismatches

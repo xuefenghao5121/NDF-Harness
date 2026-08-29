@@ -355,7 +355,7 @@ def poc_dispatch(
 
     lease_info: dict[str, Any] | None = None
     if hard_ok:
-        # Optional Episode bind only; never require Replay DAG (ADR-META-004).
+        # Optional Episode bind only; never require Replay DAG (ADR-META-004 / META-019).
         payload = wf.bind_pack_to_episode(
             payload, episode_id=episode_id, require_episode=False
         )

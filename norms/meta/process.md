@@ -2,7 +2,7 @@
 
 > scope: ndf-process  
 > 条款索引: `CHR-008`, `BEH-018`, `BEH-019`, `BEH-020`, `BEH-025`, `BEH-026`,
-> `META-006`, `META-007`, `META-009`, `META-010`, `META-011`, `META-012`, `META-013`, `META-014`, `META-015`, `META-016`, `META-017`, `META-018`
+> `META-006`, `META-007`, `META-009`, `META-010`, `META-011`, `META-012`, `META-013`, `META-014`, `META-015`, `META-016`, `META-017`, `META-018`, `META-019`
 > 目录边界: [[ARCH-008]]；SLA 隔离: [[CON-POC-001]]  
 > 术语: [[DEF-020]], [[DEF-021]], [[DEF-022]], [[DEF-023]], [[DEF-NDF-GRAPH]]  
 > 缺陷分类: [[DEF-NDF-CYCLE]]…[[DEF-NDF-BINDER-DUAL-HEAD]]（见 `meta/glossary.md`）
@@ -239,7 +239,8 @@ approved_content_sha / source_ref / status
    INTERFACE。
 4. **文字优先路径**（[[ADR-META-003]]）：新托管主题 MAY 用单次回执
    `bundle_dispatch`（phrase=`派发`）代替闸 3；内容束 MUST 与
-   `implementation_approval` 相同。`topic_review` / `design_review` 三闸串行对
+   `implementation_approval` 相同。Context verify / `poc-dispatch` MUST 认该替代
+   （[[META-019]]）。`topic_review` / `design_review` 三闸串行对
    该路径为 legacy/可选；产品提案「已确认」/「已审核」仍为契约落地门。
 5. 口令仍由人触发；Command Agent / 工具 MUST NOT 静默批准或伪造 `approved_by`。
 6. 本条不要求回填历史 POC；历史主题显示 `legacy/unknown`。
@@ -355,7 +356,7 @@ pack；POC「派发」仍 MUST 把 `bundle_dispatch` 回执写入 `GATES.md`（[
    identity mismatch）。
 4. bootstrap hop 的 `completion_receipt_path` MUST 含 `hop`（及 attempt），MUST NOT
    让不同 Foundation hop 覆盖同一 `*-attempt.json`。
-5. 心跳 / stall 与磁盘回执：见 [[META-016]]。
+5. 心跳 / stall 与磁盘回执：见 [[META-016]]。文字优先租约身份：见 [[META-019]]。
 
 历史 Episode / Replay 缺字段 MUST NOT 单独把实质完成判失败（[[ADR-META-004]]）。
 
@@ -606,8 +607,26 @@ Command 面的网关探活与委派 MUST 在 **宿主网络**（或等价全权�
 5. 指挥面已对同一 `session_key` 做过 `sessions.reset` 后，本次 `dispatch-send`
    MUST 设 `NDF_OPENCLAW_RESET_SESSION=0`，避免二次 reset 冲掉短会话。
 
-> rationale: DiskHNSW promote 验证——合入绿与 TOPIC 归档分 hop；活回执与二次 reset
+> rationale: operational promote 验证——合入绿与 TOPIC 归档分 hop；活回执与二次 reset
 > 会导致假成功 / 假失败。
+
+## 文字优先不得因 Episode / 闸3 残留 fail-closed {#META-019}
+<!-- ndf: kind=req level=must layer=L1 status=stable since=1.1.3 source=stated scope=ndf-process -->
+<!-- ndf: refines=META-010,META-011,META-016 depends-on=ADR-META-003,ADR-META-004 -->
+
+文字优先委派（[[ADR-META-003]] / [[ADR-META-004]]）MUST NOT 因缺 Episode / Replay
+字段或仅缺闸 3 行而 fail-closed。
+
+1. **闸 3 替代。** 实现 / 测量 hop 的 context verify MUST 接受有效
+   `bundle_dispatch`（phrase=`派发`，SHA 对齐，`review_slice`）作为
+   `implementation_approval` 的替代；内容束 MUST 与闸 3 相同。未收到人审口令
+   MUST NOT 伪造 `approved_by`。
+2. **租约身份。** 内联隔离租约 MUST 用 `run_id` / `session_id` / `base_sha` /
+   `allowed_write_root` 作为握手身份。缺 `episode_id` MUST NOT 构成
+   `lease_pack_incomplete`。若内部仍要相关字段，MUST 合成 `lease-<topic>-<stamp>`
+   一类与 Replay 无关的 id；MUST NOT `init_episode`，MUST NOT 把 Episode 当成功条件。
+
+> rationale: 文字优先 pack 故意不绑 Episode，Context / 租约仍按旧三闸与 Replay 字段拦截。
 
 ## Agent Episode、事件链与回放等级 {#META-013}
 <!-- ndf: kind=req level=must layer=L1 status=deprecated since=0.9.15 source=deduced scope=ndf-process -->

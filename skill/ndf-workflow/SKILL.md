@@ -70,6 +70,7 @@ Init/adopt/govern/sync：[install.md](install.md) / [adopt.md](adopt.md) / [gove
 
 - 成功 = 磁盘 `ndf-agent-completion/v1`；transport ACK / stdout ≠ success。
   stdout notify 缺失或心跳 stall MUST NOT 单独否定合法磁盘回执（[[META-016]]）。
+  `bundle_dispatch` 可替闸 3；租约不以 Episode 为成功条件（[[META-019]]）。
 - 口令回执写 `GATES.md`（人、时间、内容 SHA）；文件存在 ≠ 已批准
 - Genesis：绑内核 → 一句派发（`ndf-genesis-idea/v1` 骨架 `00–50` + 复现基线）→ `GENESIS已审核` 将骨架与已测基线标 stable；欠基线「继续」
 - Context Compiler 只在 pack 内部跑；失败只报 `context_verify_failed` + SHA
