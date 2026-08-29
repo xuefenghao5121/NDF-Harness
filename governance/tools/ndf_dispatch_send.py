@@ -530,11 +530,38 @@ def _gateway_call_payload_ok(text: str) -> bool:
     return True
 
 
-def _reset_openclaw_session(*, executable: str, session_key: str) -> dict[str, Any] | None:
-    """Reset the routing session. None means proceed; a dict is a fail-closed send result."""
+def _openclaw_agent_id(pack: Mapping[str, Any] | None = None) -> str:
+    if pack:
+        agent = str(pack.get("agent_id") or "").strip()
+        if agent:
+            return agent
+    return "main"
+
+
+def _openclaw_session_exists(
+    session_key: str,
+    *,
+    executable: str | None = None,
+) -> bool:
+    return _openclaw_session_progress(session_key, executable=executable) is not None
+
+
+def _reset_openclaw_session(
+    *,
+    executable: str,
+    session_key: str,
+    pack: Mapping[str, Any] | None = None,
+) -> dict[str, Any] | None:
+    """Reset the routing session when it already exists.
+
+    None means proceed; a dict is a fail-closed send result.
+    Missing session (first hop on a new project agent) skips reset.
+    """
     key = str(session_key or "").strip()
     if not key:
         return _openclaw_reset_failed(detail="session_key_missing")
+    if not _openclaw_session_exists(key, executable=executable):
+        return None
     cmd = _openclaw_sessions_reset_argv(executable, key)
     try:
         proc = subprocess.run(
@@ -1628,6 +1655,28 @@ def _send_openclaw(
     timeout_sec: int,
 ) -> dict[str, Any]:
     session_key = str(pack.get("session_key") or "").strip()
+    if not session_key:
+        return {
+            "ok": False,
+            "transport_ok": False,
+            "state": "failed",
+            "error": "openclaw_session_unconfigured",
+            "response_text": None,
+        }
+    if pack.get("multi_project_safe") is False or pack.get("openclaw_ownership") in {
+        "legacy_shared",
+        "custom_unverified",
+        "stale",
+        "unconfigured",
+    }:
+        return {
+            "ok": False,
+            "transport_ok": False,
+            "state": "failed",
+            "error": "openclaw_session_not_multi_project_safe",
+            "detail": str(pack.get("openclaw_ownership") or "unconfigured"),
+            "response_text": None,
+        }
     resolved = str(pack.get("resolved_session_id") or "").strip()
     transport = str(pack.get("session_transport") or "").strip()
     if not transport and not resolved and session_key:
@@ -1667,7 +1716,7 @@ def _send_openclaw(
     else:
         if _openclaw_reset_session_enabled():
             reset_fail = _reset_openclaw_session(
-                executable=executable, session_key=session_key
+                executable=executable, session_key=session_key, pack=pack
             )
             if reset_fail is not None:
                 return reset_fail
@@ -1686,9 +1735,10 @@ def _send_openclaw(
                     transport = str(resolution.get("transport") or transport).strip()
                 except Exception:
                     return _openclaw_reset_failed(detail="session_reresolve_failed")
+        agent_id = _openclaw_agent_id(pack)
         if transport == "session_id":
             session_id = resolved or session_key
-            cmd = [executable, "agent", "--agent", "main", "--message", message]
+            cmd = [executable, "agent", "--agent", agent_id, "--message", message]
             if session_id:
                 cmd.extend(["--session-id", session_id])
             use_heartbeat = True
@@ -1699,7 +1749,7 @@ def _send_openclaw(
             timeout_ms = int(max_sec * 1000) + 60_000
             params = {
                 "message": message,
-                "agentId": "main",
+                "agentId": agent_id,
                 "sessionKey": session_key,
                 "timeout": int(max_sec),
                 "idempotencyKey": str(_uuid.uuid4()),

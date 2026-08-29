@@ -95,7 +95,7 @@ Idea → 提案「已确认」/「已审核」
 | 层 | 谁 | 入口 | 写界 |
 |----|----|------|------|
 | **Command** | 指挥面（Cursor 等 + ndf-workflow skill） | 五句口令；造 pack；等人审；调 CLI | `tmp/`、触发回执；禁写 worker 实现 |
-| **Control** | 指挥 Agent（OpenClaw 等） | `control-pack` → dispatch | 提案/装订器；bootstrap `hop=genesis_design` 可写 `spec/00–50` |
+| **Control** | 指挥 Agent（OpenClaw 等） | `control-pack` → dispatch | 提案/装订器；bootstrap `hop=genesis_design` 可写 `spec/00–50`；OpenClaw MUST 用 per-project `agent_id`/`session_key`（[[META-020]]） |
 | **Implementation** | 实现 Agent（Claude Code 等） | `poc-dispatch --send`；`genesis-pack`；promote `promote_land` | POC 仅 `poc/<topic>/`；promote 可写 Trunk |
 
 成功 = 磁盘 completion receipt；**不以 transport ACK / stdout 冒充**。stdout

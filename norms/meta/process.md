@@ -2,7 +2,7 @@
 
 > scope: ndf-process  
 > 条款索引: `CHR-008`, `BEH-018`, `BEH-019`, `BEH-020`, `BEH-025`, `BEH-026`,
-> `META-006`, `META-007`, `META-009`, `META-010`, `META-011`, `META-012`, `META-013`, `META-014`, `META-015`, `META-016`, `META-017`, `META-018`, `META-019`
+> `META-006`, `META-007`, `META-009`, `META-010`, `META-011`, `META-012`, `META-013`, `META-014`, `META-015`, `META-016`, `META-017`, `META-018`, `META-019`, `META-020`
 > 目录边界: [[ARCH-008]]；SLA 隔离: [[CON-POC-001]]  
 > 术语: [[DEF-020]], [[DEF-021]], [[DEF-022]], [[DEF-023]], [[DEF-NDF-GRAPH]]  
 > 缺陷分类: [[DEF-NDF-CYCLE]]…[[DEF-NDF-BINDER-DUAL-HEAD]]（见 `meta/glossary.md`）
@@ -418,16 +418,20 @@ fallback。`roles_unbound` 仍 MUST fail-closed。
 机械入口：`python3 spec/meta/tools/ndf_role_binding.py bind|resolve|status`。
 
 当 Control `adapter=openclaw` 时，OpenClaw 探测 MUST 分三态：`gateway_reachable`、
-`session_configured`（`AGENTS.md` 非空 session_key）、`session_dispatchable`（routing key
-可匹配 sessions store，或本身为合法 UUID）。`session_key`（可含 `:` 的通道路由串）与
-`openclaw agent --session-id`（UUID）MUST 区分。Control `safe_to_dispatch` MUST 要求
-gateway 可达且 session 可派发。`dispatch-send` 对 routing key 走 gateway `sessionKey`；
-仅已解析 UUID 才用 `--session-id`。OpenClaw `dispatch-send` MUST 在发出本 hop agent
-消息之前对路由 `session_key` 调用 gateway `sessions.reset`（默认开启；
+`session_configured`（`ndf.workflow.yaml` `roles.control.session_key` 非空；
+`AGENTS.md` 仅作迁移输入）、`session_dispatchable`（routing key 可匹配 sessions store，
+或本身为合法 UUID，且 managed binding 通过 [[META-020]]）。`session_key`（可含 `:` 的
+通道路由串）与 `openclaw agent --session-id`（UUID）MUST 区分。Control
+`safe_to_dispatch` MUST 要求 gateway 可达、session 可派发、且
+`multi_project_safe=true`。`dispatch-send` MUST 使用 pack `agent_id`（不得硬编码
+`main`）；对 routing key 走 gateway `sessionKey`；仅已解析 UUID 才用 `--session-id`。
+OpenClaw `dispatch-send` MUST 在发出本 hop agent 消息之前，**若该 `session_key` 已在
+sessions store 存在**，对路由 `session_key` 调用 gateway `sessions.reset`（默认开启；
 `NDF_OPENCLAW_RESET_SESSION=0` 关闭），使每 hop 为短对话；`session_key` 路由身份
-MUST 保持不变。reset 失败 MUST `openclaw_session_reset_failed` fail-closed，MUST NOT
-把消息送进旧长对话。`NDF_OPENCLAW_DISPATCH_CMD` 覆盖路径不自动 reset。这与 ACP 默认
-`--fork-session` 对等，不是 completion。
+MUST 保持不变。首 hop（尚无 session 行）MUST 跳过 reset 并允许创建。reset 失败 MUST
+`openclaw_session_reset_failed` fail-closed，MUST NOT 把消息送进旧长对话。
+`NDF_OPENCLAW_DISPATCH_CMD` 覆盖路径不自动 reset。这与 ACP 默认 `--fork-session`
+对等，不是 completion。
 
 Worker 消息 MUST 携带 pack `request.intent`（若有）。slim JSON MUST 含 `request`。
 intent 声明 `track: bootstrap` 的 hop MUST 标 `track=bootstrap` 且 `hop=genesis_*`，
@@ -627,6 +631,36 @@ Command 面的网关探活与委派 MUST 在 **宿主网络**（或等价全权�
    一类与 Replay 无关的 id；MUST NOT `init_episode`，MUST NOT 把 Episode 当成功条件。
 
 > rationale: 文字优先 pack 故意不绑 Episode，Context / 租约仍按旧三闸与 Replay 字段拦截。
+
+## 每项目独立 OpenClaw agent（跨项目并行） {#META-020}
+<!-- ndf: kind=req level=must layer=L1 status=stable since=1.2.0 source=stated scope=ndf-process -->
+<!-- ndf: depends-on=META-011,META-014 -->
+
+本地多 Git 项目 MAY 并行委派 OpenClaw Control；每个项目 MUST 绑定独立 agent 与
+`session_key`。同一 Git common-dir（含其 worktree）MUST 共用一个 agent，项目内
+Control 仍串行。
+
+1. **SoT。** Managed 绑定 MUST 写入 `{repo}/ndf.workflow.yaml`
+   `roles.control.{agent_id,session_key,session_transport,session_binding_version}`
+   （`session_binding_version=ndf-v1`）。`AGENTS.md` session 行仅作迁移输入。
+2. **身份。** `agent_id` / `session_key` MUST 由 Git `git-common-dir` 派生
+   （`ndf-<slug>-<hash>` / `agent:<agent_id>:main`）。同仓 worktree MUST 得到相同
+   agent；不同仓库 MUST 不同。
+3. **Provision。** `ndf_role_binding.py bind|provision-openclaw-session` MUST 幂等
+   调用 `openclaw agents add <agent_id> --non-interactive --workspace <primary>`；
+   agent 已存在但 workspace 冲突 MUST fail-closed
+   （`openclaw_agent_workspace_collision`）。
+4. **Fail-closed。** 共享默认 `agent:main:main`、复制来的 stale managed 绑定、
+   未验证的自定义 key MUST NOT `safe_to_dispatch` /
+   MUST NOT `dispatch-send`（`openclaw_session_legacy_shared` /
+   `openclaw_session_collision_or_stale_binding` /
+   `openclaw_session_ownership_unverified`）。自定义 key 升级 MUST 显式
+   `--rebind-openclaw-session`。
+5. **派发。** Pack MUST 携带 `agent_id` + `session_key`；运输 MUST 使用该
+   `agentId`。本条不开放单项目多 topic OpenClaw 并发。
+
+> rationale: 共用 `agent:main:main` 时 per-hop `sessions.reset` 会跨项目互冲；
+> 独立 agent 隔离网关会话，NDF lease/completion 本就按仓隔离。
 
 ## Agent Episode、事件链与回放等级 {#META-013}
 <!-- ndf: kind=req level=must layer=L1 status=deprecated since=0.9.15 source=deduced scope=ndf-process -->

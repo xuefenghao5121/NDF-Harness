@@ -279,7 +279,9 @@ python3 ndf_acp_session_bootstrap.py [--resume]
 
 **Purpose:** Bind / probe / resolve Command / Control / Implementation adapters
 (`ndf.workflow.yaml`). Used at init (角色已配置) and by dispatch when preferred CLI
-is missing (`in-host` / `dual-session` / `custom`).
+is missing (`in-host` / `dual-session` / `custom`). When Control is `openclaw`,
+also provisions a **per-project** OpenClaw agent + managed `session_key`
+([[META-020]]).
 
 **Commands:**
 
@@ -289,9 +291,12 @@ python3 ndf_role_binding.py status --repo . --json
 python3 ndf_role_binding.py bind --repo . \
   --command cursor --control openclaw --control-fallback in-host \
   --implementation claude-code --implementation-fallback in-host
+python3 ndf_role_binding.py provision-openclaw-session --repo . --json
+# replace custom/legacy key:
+python3 ndf_role_binding.py provision-openclaw-session --repo . --rebind
 ```
 
-**Exit codes:** `0` roles bound / probe ok; `1` unbound; `2` bind args error.
+**Exit codes:** `0` roles bound / probe ok; `1` unbound; `2` bind/provision error.
 
 ---
 

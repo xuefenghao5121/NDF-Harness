@@ -11,7 +11,7 @@ from tests._helpers import PKG_ROOT, run_tool_script
 
 class TestRoleBinding(unittest.TestCase):
     def test_help_status_probe(self) -> None:
-        for cmd in ("status", "probe"):
+        for cmd in ("status", "probe", "provision-openclaw-session"):
             proc = run_tool_script("ndf_role_binding.py", cmd, "--help")
             self.assertEqual(proc.returncode, 0, proc.stderr)
 
@@ -47,6 +47,8 @@ class TestRoleBinding(unittest.TestCase):
             data = json.loads(status.stdout)
             self.assertEqual(data["roles"]["control"]["provider"], "in-host")
             self.assertEqual(data["roles"]["implementation"]["provider"], "in-host")
+            self.assertIn("openclaw_session", data)
+            self.assertIn("openclaw_identity", data)
 
 
 if __name__ == "__main__":

@@ -38,9 +38,19 @@ OpenClaw / Claude Code 是**默认** adapter，不是唯一路径。Command MUST
 **可写**：见 [roles/control.md](roles/control.md) 或 `ndf.workflow.yaml` `roles.control.writable`。  
 **禁止**：`src/`、`include/`、`tests/`；静默写 `GATES.md` 的 `approved_by`；未人审写 `spec/meta/` 稳定正文。
 
-`adapter=openclaw` 时走 `dispatch-send` gateway 路径；默认每 hop 先 `sessions.reset`
-再发消息（`NDF_OPENCLAW_RESET_SESSION=0` 关闭）。若指挥面**已**用 CLI 对同一
-`session_key` 做过 reset，本次 `dispatch-send` MUST `NDF_OPENCLAW_RESET_SESSION=0`。
+`adapter=openclaw` 时走 `dispatch-send` gateway 路径；pack MUST 带本项目
+`agent_id` + managed `session_key`（[[META-020]]）。默认每 hop 在 session 已存在时
+先 `sessions.reset` 再发消息（`NDF_OPENCLAW_RESET_SESSION=0` 关闭）。若指挥面**已**
+用 CLI 对同一 `session_key` 做过 reset，本次 `dispatch-send` MUST
+`NDF_OPENCLAW_RESET_SESSION=0`。绑定：
+
+```bash
+python3 spec/meta/tools/ndf_role_binding.py bind --repo . \
+  --command cursor --control openclaw --implementation claude-code
+# 或仅补 session：
+python3 spec/meta/tools/ndf_role_binding.py provision-openclaw-session --repo .
+```
+
 `in_host` / `dual_session` 时见 spawn 文件或 dual-session prompt（仍等磁盘 completion）。
 
 发 hop 前：目标 `completion_receipt_path` 与会假成功的活回执 MUST **MOVE**（`mv`）；

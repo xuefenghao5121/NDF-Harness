@@ -6098,8 +6098,10 @@ def resolve_openclaw_dispatch_session(
     """
     key = str(configured or "").strip()
     hint = (
-        "Edit AGENTS.md OpenClaw 指挥会话 session_key to a key listed in "
-        "`openclaw sessions --json` (or a UUID sessionId), then click 探测运行时 (light)."
+        "Bind a managed per-project OpenClaw agent via "
+        "`python3 spec/meta/tools/ndf_role_binding.py provision-openclaw-session --repo .` "
+        "(or `bind --control openclaw --rebind-openclaw-session`). "
+        "Do not reuse shared `agent:main:main` across projects."
     )
     if not key:
         return {
@@ -6193,7 +6195,9 @@ def resolve_openclaw_dispatch_session(
 def runtime_status(probe: bool | str = False) -> dict[str, Any]:
     agents_text = read_text(ROOT / "AGENTS.md")
     session_id = configured_acp_session_id(agents_text)
-    openclaw_match = OPENCLAW_SESSION_RE.search(agents_text)
+    import ndf_role_binding as role_binding
+
+    session_binding = role_binding.configured_openclaw_session(ROOT)
     mode = normalize_probe_mode(probe)
     openclaw_probe = probe_openclaw() if mode else None
     if mode == "full":
@@ -6202,7 +6206,7 @@ def runtime_status(probe: bool | str = False) -> dict[str, Any]:
         acp_probe = probe_claude_acp_light(refresh=True)
     else:
         acp_probe = _ACP_PROBE or _ACP_LIGHT_PROBE
-    configured_key = openclaw_match.group(1) if openclaw_match else "agent:main:main"
+    configured_key = str(session_binding.get("session_key") or "").strip()
     recent_keys = {
         item.get("key")
         for item in (openclaw_probe or {}).get("sessions", [])
@@ -6210,13 +6214,71 @@ def runtime_status(probe: bool | str = False) -> dict[str, Any]:
     }
     session_resolution: dict[str, Any] | None = None
     if mode:
-        if openclaw_probe and openclaw_probe.get("reachable"):
-            session_resolution = resolve_openclaw_dispatch_session(configured_key)
-        elif not str(configured_key or "").strip():
+        if not configured_key:
             session_resolution = resolve_openclaw_dispatch_session("")
+        elif openclaw_probe and openclaw_probe.get("reachable"):
+            session_resolution = resolve_openclaw_dispatch_session(configured_key)
+            # Managed bindings: also require agent_id present when declared.
+            agent_id = session_binding.get("agent_id")
+            if (
+                session_binding.get("ownership") == "managed"
+                and agent_id
+                and session_resolution.get("session_dispatchable")
+            ):
+                agents, agents_err = role_binding.list_openclaw_agents()
+                if agents_err and not agents:
+                    session_resolution = {
+                        **session_resolution,
+                        "session_dispatchable": False,
+                        "error": agents_err,
+                        "fix_hint": (
+                            "Restore OpenClaw CLI/gateway, then "
+                            "`ndf_role_binding.py provision-openclaw-session --repo .`"
+                        ),
+                    }
+                else:
+                    match = next(
+                        (
+                            item
+                            for item in agents
+                            if str(
+                                item.get("id")
+                                or item.get("agentId")
+                                or item.get("name")
+                                or ""
+                            )
+                            == agent_id
+                        ),
+                        None,
+                    )
+                    if match is None:
+                        session_resolution = {
+                            **session_resolution,
+                            "session_dispatchable": False,
+                            "error": "openclaw_agent_missing",
+                            "fix_hint": (
+                                "Run: python3 spec/meta/tools/ndf_role_binding.py "
+                                "provision-openclaw-session --repo ."
+                            ),
+                        }
+                    else:
+                        ws = role_binding._agent_workspace(match)
+                        expected_ws = str(
+                            (session_binding.get("expected") or {}).get("workspace")
+                            or ROOT.resolve()
+                        )
+                        if ws and ws != expected_ws:
+                            session_resolution = {
+                                **session_resolution,
+                                "session_dispatchable": False,
+                                "error": "openclaw_agent_workspace_collision",
+                                "fix_hint": (
+                                    f"Agent {agent_id} is bound to {ws}, not {ROOT}"
+                                ),
+                            }
         else:
             session_resolution = {
-                "session_configured": True,
+                "session_configured": bool(configured_key),
                 "session_dispatchable": False,
                 "resolved_session_id": None,
                 "matched_key": None,
@@ -6228,7 +6290,7 @@ def runtime_status(probe: bool | str = False) -> dict[str, Any]:
                 or "runtime_unavailable",
                 "fix_hint": (
                     "Restore OpenClaw gateway (`openclaw health --json`), then "
-                    "verify AGENTS.md session_key is dispatchable."
+                    "verify ndf.workflow.yaml roles.control session_key is dispatchable."
                 ),
             }
     leases = active_runtime_leases()
@@ -6291,13 +6353,18 @@ def runtime_status(probe: bool | str = False) -> dict[str, Any]:
         },
         "control": {
             "provider": "openclaw",
-            "default_session_key": configured_key,
+            "default_session_key": configured_key or None,
+            "agent_id": session_binding.get("agent_id"),
+            "session_binding_version": session_binding.get("session_binding_version"),
+            "openclaw_ownership": session_binding.get("ownership"),
+            "multi_project_safe": bool(session_binding.get("multi_project_safe")),
+            "session_binding_blockers": list(session_binding.get("blockers") or []),
             "reachable": openclaw_probe.get("reachable") if openclaw_probe else None,
             "gateway_reachable": (
                 openclaw_probe.get("reachable") if openclaw_probe else None
             ),
             "configured_session_visible": (
-                configured_key in recent_keys if mode else None
+                configured_key in recent_keys if mode and configured_key else None
             ),
             "session_configured": (
                 None
@@ -6308,6 +6375,7 @@ def runtime_status(probe: bool | str = False) -> dict[str, Any]:
                 None
                 if session_resolution is None
                 else bool(session_resolution.get("session_dispatchable"))
+                and bool(session_binding.get("multi_project_safe"))
             ),
             "resolved_session_id": (
                 None
@@ -6337,37 +6405,88 @@ def runtime_status(probe: bool | str = False) -> dict[str, Any]:
     }
 
 
+def openclaw_session_binding() -> dict[str, Any]:
+    """Prefer ndf.workflow.yaml managed binding; AGENTS.md only as migration input."""
+    import ndf_role_binding as role_binding
+
+    return role_binding.configured_openclaw_session(ROOT)
+
+
+def openclaw_agent_id() -> str | None:
+    binding = openclaw_session_binding()
+    return binding.get("agent_id")
+
+
 def openclaw_session_key() -> str:
-    agents_text = read_text(ROOT / "AGENTS.md")
-    match = OPENCLAW_SESSION_RE.search(agents_text)
-    return match.group(1) if match else "agent:main:main"
+    binding = openclaw_session_binding()
+    key = str(binding.get("session_key") or "").strip()
+    if key:
+        return key
+    # Unconfigured: do NOT fall back to shared agent:main:main.
+    return ""
+
+
+def openclaw_pack_session_fields(
+    control_runtime: Mapping[str, Any] | None = None,
+) -> dict[str, Any]:
+    """Fields stamped onto every OpenClaw Control/genesis pack."""
+    import ndf_role_binding as role_binding
+
+    binding = role_binding.configured_openclaw_session(ROOT)
+    identity = role_binding.openclaw_repo_identity(ROOT)
+    runtime = control_runtime or {}
+    transport = (
+        runtime.get("session_transport")
+        or binding.get("session_transport")
+        or "session_key"
+    )
+    return {
+        "agent_id": binding.get("agent_id") or identity.get("agent_id"),
+        "session_key": binding.get("session_key") or "",
+        "session_transport": transport,
+        "session_binding_version": binding.get("session_binding_version"),
+        "openclaw_identity_hash": identity.get("identity_hash"),
+        "openclaw_ownership": binding.get("ownership"),
+        "multi_project_safe": bool(binding.get("multi_project_safe")),
+        "resolved_session_id": runtime.get("resolved_session_id"),
+    }
 
 
 def control_runtime_dispatch_ready(control: Mapping[str, Any] | None) -> bool:
     """Gateway reachable AND configured session resolves to a dispatchable id."""
     runtime = control or {}
+    if runtime.get("multi_project_safe") is False:
+        return False
     return bool(runtime.get("reachable") and runtime.get("session_dispatchable"))
 
 
 def control_runtime_dispatch_blockers(control: Mapping[str, Any] | None) -> list[str]:
     runtime = control or {}
-    if runtime.get("reachable") and runtime.get("session_dispatchable"):
+    if runtime.get("reachable") and runtime.get("session_dispatchable") and (
+        runtime.get("multi_project_safe") is not False
+    ):
         return []
     blockers: list[str] = []
+    for item in runtime.get("session_binding_blockers") or []:
+        if item not in blockers:
+            blockers.append(str(item))
+    if runtime.get("multi_project_safe") is False and not blockers:
+        blockers.append("openclaw_session_not_multi_project_safe")
     if not runtime.get("reachable"):
         blockers.append("runtime_unavailable")
     elif runtime.get("session_configured") is False:
         blockers.append("openclaw_session_unconfigured")
     elif runtime.get("session_dispatchable") is False:
-        err = str(runtime.get("session_error") or "openclaw_session_invalid")
-        blockers.append(
-            err
-            if err.startswith("openclaw_session_")
-            else "openclaw_session_invalid"
-        )
-    else:
-        blockers.append("runtime_unavailable")
-    return blockers
+        err = runtime.get("session_error") or "openclaw_session_invalid"
+        blockers.append(str(err))
+    # dedupe while preserving order
+    seen: set[str] = set()
+    out: list[str] = []
+    for item in blockers:
+        if item not in seen:
+            seen.add(item)
+            out.append(item)
+    return out
 
 
 def implementation_dispatch_runtime(
@@ -9217,9 +9336,16 @@ def control_proposal_idea_pack(
         "resume": False,
         "active_episode_id": None,
         "provider": "openclaw",
-        "session_key": openclaw_session_key(),
-        "resolved_session_id": control_runtime.get("resolved_session_id"),
-        "session_transport": control_runtime.get("session_transport"),
+        **(
+            lambda _oc: {
+                **_oc,
+                "resolved_session_id": control_runtime.get("resolved_session_id"),
+                "session_transport": (
+                    control_runtime.get("session_transport")
+                    or _oc.get("session_transport")
+                ),
+            }
+        )(openclaw_pack_session_fields()),
         "base_sha": git_head(),
         "workspace": binding,
         "workspace_truth": workspace_truth(binding, read_openclaw_workspace()),
@@ -9443,9 +9569,16 @@ def control_pack(
         "resume": bool(resume or (active_episode and episode_id == active_episode)),
         "active_episode_id": active_episode,
         "provider": "openclaw",
-        "session_key": openclaw_session_key(),
-        "resolved_session_id": control_runtime.get("resolved_session_id"),
-        "session_transport": control_runtime.get("session_transport"),
+        **(
+            lambda _oc: {
+                **_oc,
+                "resolved_session_id": control_runtime.get("resolved_session_id"),
+                "session_transport": (
+                    control_runtime.get("session_transport")
+                    or _oc.get("session_transport")
+                ),
+            }
+        )(openclaw_pack_session_fields()),
         "base_sha": git_head(),
         "workspace": workspace_binding(topic),
         "workspace_truth": workspace_truth_view(topic),
@@ -9961,9 +10094,16 @@ def project_control_land_pack(
             "human_phrase": human_phrase,
         },
         "provider": "openclaw",
-        "session_key": openclaw_session_key(),
-        "resolved_session_id": control_runtime.get("resolved_session_id"),
-        "session_transport": control_runtime.get("session_transport"),
+        **(
+            lambda _oc: {
+                **_oc,
+                "resolved_session_id": control_runtime.get("resolved_session_id"),
+                "session_transport": (
+                    control_runtime.get("session_transport")
+                    or _oc.get("session_transport")
+                ),
+            }
+        )(openclaw_pack_session_fields()),
         "base_sha": git_head(),
         "workspace": workspace_binding(None),
         "workspace_truth": workspace_truth_view(None),
@@ -10114,9 +10254,16 @@ def project_control_pack(
             "hop": "draft",
         },
         "provider": "openclaw",
-        "session_key": openclaw_session_key(),
-        "resolved_session_id": control_runtime.get("resolved_session_id"),
-        "session_transport": control_runtime.get("session_transport"),
+        **(
+            lambda _oc: {
+                **_oc,
+                "resolved_session_id": control_runtime.get("resolved_session_id"),
+                "session_transport": (
+                    control_runtime.get("session_transport")
+                    or _oc.get("session_transport")
+                ),
+            }
+        )(openclaw_pack_session_fields()),
         "base_sha": git_head(),
         "workspace": workspace_binding(None),
         "workspace_truth": workspace_truth_view(None),
@@ -10200,8 +10347,7 @@ def genesis_pack(mode: str, episode_id: str | None = None) -> tuple[dict[str, An
         "hop": "genesis_trunk",
         "bootstrap_mode": mode,
         "provider": provider,
-        "session_key": openclaw_session_key(),
-        "session_transport": "session_key",
+        **openclaw_pack_session_fields(),
         "base_sha": git_head(),
         "workspace": workspace_binding(None),
         "workspace_truth": workspace_truth_view(None),

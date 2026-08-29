@@ -1,5 +1,22 @@
 # Changelog
 
+## 1.2.0 — 2026-08-29
+
+**META-020**: per-project OpenClaw agent + session isolation for multi-repo parallel
+Control dispatch (same Git common-dir stays serial):
+
+- **Binding SoT**: `ndf.workflow.yaml` `roles.control.{agent_id,session_key,
+  session_transport,session_binding_version=ndf-v1}`; identity from
+  `git-common-dir`; provision via `openclaw agents add --non-interactive
+  --workspace`.
+- **Tools**: `ndf_role_binding.py` provision/status; packs stamp `agent_id`;
+  `ndf_dispatch_send.py` uses pack `agentId` (not hardcoded `main`); reset only
+  when session already exists; fail-closed on shared `agent:main:main` /
+  stale copied bindings / unverified custom keys.
+- **Tests**: `test_openclaw_project_session.py`.
+- **Docs**: process META-020, INSTALL/TOOLS/TROUBLESHOOTING, OpenClaw adapter,
+  delegate skill.
+
 ## 1.1.3 — 2026-08-29
 
 Distill **META-019** from consumer greenfield POC dispatch (text-first pack

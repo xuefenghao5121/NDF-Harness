@@ -153,6 +153,13 @@
         "fallback": { "$ref": "#/$defs/roleFallback" },
         "model": { "type": ["string", "null"] },
         "command": { "type": "string" },
+        "agent_id": { "type": "string" },
+        "session_key": { "type": "string" },
+        "session_transport": {
+          "type": "string",
+          "enum": ["session_key", "session_id"]
+        },
+        "session_binding_version": { "type": "string" },
         "writable": {
           "type": "array",
           "items": { "type": "string" }

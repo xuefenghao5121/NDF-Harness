@@ -56,6 +56,15 @@ python3 install.py install --repo . --profile dual-track \
   --runtime cursor --runtime openclaw --runtime claude-code
 ```
 
+After install with OpenClaw, bind roles and provision a **per-project** agent
+([[META-020]]) so local multi-repo parallel dispatch does not share `agent:main:main`:
+
+```bash
+python3 spec/meta/tools/ndf_role_binding.py bind --repo . \
+  --command cursor --control openclaw --control-fallback in-host \
+  --implementation claude-code --implementation-fallback in-host
+```
+
 **Installs:**
 
 - Full `norms/meta/` → `spec/meta/`

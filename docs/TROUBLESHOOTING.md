@@ -28,6 +28,23 @@ is up on the host; Cursor sandbox `ECONNREFUSED` on `127.0.0.1:<gateway>`.
 
 **Prevent:** install `adapters/cursor/rules/ndf-no-sandbox-dispatch.mdc`.
 
+## OpenClaw cross-project session collision
+
+**Symptoms:** `openclaw_session_legacy_shared`, `openclaw_session_not_multi_project_safe`,
+`openclaw_session_collision_or_stale_binding`, or one project's `sessions.reset`
+wipes another project's Control hop.
+
+**Fix:**
+
+1. Provision a managed per-project agent:
+   `python3 spec/meta/tools/ndf_role_binding.py provision-openclaw-session --repo .`
+2. If replacing a custom key: add `--rebind` (or bind with `--rebind-openclaw-session`)
+3. Confirm `ndf.workflow.yaml` has `roles.control.agent_id` /
+   `session_key` / `session_binding_version: ndf-v1`
+4. Do **not** share `agent:main:main` across local projects ([[META-020]])
+
+**Note:** Parallelism is across distinct Git repos. Same-repo Control hops stay serial.
+
 ## `required_gate_not_valid` / `lease_pack_incomplete:episode_id`
 
 **Symptoms:** `poc-dispatch --intent implement` fails after a valid `bundle_dispatch`
