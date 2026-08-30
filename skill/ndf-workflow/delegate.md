@@ -41,7 +41,9 @@ OpenClaw 同时绑 Control+Implementation 时：按 `task` 定角色，reset 后
 **禁止**：`src/`、`include/`、`tests/`；静默写 `GATES.md` 的 `approved_by`；未人审写 `spec/meta/` 稳定正文。
 
 `adapter=openclaw` 时走 `dispatch-send` gateway 路径；pack MUST 带本项目
-`agent_id` + managed `session_key`（[[META-020]]）。默认每 hop 在 session 已存在时
+`agent_id` + managed `session_key`（[[META-020]]）。Control 与 Implementation
+皆 OpenClaw 时 MUST 各用独立 managed session（[[META-022]]；Implementation
+`…-impl`）。默认每 hop 在 session 已存在时
 先 `sessions.reset` 再发消息（`NDF_OPENCLAW_RESET_SESSION=0` 关闭）。若指挥面**已**
 用 CLI 对同一 `session_key` 做过 reset，本次 `dispatch-send` MUST
 `NDF_OPENCLAW_RESET_SESSION=0`。绑定：

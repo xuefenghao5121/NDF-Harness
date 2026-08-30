@@ -6405,20 +6405,20 @@ def runtime_status(probe: bool | str = False) -> dict[str, Any]:
     }
 
 
-def openclaw_session_binding() -> dict[str, Any]:
+def openclaw_session_binding(*, role: str = "control") -> dict[str, Any]:
     """Prefer ndf.workflow.yaml managed binding; AGENTS.md only as migration input."""
     import ndf_role_binding as role_binding
 
-    return role_binding.configured_openclaw_session(ROOT)
+    return role_binding.configured_openclaw_session(ROOT, role=role)
 
 
-def openclaw_agent_id() -> str | None:
-    binding = openclaw_session_binding()
+def openclaw_agent_id(*, role: str = "control") -> str | None:
+    binding = openclaw_session_binding(role=role)
     return binding.get("agent_id")
 
 
-def openclaw_session_key() -> str:
-    binding = openclaw_session_binding()
+def openclaw_session_key(*, role: str = "control") -> str:
+    binding = openclaw_session_binding(role=role)
     key = str(binding.get("session_key") or "").strip()
     if key:
         return key
@@ -6428,26 +6428,37 @@ def openclaw_session_key() -> str:
 
 def openclaw_pack_session_fields(
     control_runtime: Mapping[str, Any] | None = None,
+    *,
+    role: str = "control",
 ) -> dict[str, Any]:
-    """Fields stamped onto every OpenClaw Control/genesis pack."""
+    """Fields stamped onto OpenClaw packs for the mapped role (META-020/022)."""
     import ndf_role_binding as role_binding
 
-    binding = role_binding.configured_openclaw_session(ROOT)
-    identity = role_binding.openclaw_repo_identity(ROOT)
+    oc_role = role_binding._normalize_openclaw_role(role)
+    binding = role_binding.configured_openclaw_session(ROOT, role=oc_role)
+    identity = role_binding.openclaw_repo_identity(ROOT, role=oc_role)
     runtime = control_runtime or {}
     transport = (
         runtime.get("session_transport")
         or binding.get("session_transport")
         or "session_key"
     )
+    ownership = binding.get("ownership")
+    multi_safe = bool(binding.get("multi_project_safe"))
+    if oc_role == "implementation":
+        collapse = role_binding.openclaw_role_session_collapse(ROOT)
+        if collapse.get("collapsed"):
+            ownership = "role_collapsed"
+            multi_safe = False
     return {
         "agent_id": binding.get("agent_id") or identity.get("agent_id"),
         "session_key": binding.get("session_key") or "",
         "session_transport": transport,
         "session_binding_version": binding.get("session_binding_version"),
         "openclaw_identity_hash": identity.get("identity_hash"),
-        "openclaw_ownership": binding.get("ownership"),
-        "multi_project_safe": bool(binding.get("multi_project_safe")),
+        "openclaw_ownership": ownership,
+        "openclaw_role": oc_role,
+        "multi_project_safe": multi_safe,
         "resolved_session_id": runtime.get("resolved_session_id"),
     }
 

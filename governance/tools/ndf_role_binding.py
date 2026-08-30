@@ -73,9 +73,13 @@ HARNESS_TEMPLATE = Path("packages/ndf-harness/workflow/ndf.workflow.yaml")
 
 
 def _repo_root(repo: Path | str | None = None) -> Path:
-    if repo is None:
-        return Path(__file__).resolve().parents[2]
-    return Path(repo).resolve()
+    if repo is not None:
+        return Path(repo).resolve()
+    here = Path(__file__).resolve().parent
+    for cand in (here.parents[2], here.parents[3]):
+        if (cand / "ndf.workflow.yaml").is_file() or (cand / "spec" / "meta").is_dir():
+            return cand
+    return here.parents[2]
 
 
 def _read_text(path: Path) -> str:
@@ -187,7 +191,7 @@ def role_config(repo: Path | str | None, role: str) -> dict[str, Any]:
         "writable": list(block.get("writable") or []) if role == "control" else [],
         "raw": dict(block),
     }
-    if role == "control":
+    if role in {"control", "implementation"}:
         out["agent_id"] = str(block.get("agent_id") or "").strip() or None
         out["session_key"] = str(block.get("session_key") or "").strip() or None
         out["session_transport"] = (
@@ -204,8 +208,19 @@ def _sanitize_repo_slug(name: str) -> str:
     return (slug or "repo")[:40]
 
 
-def openclaw_repo_identity(repo: Path | str | None = None) -> dict[str, Any]:
-    """Stable per-git-common-dir identity for OpenClaw agent isolation."""
+def _normalize_openclaw_role(role: str | None) -> str:
+    r = str(role or "control").strip().lower()
+    if r in {"implementation", "impl"}:
+        return "implementation"
+    return "control"
+
+
+def openclaw_repo_identity(
+    repo: Path | str | None = None,
+    *,
+    role: str = "control",
+) -> dict[str, Any]:
+    """Stable per-git-common-dir OpenClaw identity; role may suffix agent (META-022)."""
     root = _repo_root(repo)
     git_common = ""
     try:
@@ -235,7 +250,9 @@ def openclaw_repo_identity(repo: Path | str | None = None) -> dict[str, Any]:
         else:
             slug_src = common_path.parent.name or common_path.name
     slug = _sanitize_repo_slug(slug_src)
-    agent_id = f"ndf-{slug}-{digest}"
+    base_agent_id = f"ndf-{slug}-{digest}"
+    oc_role = _normalize_openclaw_role(role)
+    agent_id = f"{base_agent_id}-impl" if oc_role == "implementation" else base_agent_id
     session_key = f"agent:{agent_id}:main"
     # Prefer primary checkout as OpenClaw workspace so main/worktree share one bind.
     workspace = str(root.resolve())
@@ -249,6 +266,8 @@ def openclaw_repo_identity(repo: Path | str | None = None) -> dict[str, Any]:
         "git_common_dir": git_common or None,
         "repo_slug": slug,
         "identity_hash": digest,
+        "role": oc_role,
+        "base_agent_id": base_agent_id,
         "agent_id": agent_id,
         "session_key": session_key,
         "session_transport": "session_key",
@@ -256,14 +275,27 @@ def openclaw_repo_identity(repo: Path | str | None = None) -> dict[str, Any]:
     }
 
 
-def managed_openclaw_binding(repo: Path | str | None = None) -> dict[str, Any]:
-    identity = openclaw_repo_identity(repo)
+def paired_openclaw_agent_ids(repo: Path | str | None = None) -> set[str]:
+    """Control + Implementation managed agent ids for one git-common-dir."""
+    base = openclaw_repo_identity(repo, role="control")
+    impl = openclaw_repo_identity(repo, role="implementation")
+    return {str(base["agent_id"]), str(impl["agent_id"])}
+
+
+def managed_openclaw_binding(
+    repo: Path | str | None = None,
+    *,
+    role: str = "control",
+) -> dict[str, Any]:
+    identity = openclaw_repo_identity(repo, role=role)
     return {
         "agent_id": identity["agent_id"],
         "session_key": identity["session_key"],
         "session_transport": identity["session_transport"],
         "session_binding_version": identity["session_binding_version"],
         "identity_hash": identity["identity_hash"],
+        "role": identity.get("role") or _normalize_openclaw_role(role),
+        "base_agent_id": identity.get("base_agent_id"),
         "repo_root": identity["repo_root"],
         "workspace": identity.get("workspace") or identity["repo_root"],
         "git_common_dir": identity["git_common_dir"],
@@ -280,21 +312,28 @@ def _legacy_agents_session_key(repo: Path | str | None = None) -> str | None:
 
 def configured_openclaw_session(
     repo: Path | str | None = None,
+    *,
+    role: str = "control",
 ) -> dict[str, Any]:
-    """Resolve Control OpenClaw session from workflow yaml (preferred) or AGENTS.md."""
+    """Resolve OpenClaw session for a role from workflow yaml (preferred) or AGENTS.md."""
     root = _repo_root(repo)
-    cfg = role_config(root, "control")
-    expected = managed_openclaw_binding(root)
+    oc_role = _normalize_openclaw_role(role)
+    cfg = role_config(root, oc_role)
+    expected = managed_openclaw_binding(root, role=oc_role)
     agent_id = cfg.get("agent_id")
     session_key = cfg.get("session_key")
     transport = cfg.get("session_transport") or "session_key"
     binding_version = cfg.get("session_binding_version")
     source = "workflow"
     if not session_key:
-        legacy = _legacy_agents_session_key(root)
-        if legacy:
-            session_key = legacy
-            source = "agents_md"
+        # Legacy AGENTS.md line only feeds Control (META-020 migration).
+        if oc_role == "control":
+            legacy = _legacy_agents_session_key(root)
+            if legacy:
+                session_key = legacy
+                source = "agents_md"
+            else:
+                source = "unconfigured"
         else:
             source = "unconfigured"
     ownership = "unverified"
@@ -318,6 +357,7 @@ def configured_openclaw_session(
         ownership = "unconfigured"
         blockers.append("openclaw_session_unconfigured")
     return {
+        "role": oc_role,
         "agent_id": agent_id,
         "session_key": session_key,
         "session_transport": transport,
@@ -327,6 +367,48 @@ def configured_openclaw_session(
         "expected": expected,
         "multi_project_safe": ownership == "managed",
         "blockers": blockers,
+    }
+
+
+def openclaw_dual_role_required(repo: Path | str | None = None) -> bool:
+    """True when Control and Implementation both resolve to OpenClaw transport."""
+    root = _repo_root(repo)
+    return (
+        resolve_role(root, "control").get("provider") == "openclaw"
+        and resolve_role(root, "implementation").get("provider") == "openclaw"
+    )
+
+
+def openclaw_role_session_collapse(
+    repo: Path | str | None = None,
+) -> dict[str, Any]:
+    """Detect Implementation reusing Control session_key (META-022)."""
+    root = _repo_root(repo)
+    if not openclaw_dual_role_required(root):
+        return {"collapsed": False, "error": None, "control": None, "implementation": None}
+    control = configured_openclaw_session(root, role="control")
+    impl = configured_openclaw_session(root, role="implementation")
+    c_key = str(control.get("session_key") or "").strip()
+    i_key = str(impl.get("session_key") or "").strip()
+    if c_key and i_key and c_key == i_key:
+        return {
+            "collapsed": True,
+            "error": "openclaw_role_session_collapsed",
+            "control": control,
+            "implementation": impl,
+        }
+    if not i_key:
+        return {
+            "collapsed": True,
+            "error": "openclaw_session_unconfigured",
+            "control": control,
+            "implementation": impl,
+        }
+    return {
+        "collapsed": False,
+        "error": None,
+        "control": control,
+        "implementation": impl,
     }
 
 
@@ -392,18 +474,110 @@ def _agent_workspace(item: Mapping[str, Any]) -> str | None:
         return str(raw)
 
 
-def provision_openclaw_project_agent(
-    repo: Path | str | None = None,
+def _ensure_openclaw_agent(
     *,
-    force_rebind: bool = False,
-    no_provision: bool = False,
+    exe: str,
+    agents: list[dict[str, Any]],
+    agent_id: str,
+    workspace: str,
+    paired_ids: set[str],
+    root: Path,
 ) -> dict[str, Any]:
-    """Idempotently provision a per-project OpenClaw agent + managed session binding."""
-    root = _repo_root(repo)
-    expected = managed_openclaw_binding(root)
-    current = configured_openclaw_session(root)
+    """Add or reuse one OpenClaw agent; allow paired role agents on same workspace."""
     result: dict[str, Any] = {
         "ok": False,
+        "provisioned": False,
+        "reused": False,
+        "error": None,
+        "blockers": [],
+    }
+    match = None
+    for item in agents:
+        aid = str(item.get("id") or item.get("agentId") or item.get("name") or "")
+        if aid == agent_id:
+            match = item
+            break
+    if match is not None:
+        existing_ws = _agent_workspace(match)
+        if existing_ws and existing_ws != workspace:
+            result["error"] = "openclaw_agent_workspace_collision"
+            result["blockers"] = ["openclaw_agent_workspace_collision"]
+            result["existing_workspace"] = existing_ws
+            return result
+        result["ok"] = True
+        result["reused"] = True
+        return result
+
+    for item in agents:
+        existing_ws = _agent_workspace(item)
+        if existing_ws != workspace:
+            continue
+        aid = str(item.get("id") or item.get("agentId") or item.get("name") or "")
+        # META-022: Control + Implementation may share workspace.
+        if aid and aid != agent_id and aid != "main" and aid not in paired_ids:
+            result["error"] = "openclaw_workspace_already_bound"
+            result["blockers"] = ["openclaw_workspace_already_bound"]
+            result["existing_agent_id"] = aid
+            return result
+    try:
+        proc = subprocess.run(
+            [
+                exe,
+                "agents",
+                "add",
+                agent_id,
+                "--non-interactive",
+                "--workspace",
+                workspace,
+                "--json",
+            ],
+            cwd=root,
+            text=True,
+            stdout=subprocess.PIPE,
+            stderr=subprocess.STDOUT,
+            check=False,
+            timeout=60,
+        )
+    except (OSError, subprocess.TimeoutExpired) as exc:
+        result["error"] = f"openclaw_agents_add_failed:{exc}"
+        result["blockers"] = ["openclaw_agents_add_failed"]
+        return result
+    if proc.returncode != 0:
+        agents2, _ = list_openclaw_agents(executable=exe)
+        if not any(
+            str(item.get("id") or item.get("agentId") or item.get("name") or "")
+            == agent_id
+            for item in agents2
+        ):
+            result["error"] = "openclaw_agents_add_failed"
+            result["blockers"] = ["openclaw_agents_add_failed"]
+            result["detail"] = (proc.stdout or "")[:800]
+            return result
+        result["ok"] = True
+        result["reused"] = True
+        return result
+    result["ok"] = True
+    result["provisioned"] = True
+    return result
+
+
+def provision_openclaw_role_agent(
+    repo: Path | str | None = None,
+    *,
+    role: str = "control",
+    force_rebind: bool = False,
+    no_provision: bool = False,
+    agents: list[dict[str, Any]] | None = None,
+    executable: str | None = None,
+) -> dict[str, Any]:
+    """Idempotently provision one role's OpenClaw agent + managed session binding."""
+    root = _repo_root(repo)
+    oc_role = _normalize_openclaw_role(role)
+    expected = managed_openclaw_binding(root, role=oc_role)
+    current = configured_openclaw_session(root, role=oc_role)
+    result: dict[str, Any] = {
+        "ok": False,
+        "role": oc_role,
         "expected": expected,
         "before": current,
         "provisioned": False,
@@ -416,128 +590,140 @@ def provision_openclaw_project_agent(
         result["error"] = "openclaw_provision_skipped"
         result["blockers"] = ["openclaw_provision_skipped"]
         return result
-    if (
-        current.get("ownership") == "custom_unverified"
-        and not force_rebind
-    ):
+    if current.get("ownership") == "custom_unverified" and not force_rebind:
         result["error"] = "openclaw_session_ownership_unverified"
         result["blockers"] = list(current.get("blockers") or [])
         return result
-    if (
-        current.get("ownership") == "managed"
-        and not force_rebind
-    ):
-        # Still verify agent/workspace on the gateway when CLI is available.
-        pass
-    elif current.get("ownership") == "stale" and not force_rebind:
+    if current.get("ownership") == "stale" and not force_rebind:
         result["error"] = "openclaw_session_collision_or_stale_binding"
         result["blockers"] = list(current.get("blockers") or [])
         return result
 
-    exe = shutil.which("openclaw")
+    exe = executable or shutil.which("openclaw")
     if not exe:
         result["error"] = "openclaw_cli_missing"
         result["blockers"] = ["openclaw_cli_missing"]
         return result
 
-    agents, list_error = list_openclaw_agents(executable=exe)
-    if list_error and not agents:
+    agent_list = agents
+    list_error = None
+    if agent_list is None:
+        agent_list, list_error = list_openclaw_agents(executable=exe)
+    if list_error and not agent_list:
         result["error"] = list_error
         result["blockers"] = [list_error]
         return result
 
     agent_id = str(expected["agent_id"])
     workspace = str(expected.get("workspace") or expected["repo_root"])
-    match = None
-    for item in agents:
-        aid = str(item.get("id") or item.get("agentId") or item.get("name") or "")
-        if aid == agent_id:
-            match = item
-            break
-    if match is not None:
-        existing_ws = _agent_workspace(match)
-        if existing_ws and existing_ws != workspace:
-            # Same agent_id claimed by another workspace — fail closed.
-            result["error"] = "openclaw_agent_workspace_collision"
-            result["blockers"] = ["openclaw_agent_workspace_collision"]
-            result["existing_workspace"] = existing_ws
-            return result
-        result["reused"] = True
-    else:
-        # Collision check: another agent already bound to this workspace?
-        for item in agents:
-            existing_ws = _agent_workspace(item)
-            if existing_ws == workspace:
-                aid = str(item.get("id") or item.get("agentId") or item.get("name") or "")
-                if aid and aid != agent_id and aid != "main":
-                    result["error"] = "openclaw_workspace_already_bound"
-                    result["blockers"] = ["openclaw_workspace_already_bound"]
-                    result["existing_agent_id"] = aid
-                    return result
-        try:
-            proc = subprocess.run(
-                [
-                    exe,
-                    "agents",
-                    "add",
-                    agent_id,
-                    "--non-interactive",
-                    "--workspace",
-                    workspace,
-                    "--json",
-                ],
-                cwd=root,
-                text=True,
-                stdout=subprocess.PIPE,
-                stderr=subprocess.STDOUT,
-                check=False,
-                timeout=60,
-            )
-        except (OSError, subprocess.TimeoutExpired) as exc:
-            result["error"] = f"openclaw_agents_add_failed:{exc}"
-            result["blockers"] = ["openclaw_agents_add_failed"]
-            return result
-        if proc.returncode != 0:
-            # Idempotent: agent may already exist without showing in list.
-            agents2, _ = list_openclaw_agents(executable=exe)
-            if not any(
-                str(item.get("id") or item.get("agentId") or item.get("name") or "")
-                == agent_id
-                for item in agents2
-            ):
-                result["error"] = "openclaw_agents_add_failed"
-                result["blockers"] = ["openclaw_agents_add_failed"]
-                result["detail"] = (proc.stdout or "")[:800]
-                return result
-            result["reused"] = True
-        else:
-            result["provisioned"] = True
+    paired = paired_openclaw_agent_ids(root)
+    ensured = _ensure_openclaw_agent(
+        exe=exe,
+        agents=list(agent_list or []),
+        agent_id=agent_id,
+        workspace=workspace,
+        paired_ids=paired,
+        root=root,
+    )
+    if not ensured.get("ok"):
+        result["error"] = ensured.get("error")
+        result["blockers"] = list(ensured.get("blockers") or [])
+        if ensured.get("existing_workspace"):
+            result["existing_workspace"] = ensured["existing_workspace"]
+        if ensured.get("existing_agent_id"):
+            result["existing_agent_id"] = ensured["existing_agent_id"]
+        if ensured.get("detail"):
+            result["detail"] = ensured["detail"]
+        return result
+    result["provisioned"] = bool(ensured.get("provisioned"))
+    result["reused"] = bool(ensured.get("reused"))
 
-    binding = {
+    binding: dict[str, Any] = {
         "adapter": "openclaw",
         "agent_id": expected["agent_id"],
         "session_key": expected["session_key"],
         "session_transport": expected["session_transport"],
         "session_binding_version": expected["session_binding_version"],
     }
-    # Preserve fallback/model if already set.
-    if cfg_fallback := cfg_get_fallback(root):
-        binding["fallback"] = cfg_fallback
-    if cfg_model := role_config(root, "control").get("model"):
-        binding["model"] = cfg_model
+    cfg = role_config(root, oc_role)
+    if cfg.get("fallback"):
+        binding["fallback"] = cfg["fallback"]
+    if cfg.get("model"):
+        binding["model"] = cfg["model"]
     path = _ensure_workflow_file(root)
-    updated = _update_roles_in_yaml(_read_text(path), {"control": binding})
+    updated = _update_roles_in_yaml(_read_text(path), {oc_role: binding})
     path.write_text(updated, encoding="utf-8")
     result["ok"] = True
     result["binding"] = binding
-    result["after"] = configured_openclaw_session(root)
+    result["after"] = configured_openclaw_session(root, role=oc_role)
     result["path"] = str(path.relative_to(root))
+    return result
+
+
+def provision_openclaw_project_agent(
+    repo: Path | str | None = None,
+    *,
+    force_rebind: bool = False,
+    no_provision: bool = False,
+) -> dict[str, Any]:
+    """Provision Control (+ Implementation when both OpenClaw) managed sessions."""
+    root = _repo_root(repo)
+    control = provision_openclaw_role_agent(
+        root,
+        role="control",
+        force_rebind=force_rebind,
+        no_provision=no_provision,
+    )
+    result: dict[str, Any] = {
+        "ok": bool(control.get("ok")),
+        "expected": control.get("expected"),
+        "before": control.get("before"),
+        "provisioned": bool(control.get("provisioned")),
+        "reused": bool(control.get("reused")),
+        "binding": control.get("binding"),
+        "error": control.get("error"),
+        "blockers": list(control.get("blockers") or []),
+        "control": control,
+        "implementation": None,
+        "path": control.get("path"),
+        "after": control.get("after"),
+    }
+    if not control.get("ok"):
+        return result
+
+    # META-022: second identity when Implementation also uses OpenClaw.
+    impl_adapter = _normalize_adapter(
+        str(role_config(root, "implementation").get("adapter") or "")
+    )
+    if impl_adapter == "openclaw" or resolve_role(root, "implementation").get(
+        "provider"
+    ) == "openclaw":
+        impl = provision_openclaw_role_agent(
+            root,
+            role="implementation",
+            force_rebind=force_rebind,
+            no_provision=no_provision,
+        )
+        result["implementation"] = impl
+        if not impl.get("ok"):
+            result["ok"] = False
+            result["error"] = impl.get("error") or "openclaw_impl_provision_failed"
+            result["blockers"] = list(impl.get("blockers") or result["blockers"])
+            return result
+        result["provisioned"] = result["provisioned"] or bool(impl.get("provisioned"))
+        result["reused"] = result["reused"] and bool(impl.get("reused"))
+        collapse = openclaw_role_session_collapse(root)
+        if collapse.get("collapsed"):
+            result["ok"] = False
+            result["error"] = collapse.get("error") or "openclaw_role_session_collapsed"
+            result["blockers"] = [result["error"]]
+            return result
+    result["after"] = configured_openclaw_session(root, role="control")
     return result
 
 
 def cfg_get_fallback(repo: Path | str | None) -> str | None:
     return role_config(repo, "control").get("fallback")
-
 
 def _cli_available(adapter: str) -> bool:
     norm = _normalize_adapter(adapter)
@@ -726,30 +912,35 @@ def roles_bound(repo: Path | str | None = None) -> bool:
 
 def check_roles_for_dispatch(repo: Path | str | None = None) -> tuple[bool, list[str]]:
     """Integration helper for pack construction / dispatch safety."""
-    if roles_bound(repo):
-        return True, []
-    blockers = ["roles_unbound"]
-    root = _repo_root(repo)
-    missing = [r for r in ROLES if not role_config(root, r)["adapter"]]
-    if missing:
-        blockers.append(f"roles_missing_adapter:{','.join(missing)}")
-    if _project_maturity(root) not in {"operational", "operational_legacy"}:
-        if not _genesis_roles_gate_valid(root):
-            blockers.append("roles_gate_missing:角色已配置")
-    return False, blockers
+    blockers: list[str] = []
+    if not roles_bound(repo):
+        blockers.append("roles_unbound")
+        root = _repo_root(repo)
+        missing = [r for r in ROLES if not role_config(root, r)["adapter"]]
+        if missing:
+            blockers.append(f"roles_missing_adapter:{','.join(missing)}")
+        if _project_maturity(root) not in {"operational", "operational_legacy"}:
+            if not _genesis_roles_gate_valid(root):
+                blockers.append("roles_gate_missing:角色已配置")
+    collapse = openclaw_role_session_collapse(repo)
+    if collapse.get("collapsed") and collapse.get("error"):
+        err = str(collapse["error"])
+        if err not in blockers:
+            blockers.append(err)
+    return (not blockers), blockers
 
 
 def resolve_pack_provider(
     repo: Path | str | None,
     pack: Mapping[str, Any],
 ) -> dict[str, Any]:
-    """Map pack provider → role resolution (may override transport provider)."""
+    """Map pack → role (task first; META-021 / META-022)."""
     provider = str(pack.get("provider") or "")
     task = str(pack.get("task") or "")
     hop = str(pack.get("hop") or "")
     # Task wins over provider→role table: OpenClaw MAY serve BOTH Control and
-    # Implementation (ndf.workflow.yaml). PACK_PROVIDER_ROLE maps openclaw→control,
-    # which MUST NOT steal poc_implementation → Implementation model (META-021).
+    # Implementation. PACK_PROVIDER_ROLE maps openclaw→control and MUST NOT steal
+    # poc_implementation (META-021). Role sessions differ under META-022.
     if task == "project_genesis" or hop.startswith("genesis_"):
         role = "implementation"
     elif task.startswith("poc_") or task in {
@@ -763,6 +954,7 @@ def resolve_pack_provider(
         or task.startswith("gate_")
         or "control" in task
         or "proposal" in task
+        or task.startswith("ndf_improvement")
         or task
         in {
             "product_proposal",
@@ -856,6 +1048,9 @@ def status_report(repo: Path | str | None = None) -> dict[str, Any]:
     root = _repo_root(repo)
     wf_path = workflow_yaml_path(root)
     maturity = _project_maturity(root)
+    control_session = configured_openclaw_session(root, role="control")
+    impl_session = configured_openclaw_session(root, role="implementation")
+    collapse = openclaw_role_session_collapse(root)
     return {
         "workflow_yaml": str(wf_path.relative_to(root)) if wf_path.is_file() else None,
         "roles_bound": roles_bound(root),
@@ -864,8 +1059,13 @@ def status_report(repo: Path | str | None = None) -> dict[str, Any]:
         "genesis_roles_gate": _genesis_roles_gate_valid(root),
         "roles": {role: resolve_role(root, role) for role in ROLES},
         "normalized_roles": _normalized_roles_block(root),
-        "openclaw_session": configured_openclaw_session(root),
-        "openclaw_identity": openclaw_repo_identity(root),
+        "openclaw_session": control_session,
+        "openclaw_session_implementation": impl_session,
+        "openclaw_identity": openclaw_repo_identity(root, role="control"),
+        "openclaw_identity_implementation": openclaw_repo_identity(
+            root, role="implementation"
+        ),
+        "openclaw_role_session_collapse": collapse,
     }
 
 
@@ -962,6 +1162,20 @@ def _update_roles_in_yaml(text: str, bindings: Mapping[str, Mapping[str, Any]]) 
             role = rm.group(2)
             indent = len(rm.group(1))
             child = indent + 2
+            # META-022: only rewrite roles present in bindings; leave others intact.
+            if role not in bindings:
+                j = i + 1
+                while j < len(lines):
+                    if not lines[j].strip() or lines[j].lstrip().startswith("#"):
+                        j += 1
+                        continue
+                    cur_indent = len(re.match(r"^(\s*)", lines[j]).group(1))
+                    if cur_indent <= indent:
+                        break
+                    j += 1
+                out.extend(lines[i + 1 : j])
+                i = j
+                continue
             b = bindings.get(role) or {}
             # Skip existing managed key lines
             j = i + 1

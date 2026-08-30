@@ -2,7 +2,7 @@
 
 > scope: ndf-process  
 > 条款索引: `CHR-008`, `BEH-018`, `BEH-019`, `BEH-020`, `BEH-025`, `BEH-026`,
-> `META-006`, `META-007`, `META-009`, `META-010`, `META-011`, `META-012`, `META-013`, `META-014`, `META-015`, `META-016`, `META-017`, `META-018`, `META-019`, `META-020`, `META-021`
+> `META-006`, `META-007`, `META-009`, `META-010`, `META-011`, `META-012`, `META-013`, `META-014`, `META-015`, `META-016`, `META-017`, `META-018`, `META-019`, `META-020`, `META-021`, `META-022`
 > 目录边界: [[ARCH-008]]；SLA 隔离: [[CON-POC-001]]  
 > 术语: [[DEF-020]], [[DEF-021]], [[DEF-022]], [[DEF-023]], [[DEF-NDF-GRAPH]]  
 > 缺陷分类: [[DEF-NDF-CYCLE]]…[[DEF-NDF-BINDER-DUAL-HEAD]]（见 `meta/glossary.md`）
@@ -657,7 +657,8 @@ Control 仍串行。
    `openclaw_session_ownership_unverified`）。自定义 key 升级 MUST 显式
    `--rebind-openclaw-session`。
 5. **派发。** Pack MUST 携带 `agent_id` + `session_key`；运输 MUST 使用该
-   `agentId`。本条不开放单项目多 topic OpenClaw 并发。
+   `agentId`。本条不开放单项目多 topic OpenClaw 并发。同项目 Control 与
+   Implementation 皆走 OpenClaw 时的**角色分 session**见 [[META-022]]。
 
 > rationale: 共用 `agent:main:main` 时 per-hop `sessions.reset` 会跨项目互冲；
 > 独立 agent 隔离网关会话，NDF lease/completion 本就按仓隔离。
@@ -687,7 +688,34 @@ Control 仍串行。
 
 > rationale: 同 Feishu `session_key` 上 Control（如 deepseek）与 Implementation
 > （如 glm）轮流派发时，provider 表与 sticky modelOverride 会串角色；本条把角色
-> 与模型钉回 pack/task 合同。
+> 与模型钉回 pack/task 合同。同项目物理分 session 见 [[META-022]]。
+
+## OpenClaw 按角色分 session（Control ≠ Implementation） {#META-022}
+<!-- ndf: kind=req level=must layer=L1 status=stable since=1.2.2 source=stated scope=ndf-process -->
+<!-- ndf: depends-on=META-011,META-017,META-020,META-021 -->
+
+当 Control 与 Implementation **都**绑定 OpenClaw 运输时，项目 MUST 绑定两套
+managed 身份；MUST NOT 让 Implementation pack 复用 `roles.control.session_key`。
+
+1. **SoT。** Control 继续写在 `roles.control.{agent_id,session_key,…}`
+   （[[META-020]]）。Implementation MUST 写入
+   `roles.implementation.{agent_id,session_key,session_transport,session_binding_version}`。
+2. **身份。** 均由同一 `git-common-dir` 派生；Implementation MUST 带角色后缀：
+   Control `ndf-<slug>-<hash>` / `agent:…:main`；Implementation
+   `ndf-<slug>-<hash>-impl` / `agent:…-impl:main`。同仓 worktree MUST 同双身份；
+   不同仓库 MUST 不同。两角色 `session_key` MUST 字面不同。
+3. **Provision。** `bind` / `provision-openclaw-session` MUST 幂等为两角色各
+   `agents add`（允许同 workspace 上的配对 agent）；冲突 MUST fail-closed。
+4. **派发。** Pack / `dispatch-send` MUST 按 mapped role（task 优先，
+   [[META-021]]）戳对应角色 session。Implementation 复用 Control
+   `session_key` MUST NOT `safe_to_dispatch` / MUST NOT `dispatch-send`
+   （`openclaw_role_session_collapsed`）。OpenClaw 失败时 MUST NOT 静默塌到
+   in-host（[[META-017]] / [[META-021]]）。
+5. **并发。** 不开放单角色多 topic OpenClaw 并发；跨项目隔离仍以 [[META-020]] 为准。
+
+> rationale: 同仓共用一条 session 时 Control 上下文与 sticky model 会污染
+> Implementation hop；分 session 隔离角色而不放松跨项目边界。[[META-021]] 钉模型
+> 与本条互补。
 
 ## Agent Episode、事件链与回放等级 {#META-013}
 <!-- ndf: kind=req level=must layer=L1 status=deprecated since=0.9.15 source=deduced scope=ndf-process -->

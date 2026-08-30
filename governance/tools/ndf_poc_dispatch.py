@@ -276,6 +276,23 @@ def poc_dispatch(
             files.append({"path": wf.rel(path), "sha256": wf.file_sha(path)})
 
     hard_ok = not hard
+    impl_provider = "claude-code-acp"
+    openclaw_fields: dict[str, Any] = {}
+    try:
+        import ndf_role_binding as role_binding
+
+        impl_resolved = role_binding.resolve_role(wf.ROOT, "implementation")
+        impl_provider = str(impl_resolved.get("provider") or impl_provider)
+        if impl_provider == "openclaw":
+            openclaw_fields = wf.openclaw_pack_session_fields(role="implementation")
+            collapse = role_binding.openclaw_role_session_collapse(wf.ROOT)
+            if collapse.get("collapsed") and collapse.get("error"):
+                err = str(collapse["error"])
+                if err not in hard:
+                    hard.append(err)
+                hard_ok = False
+    except Exception:
+        pass
     payload: dict[str, Any] = {
         "schema": "ndf-workflow-pack/v2",
         "compatibility": {
@@ -288,7 +305,8 @@ def poc_dispatch(
         "track": "poc",
         "task": task,
         "intent": intent,
-        "provider": "claude-code-acp",
+        "provider": impl_provider,
+        **openclaw_fields,
         "base_sha": wf.git_head(),
         "workspace": wf.workspace_binding(topic),
         "workspace_truth": truth,

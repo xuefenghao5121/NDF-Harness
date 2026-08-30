@@ -11,7 +11,7 @@
 1. 本文件 `AGENTS.md`
 2. **流程 SoT**：`spec/meta/README.md`、`spec/meta/language.md`、`spec/meta/process.md`
    （[[CHR-008]]、[[BEH-018]]…[[BEH-020]]、[[BEH-025]]、[[META-006]]、[[META-007]]、
-   [[META-009]]…[[META-012]]、[[META-014]]、[[META-016]]…[[META-021]]；[[META-013]]/[[META-015]] 已 deprecated）
+   [[META-009]]…[[META-012]]、[[META-014]]、[[META-016]]…[[META-022]]；[[META-013]]/[[META-015]] 已 deprecated）
 3. 当前相关**产品**契约：`spec/00–50` 与 `spec/open/` 提案
 
 若存在 `SOUL.md` / `MEMORY.md`，一并重读；不存在则跳过。
@@ -95,7 +95,7 @@ Idea → 提案「已确认」/「已审核」
 | 层 | 谁 | 入口 | 写界 |
 |----|----|------|------|
 | **Command** | 指挥面（Cursor 等 + ndf-workflow skill） | 五句口令；造 pack；等人审；调 CLI | `tmp/`、触发回执；禁写 worker 实现 |
-| **Control** | 指挥 Agent（OpenClaw 等） | `control-pack` → dispatch | 提案/装订器；bootstrap `hop=genesis_design` 可写 `spec/00–50`；OpenClaw MUST 用 per-project `agent_id`/`session_key`（[[META-020]]） |
+| **Control** | 指挥 Agent（OpenClaw 等） | `control-pack` → dispatch | 提案/装订器；bootstrap `hop=genesis_design` 可写 `spec/00–50`；OpenClaw MUST 用 per-project `agent_id`/`session_key`（[[META-020]]）；与 Implementation 皆走 OpenClaw 时 MUST 分 session（[[META-022]]） |
 | **Implementation** | 实现 Agent（Claude Code 等） | `poc-dispatch --send`；`genesis-pack`；promote `promote_land` | POC 仅 `poc/<topic>/`；promote 可写 Trunk |
 
 成功 = 磁盘 completion receipt；**不以 transport ACK / stdout 冒充**。stdout

@@ -42,8 +42,12 @@ wipes another project's Control hop.
 3. Confirm `ndf.workflow.yaml` has `roles.control.agent_id` /
    `session_key` / `session_binding_version: ndf-v1`
 4. Do **not** share `agent:main:main` across local projects ([[META-020]])
+5. When Control **and** Implementation use OpenClaw, confirm
+   `roles.implementation.session_key` differs from Control（`…-impl`）
+   ([[META-022]]); collapse → `openclaw_role_session_collapsed`
 
 **Note:** Parallelism is across distinct Git repos. Same-repo Control hops stay serial.
+Same-repo dual-role OpenClaw uses two sessions ([[META-022]]) but still serial per role.
 
 ## Implementation OpenClaw uses Control model / falls to `in-host`
 
@@ -62,7 +66,8 @@ and waits in-host; or gateway errors with
    collapse to `in-host` on OpenClaw transport failure
 
 **Prevent:** keep `_pin_openclaw_session_model` + task-first role map; do not
-default META-017 mapped role to `control`.
+default META-017 mapped role to `control`. Prefer [[META-022]] separate
+Implementation session so Control sticky context cannot pollute implement hops.
 
 ## `required_gate_not_valid` / `lease_pack_incomplete:episode_id`
 

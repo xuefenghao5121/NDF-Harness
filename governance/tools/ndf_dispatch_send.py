@@ -1746,12 +1746,16 @@ def _send_openclaw(
         "custom_unverified",
         "stale",
         "unconfigured",
+        "role_collapsed",
     }:
+        err = "openclaw_session_not_multi_project_safe"
+        if pack.get("openclaw_ownership") == "role_collapsed":
+            err = "openclaw_role_session_collapsed"
         return {
             "ok": False,
             "transport_ok": False,
             "state": "failed",
-            "error": "openclaw_session_not_multi_project_safe",
+            "error": err,
             "detail": str(pack.get("openclaw_ownership") or "unconfigured"),
             "response_text": None,
         }
@@ -2957,6 +2961,52 @@ def dispatch_send(
         _write_last(sent_receipt)
 
     if provider == "openclaw":
+        # META-020/022: stamp mapped-role managed session (override stale pack fields).
+        import ndf_workflow_status as workflow
+
+        mapped = str(
+            role_resolution.get("mapped_role")
+            or role_resolution.get("role")
+            or pack.get("openclaw_role")
+            or "control"
+        )
+        stamped = {
+            **dict(pack),
+            **workflow.openclaw_pack_session_fields(role=mapped),
+        }
+        # Prefer role-bound model for META-021 pin when pack omitted it.
+        if not str(stamped.get("model") or "").strip():
+            model = str(role_resolution.get("model") or "").strip()
+            if model:
+                stamped["model"] = model
+        pack = stamped
+        working = stamped
+
+        # META-022: refuse Implementation packs that reuse Control session_key.
+        try:
+            import ndf_role_binding as role_binding
+
+            if mapped == "implementation":
+                collapse = role_binding.openclaw_role_session_collapse(ROOT)
+                if collapse.get("collapsed"):
+                    send_result = {
+                        "ok": False,
+                        "transport_ok": False,
+                        "state": "failed",
+                        "error": collapse.get("error")
+                        or "openclaw_role_session_collapsed",
+                        "response_text": None,
+                    }
+                    sent_receipt["send"] = send_result
+                    sent_receipt["state"] = "failed"
+                    sent_receipt["dispatch_state"] = "failed"
+                    sent_receipt["transport_ok"] = False
+                    sent_receipt["blockers"] = [send_result["error"]]
+                    sent_receipt["result_summary"] = send_result["error"]
+                    _write_last(sent_receipt)
+                    return sent_receipt
+        except Exception:
+            pass
         send_result = _send_openclaw(pack, message=message, timeout_sec=timeout)
         openclaw_fallback_errors = {
             "openclaw_cli_missing",

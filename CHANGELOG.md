@@ -1,5 +1,22 @@
 # Changelog
 
+## 1.2.2 — 2026-08-30
+
+Distill **META-022** from consumer `megakernel-fft` (OpenClaw Control +
+Implementation shared one project session and polluted implement hops):
+
+- **META-022**: when both roles use OpenClaw, provision dual managed identities
+  (`ndf-<slug>-<hash>` vs `ndf-<slug>-<hash>-impl`); packs stamp role-scoped
+  `session_key`; collapse → `openclaw_role_session_collapsed`.
+- **Tools**: `ndf_role_binding.py` dual identity / provision / collapse check /
+  yaml update must not wipe sibling roles; `openclaw_pack_session_fields(role=)`;
+  `ndf_poc_dispatch.py` resolves Implementation provider + stamps impl session;
+  `ndf_dispatch_send.py` re-stamps mapped-role session before send (keeps
+  [[META-021]] `_pin_openclaw_session_model`).
+- **Tests**: `test_openclaw_role_sessions.py`.
+- **Docs**: process META-022; AGENTS / norms README / skill / TROUBLESHOOTING.
+- Complements [[META-021]] (task/model pin on a hop) with physical session split.
+
 ## 1.2.1 — 2026-08-29
 
 Distill **META-021** from consumer operational OpenClaw dual-role dispatch
