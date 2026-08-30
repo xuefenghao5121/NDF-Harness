@@ -11,7 +11,7 @@
 1. 本文件 `AGENTS.md`
 2. **流程 SoT**：`spec/meta/README.md`、`spec/meta/language.md`、`spec/meta/process.md`
    （[[CHR-008]]、[[BEH-018]]…[[BEH-020]]、[[BEH-025]]、[[META-006]]、[[META-007]]、
-   [[META-009]]…[[META-012]]、[[META-014]]、[[META-016]]…[[META-019]]；[[META-013]]/[[META-015]] 已 deprecated）
+   [[META-009]]…[[META-012]]、[[META-014]]、[[META-016]]…[[META-021]]；[[META-013]]/[[META-015]] 已 deprecated）
 3. 当前相关**产品**契约：`spec/00–50` 与 `spec/open/` 提案
 
 若存在 `SOUL.md` / `MEMORY.md`，一并重读；不存在则跳过。

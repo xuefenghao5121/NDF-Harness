@@ -747,17 +747,41 @@ def resolve_pack_provider(
     provider = str(pack.get("provider") or "")
     task = str(pack.get("task") or "")
     hop = str(pack.get("hop") or "")
+    # Task wins over provider→role table: OpenClaw MAY serve BOTH Control and
+    # Implementation (ndf.workflow.yaml). PACK_PROVIDER_ROLE maps openclaw→control,
+    # which MUST NOT steal poc_implementation → Implementation model (META-021).
     if task == "project_genesis" or hop.startswith("genesis_"):
         role = "implementation"
+    elif task.startswith("poc_") or task in {
+        "implement",
+        "poc_measurement",
+        "prepare_acp_lease",
+    }:
+        role = "implementation"
+    elif (
+        task.startswith("binder_")
+        or task.startswith("gate_")
+        or "control" in task
+        or "proposal" in task
+        or task
+        in {
+            "product_proposal",
+            "ndf_improvement_proposal",
+            "ndf_improvement_land",
+        }
+    ):
+        role = "control"
     else:
         role = PACK_PROVIDER_ROLE.get(provider)
-    if role is None:
-        if task.startswith("poc_") or task in {"implement", "poc_measurement", "prepare_acp_lease"}:
-            role = "implementation"
-        elif provider == "openclaw" or "control" in task or "proposal" in task:
-            role = "control"
-        else:
-            role = "implementation" if "poc" in str(pack.get("track") or "") else "control"
+        if role is None:
+            if provider == "openclaw":
+                role = "control"
+            else:
+                role = (
+                    "implementation"
+                    if "poc" in str(pack.get("track") or "")
+                    else "control"
+                )
     resolved = resolve_role(repo, role)
     return {**resolved, "pack_provider": provider, "mapped_role": role}
 

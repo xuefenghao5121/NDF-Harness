@@ -45,6 +45,25 @@ wipes another project's Control hop.
 
 **Note:** Parallelism is across distinct Git repos. Same-repo Control hops stay serial.
 
+## Implementation OpenClaw uses Control model / falls to `in-host`
+
+**Symptoms:** `poc-dispatch` with `provider=openclaw` runs on Control's model
+(e.g. deepseek), or after transport error writes `ndf-role-spawn-control.json`
+and waits in-host; or gateway errors with
+`provider/model overrides are not authorized for this caller`.
+
+**Fix:**
+
+1. `resolve_pack_provider` MUST map `poc_*` → `implementation` even when
+   `provider=openclaw` ([[META-021]])
+2. Do **not** put `model` in gateway `agent` params; pin `sessions.json` from
+   `pack.model` after `sessions.reset` (clear sticky `modelOverride`)
+3. META-017: `task` starting with `poc_` + pack `provider=openclaw` MUST NOT
+   collapse to `in-host` on OpenClaw transport failure
+
+**Prevent:** keep `_pin_openclaw_session_model` + task-first role map; do not
+default META-017 mapped role to `control`.
+
 ## `required_gate_not_valid` / `lease_pack_incomplete:episode_id`
 
 **Symptoms:** `poc-dispatch --intent implement` fails after a valid `bundle_dispatch`

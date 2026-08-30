@@ -77,6 +77,7 @@ Init/adopt/govern/sync：[install.md](install.md) / [adopt.md](adopt.md) / [gove
 - `roles_unbound` → 不得派发；先跑 [genesis.md](genesis.md) G-1 角色向导
 - promote 合入与 TOPIC 归档分 hop（[[META-018]]）；发前 MOVE 活回执
 - CLI 已 `sessions.reset` 后本次 `dispatch-send` MUST `NDF_OPENCLAW_RESET_SESSION=0`
+- OpenClaw 双角色：按 `task` 定角色；reset 后钉 `pack.model`（[[META-021]]）
 
 ## CLI（Command 内部）
 

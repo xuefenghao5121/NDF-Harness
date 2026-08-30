@@ -2,7 +2,7 @@
 
 > scope: ndf-process  
 > 条款索引: `CHR-008`, `BEH-018`, `BEH-019`, `BEH-020`, `BEH-025`, `BEH-026`,
-> `META-006`, `META-007`, `META-009`, `META-010`, `META-011`, `META-012`, `META-013`, `META-014`, `META-015`, `META-016`, `META-017`, `META-018`, `META-019`, `META-020`
+> `META-006`, `META-007`, `META-009`, `META-010`, `META-011`, `META-012`, `META-013`, `META-014`, `META-015`, `META-016`, `META-017`, `META-018`, `META-019`, `META-020`, `META-021`
 > 目录边界: [[ARCH-008]]；SLA 隔离: [[CON-POC-001]]  
 > 术语: [[DEF-020]], [[DEF-021]], [[DEF-022]], [[DEF-023]], [[DEF-NDF-GRAPH]]  
 > 缺陷分类: [[DEF-NDF-CYCLE]]…[[DEF-NDF-BINDER-DUAL-HEAD]]（见 `meta/glossary.md`）
@@ -661,6 +661,33 @@ Control 仍串行。
 
 > rationale: 共用 `agent:main:main` 时 per-hop `sessions.reset` 会跨项目互冲；
 > 独立 agent 隔离网关会话，NDF lease/completion 本就按仓隔离。
+
+## OpenClaw 双角色：按 task 定角色 + session 模型钉死 {#META-021}
+<!-- ndf: kind=req level=must layer=L1 status=stable since=1.2.1 source=stated scope=ndf-process -->
+<!-- ndf: depends-on=META-011,META-017,META-020 -->
+
+当 Control 与 Implementation **都**绑定 OpenClaw（或 Implementation 也走 OpenClaw
+运输）时，`provider=openclaw` MUST NOT 单独决定角色模型与 fallback 行为。
+
+1. **角色映射。** `resolve_pack_provider` MUST 以 pack `task` 优先于
+   `PACK_PROVIDER_ROLE`（该表将 `openclaw`→`control`）。`poc_*` /
+   `implement` / `poc_measurement` / `prepare_acp_lease` MUST 映射
+   `implementation`；`binder_*` / `gate_*` / `*proposal*` MUST 映射 `control`。
+   错把 `poc_implementation` 当成 Control 会盗用 Control 模型并在失败时塌到
+   `in-host` spawn（作者塌缩）。
+2. **模型钉死。** Gateway `agent` 调用对 caller 的 `model` 参数 MAY 拒绝
+   （`provider/model overrides are not authorized`）。`dispatch-send` MUST 在
+   `sessions.reset` 之后、发消息之前，按 `pack.model`（角色绑定）best-effort
+   写入对应 agent 的 `sessions.json`（清掉 sticky `modelOverride`），MUST NOT
+   依赖 gateway params 里的 model 字段作为唯一手段。`session_id` 运输路径 MAY
+   另附 CLI `--model`。
+3. **META-017 加固。** OpenClaw 运输失败时，若 `mapped_role=implementation`
+   **或** `task` 以 `poc_` 开头且 pack `provider=openclaw`，MUST NOT 静默塌到
+   `in-host`；须 fail-closed 报告 OpenClaw 错误。
+
+> rationale: 同 Feishu `session_key` 上 Control（如 deepseek）与 Implementation
+> （如 glm）轮流派发时，provider 表与 sticky modelOverride 会串角色；本条把角色
+> 与模型钉回 pack/task 合同。
 
 ## Agent Episode、事件链与回放等级 {#META-013}
 <!-- ndf: kind=req level=must layer=L1 status=deprecated since=0.9.15 source=deduced scope=ndf-process -->

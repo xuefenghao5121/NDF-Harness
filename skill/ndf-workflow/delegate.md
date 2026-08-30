@@ -23,7 +23,9 @@ OpenClaw / Claude Code 是**默认** adapter，不是唯一路径。Command MUST
 `poc/<topic>/ndf/` 装订器 facet 正文。产品提案「已审核」后只造 `binder_pipeline` pack；
 无 `TOPIC.md` 时仍可开题（已审提案钉死 seed）；主 adapter `runtime_unavailable` 且
 已配 fallback 时 MUST 派 fallback（**Control**），不得手写装订器。Implementation +
-`provider=openclaw` 运输失败 MUST NOT 静默塌到 `in-host`（[[META-017]]）。
+`provider=openclaw` 运输失败 MUST NOT 静默塌到 `in-host`（[[META-017]] / [[META-021]]）。
+OpenClaw 同时绑 Control+Implementation 时：按 `task` 定角色，reset 后钉
+`pack.model`（[[META-021]]）。
 
 ## 委派 Control（Design agent）
 

@@ -29,6 +29,7 @@ class Meta017018Process(unittest.TestCase):
     def test_dispatch_send_refuses_impl_inhost_collapse(self) -> None:
         src = (TOOLS / "ndf_dispatch_send.py").read_text(encoding="utf-8")
         self.assertIn('mapped == "implementation"', src)
+        self.assertIn('task.startswith("poc_")', src)
         self.assertIn('provider") or "") == "openclaw"', src)
         self.assertIn("META-017", src)
 

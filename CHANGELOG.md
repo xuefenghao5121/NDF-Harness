@@ -1,5 +1,23 @@
 # Changelog
 
+## 1.2.1 — 2026-08-29
+
+Distill **META-021** from consumer operational OpenClaw dual-role dispatch
+(Implementation hop after Control on a shared Feishu `session_key`):
+
+- **Bug**: `PACK_PROVIDER_ROLE[openclaw]=control` stole `poc_implementation` →
+  Control model + META-017 fallback allowed `in-host` spawn as Control.
+- **Bug**: Gateway rejects `model` in `agent` params; sticky `modelOverride`
+  (Control model) survived `sessions.reset` and poisoned Implementation model.
+- **META-021**: task-first `resolve_pack_provider`; pin `sessions.json` model from
+  `pack.model` after reset (clear `modelOverride`); META-017 also keys off
+  `task.startswith("poc_")`.
+- **Tools**: `ndf_role_binding.py`, `ndf_dispatch_send.py`
+  (`_pin_openclaw_session_model`, agent_id-aware path).
+- **Tests**: `test_meta021_dispatch.py`; tighten `test_meta017_018_dispatch.py`.
+- **Docs**: process META-021; AGENTS / norms README / skill / TROUBLESHOOTING
+  one-line pointers.
+
 ## 1.2.0 — 2026-08-29
 
 **META-020**: per-project OpenClaw agent + session isolation for multi-repo parallel

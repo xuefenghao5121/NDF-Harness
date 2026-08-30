@@ -22,7 +22,7 @@
 | 读什么 | 路径 |
 |--------|------|
 | **NDF 语言 SoT** | [`language.md`](language.md)（[[META-001]]…[[META-005]]、[[META-008]] 工作空间视角；性能 SLA↔旋钮图依赖 / `trunk-ref` 见 [[META-005]]） |
-| 流程纪律 | [`process.md`](process.md)（[[CHR-008]]、[[BEH-018]]…[[BEH-020]]、[[BEH-025]]、[[META-006]]、[[META-007]]、[[META-009]]…[[META-012]]、[[META-014]]、[[META-016]]…[[META-020]]；[[META-013]]/[[META-015]] deprecated） |
+| 流程纪律 | [`process.md`](process.md)（[[CHR-008]]、[[BEH-018]]…[[BEH-020]]、[[BEH-025]]、[[META-006]]、[[META-007]]、[[META-009]]…[[META-012]]、[[META-014]]、[[META-016]]…[[META-021]]；[[META-013]]/[[META-015]] deprecated） |
 | 目录边界 | [`architecture.md`](architecture.md)（[[ARCH-008]]） |
 | POC↔SLA | [`constraints.md`](constraints.md)（[[CON-POC-001]]） |
 | 术语 | [`glossary.md`](glossary.md)（[[DEF-020]]…[[DEF-023]]、[[DEF-META-ID-NS]]、DEF-NDF-*） |

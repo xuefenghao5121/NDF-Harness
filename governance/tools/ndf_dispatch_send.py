@@ -538,6 +538,84 @@ def _openclaw_agent_id(pack: Mapping[str, Any] | None = None) -> str:
     return "main"
 
 
+def _pin_openclaw_session_model(
+    *,
+    session_key: str,
+    model: str,
+    agent_id: str | None = None,
+) -> dict[str, Any]:
+    """Best-effort pin of sessions.json model after reset.
+
+    Gateway `agent` params reject caller model overrides
+    (`provider/model overrides are not authorized for this caller`). Role-bound
+    `pack.model` MUST still win over a sticky Control `modelOverride` on a shared
+    Feishu `session_key` (META-021).
+    """
+    key = str(session_key or "").strip()
+    raw_model = str(model or "").strip()
+    if not key or not raw_model:
+        return {"ok": False, "error": "missing_key_or_model"}
+    provider = None
+    model_id = raw_model
+    if "/" in raw_model:
+        provider, model_id = raw_model.split("/", 1)
+        provider = provider.strip() or None
+        model_id = model_id.strip() or raw_model
+    agent = str(agent_id or "main").strip() or "main"
+    path = (
+        Path.home()
+        / ".openclaw"
+        / "agents"
+        / agent
+        / "sessions"
+        / "sessions.json"
+    )
+    if not path.is_file() and agent != "main":
+        # Fall back to default agent store when project agent not provisioned yet.
+        path = (
+            Path.home()
+            / ".openclaw"
+            / "agents"
+            / "main"
+            / "sessions"
+            / "sessions.json"
+        )
+    if not path.is_file():
+        return {"ok": False, "error": "sessions_json_missing", "path": str(path)}
+    try:
+        data = json.loads(path.read_text(encoding="utf-8"))
+    except (OSError, json.JSONDecodeError) as exc:
+        return {"ok": False, "error": f"sessions_json_unreadable:{exc}"}
+    if not isinstance(data, dict):
+        return {"ok": False, "error": "sessions_json_not_object"}
+    row = data.get(key)
+    if not isinstance(row, dict):
+        row = {"key": key}
+        data[key] = row
+    row["model"] = model_id
+    if provider:
+        row["modelProvider"] = provider
+    # Sticky user overrides beat role pins; clear so Control deepseek does not
+    # steal Implementation glm (and vice versa) across a shared session_key.
+    row.pop("modelOverride", None)
+    row.pop("modelOverrideSource", None)
+    try:
+        path.write_text(
+            json.dumps(data, ensure_ascii=False, indent=2) + "\n",
+            encoding="utf-8",
+        )
+    except OSError as exc:
+        return {"ok": False, "error": f"sessions_json_write_failed:{exc}"}
+    return {
+        "ok": True,
+        "key": key,
+        "model": model_id,
+        "modelProvider": provider,
+        "agent_id": agent,
+        "path": str(path),
+    }
+
+
 def _openclaw_session_exists(
     session_key: str,
     *,
@@ -1736,11 +1814,20 @@ def _send_openclaw(
                 except Exception:
                     return _openclaw_reset_failed(detail="session_reresolve_failed")
         agent_id = _openclaw_agent_id(pack)
+        model = str(pack.get("model") or "").strip()
+        if model and session_key:
+            # Gateway agent params reject caller model overrides; pin session
+            # model after reset from role-bound pack.model (META-021).
+            _pin_openclaw_session_model(
+                session_key=session_key, model=model, agent_id=agent_id
+            )
         if transport == "session_id":
             session_id = resolved or session_key
             cmd = [executable, "agent", "--agent", agent_id, "--message", message]
             if session_id:
                 cmd.extend(["--session-id", session_id])
+            if model:
+                cmd.extend(["--model", model])
             use_heartbeat = True
         else:
             import uuid as _uuid
@@ -1754,6 +1841,7 @@ def _send_openclaw(
                 "timeout": int(max_sec),
                 "idempotencyKey": str(_uuid.uuid4()),
             }
+            # Do NOT put model in gateway params — unauthorized for this caller.
             cmd = [
                 executable,
                 "gateway",
@@ -2892,10 +2980,13 @@ def dispatch_send(
             mapped = str(
                 role_resolution.get("mapped_role")
                 or role_resolution.get("role")
-                or "control"
+                or ""
             )
-            if mapped == "implementation" and str(pack.get("provider") or "") == "openclaw":
-                pass  # keep send_result failure; caller reports openclaw error
+            task = str(pack.get("task") or "")
+            # Task poc_* is Implementation even if role map regresses (META-021).
+            is_implementation = mapped == "implementation" or task.startswith("poc_")
+            if is_implementation and str(pack.get("provider") or "") == "openclaw":
+                pass  # keep send_result failure; caller reports openclaw error (META-017)
             else:
                 cfg = role_binding.role_config(ROOT, mapped)
                 fb_raw = (cfg.get("fallback") or "").strip().lower().replace("_", "-")
