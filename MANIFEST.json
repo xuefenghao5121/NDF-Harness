@@ -1,8 +1,8 @@
 {
   "schema": "ndf-harness-manifest/v1",
   "version": "1.2.2",
-  "source_commit": "607e4f91f590207de25b1db54c6ef5fc888020d9",
-  "generated_at": "2026-08-30T12:00:15+00:00",
+  "source_commit": "59e591d4fd53daade229e102b5ea4d11eb9c5fa4",
+  "generated_at": "2026-08-31T08:06:50+00:00",
   "files": [
     {
       "path": ".gitignore",
@@ -16,8 +16,8 @@
     },
     {
       "path": "README.md",
-      "sha256": "d8cfdc845f9ba4011095021090ced6226886b3f7530e6e90314a18ecf6128afb",
-      "bytes": 6532
+      "sha256": "efe9be28156f6ac45a9ba8ea2c53a5bdaa1d05665f0db841c871804cf290b42c",
+      "bytes": 7021
     },
     {
       "path": "VERSION",

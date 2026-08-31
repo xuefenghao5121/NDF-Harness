@@ -1,12 +1,13 @@
-# NDF Harness 1.0
+# NDF Harness
 
 > **role:** ndf-process-package  
 > **product_behavior:** false  
-> **version:** see [`VERSION`](VERSION)
+> **version:** [`VERSION`](VERSION) (current **1.2.2**)
 
 Portable package that installs **NDF process norms**, **command workflow** (`AGENTS.md`),
-**governance CLI**, **skills**, and **templates** into any repository. Works with Cursor,
-OpenClaw, Claude Code, OpenCode, or generic agents — no single IDE is required.
+**governance CLI**, **skills**, and **templates** into any repository. This checkout
+*is* the package (not a nested `packages/ndf-harness/` tree). Works with Cursor,
+OpenClaw, Claude Code, OpenCode, or generic agents; no single IDE is required.
 
 ## What Harness is / is not
 
@@ -102,13 +103,16 @@ Checks: VERSION, AGENTS, workflow yaml, tool `--help` smoke, skill entry paths, 
 |---------|-----|
 | Gate / bundle SHA mismatch | [`docs/TROUBLESHOOTING.md`](docs/TROUBLESHOOTING.md) |
 | `context_verify_failed` | [`docs/TROUBLESHOOTING.md`](docs/TROUBLESHOOTING.md) |
+| OpenClaw session collision / dual-role collapse | [`docs/TROUBLESHOOTING.md`](docs/TROUBLESHOOTING.md) ([[META-020]]…[[META-022]]) |
+| Implementation hop uses Control model / `in-host` | [`docs/TROUBLESHOOTING.md`](docs/TROUBLESHOOTING.md) ([[META-021]]) |
 | graphcheck / bindcheck failures | [`docs/TOOLS.md`](docs/TOOLS.md) |
 | Wrong workspace / repo_root | [`docs/SECURITY.md`](docs/SECURITY.md) |
 | Fake or missing completion | [`docs/SECURITY.md`](docs/SECURITY.md) |
 
 ## Version / compatibility
 
-- Current: **1.2.2** ([`CHANGELOG.md`](CHANGELOG.md))
+- Current: **1.2.2** ([`CHANGELOG.md`](CHANGELOG.md)) — OpenClaw per-project
+  identity ([[META-020]]) and Control/Implementation session split ([[META-022]])
 - 0.2.x repos: run [`migration/detect_0_2.py`](migration/detect_0_2.py)
 - Installed consumer `spec/meta/` wins over package after adopt
 
@@ -145,7 +149,7 @@ Do **not** delete consumer-authored `spec/meta/` clauses or POC binders.
 ## Package layout
 
 ```text
-packages/ndf-harness/
+.
 ├── install.py          # plan | install | adopt | verify
 ├── ndf.profile.yaml    # profile selector
 ├── norms/              # meta + product-tree seed
@@ -155,5 +159,6 @@ packages/ndf-harness/
 ├── adapters/           # runtime mounts
 ├── templates/          # POC / genesis stubs
 ├── migration/          # 0.2 detect + plan
+├── scripts/            # MANIFEST build / verify
 └── docs/               # product-neutral guides
 ```
