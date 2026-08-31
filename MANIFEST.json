@@ -1,8 +1,8 @@
 {
   "schema": "ndf-harness-manifest/v1",
   "version": "1.2.2",
-  "source_commit": "42d3a26a385a1fb6ba796b7a8d46aff1399fe886",
-  "generated_at": "2026-08-31T14:45:41+00:00",
+  "source_commit": "97f74815cc5863e29a870dc262c27ae6051b5aac",
+  "generated_at": "2026-08-31T16:57:02+00:00",
   "files": [
     {
       "path": ".gitignore",
@@ -16,8 +16,8 @@
     },
     {
       "path": "README.md",
-      "sha256": "85a65db3f607255d487e7af218c4a646eff8288ee1ccc8e97ff5032788b0d69f",
-      "bytes": 4559
+      "sha256": "fe481c04dc91a908165e0a1d470b1191b87f481ca71c8fff007c1ea289c8d9fa",
+      "bytes": 4264
     },
     {
       "path": "VERSION",
@@ -511,8 +511,8 @@
     },
     {
       "path": "skill/ndf-workflow/SKILL.md",
-      "sha256": "87fcbc798312c2a02742597219d8db014e83c357529b269ae242652e56c4eb11",
-      "bytes": 6137
+      "sha256": "5e20ad3a58866fa6c5c76f5adc70b7b0d81f16c815b1d7ba3e2fc81f0c30c6d7",
+      "bytes": 7880
     },
     {
       "path": "skill/ndf-workflow/adopt.md",
@@ -546,8 +546,8 @@
     },
     {
       "path": "skill/ndf-workflow/install.md",
-      "sha256": "a013268d61cd90e3110f4af6ab5339990853584a555d36476b850113f2e60850",
-      "bytes": 781
+      "sha256": "0dd524a6e4c9f9c33ea9b803dae08b0271ffe2891762aa684b078f99b6f3857e",
+      "bytes": 778
     },
     {
       "path": "skill/ndf-workflow/intake.md",

@@ -1,44 +1,48 @@
 # NDF Harness
 
-基于 [NDF](https://github.com/hengliao1972/normative_language/blob/main/normative_language_cn.md) 规范的论文和预研 POC 工作流。给架构师和开发者用：把一篇论文、一个 IDEA 做成能反复跑的原型，而且过程能查、能回。
+按 [NDF](https://github.com/hengliao1972/normative_language/blob/main/normative_language_cn.md) 写规范的论文和预研 POC 工作流。架构师、开发者拿它把论文或 IDEA 做成能反复跑的原型。验证留在仓库里，过后还能翻回来。
 
-版本见 [`VERSION`](VERSION)，当前 **1.2.2**。变更记在 [`CHANGELOG.md`](CHANGELOG.md)。
+当前版本 **1.2.2**，见 [`VERSION`](VERSION)。
 
-做原型时最容易坏的是两件事。设计活在聊天里：人跟 Agent 来回几百轮，后一句盖前一句，清聊天就丢，下次再验证同一篇论文只能考古。试错还不关，`src/` 里全是过期实现。Harness 管的就是这两件事。
+设计只写在聊天里，后一句会盖掉前一句，清掉会话就没了。试错直接写进 `src/`，过期实现会把主干撑满。所以每个验证主题占一个 `poc/<topic>/`，假设写在该目录的装订器里。你说「派发」，代码才许改。做完只看磁盘回执。题目有开有关，关了不许用同一个 id 再开。
 
-装进你的仓库之后，说了算的是那边的 `spec/meta/` 和 `AGENTS.md`。这个包是流程种子，不许用包去改已经定稿的本地规范。
+打开指挥 Agent 说话就行（Cursor 读 `.cursor/skills/ndf-workflow/`）。不用选 skill，也不用背命令。只要说下面五句。没说出口，Agent 不能往下走。
 
-## 两件核心
+## 五句口令
 
-**POC 管理。** 每个验证主题占一个目录 `poc/<topic>/`。假设、接口、测量协议写在装订器里（`TOPIC`、`DESIGN`、`GATES`），不写在聊天里。人说「派发」时，契约会被钉成 bundle SHA。假设变了，SHA 变，得重新审；数字、实验日志、Rounds 追加，SHA 不变。Agent 说做完了，只认磁盘上的 `ndf-agent-completion/v1`。聊天一句 OK、运输 ACK、stdout 一段 JSON，都不算。主题、SHA、git 都能回到某一轮，不用翻模型会话。
+**初始化项目**
 
-**POC 回合。** 探索只许写 `poc/<topic>/`，不许改主干的 `src/`、`include/`、`tests/`。一个主题有开有关：跑通了就 promote 合进主线，证伪了就 reject，把否定结果记进决策记录并归档装订器。关了的 id 不许再开，再试就新开主题。试错有地方放，关题时清掉，主干不会被半成品撑满。
+这个仓库从现在起按这套规矩干活。后面做 POC 要有对照，不能对着空气调参。
 
-NDF 本身管规范怎么写成树、图、git。Harness 不管你的产品 SLA 怎么写，只管验证怎么开、怎么钉、怎么关。
+要定的是谁指挥、谁写设计、谁写代码，以及第一版规范骨架和可复现基线能不能冻住。中间还会问两句。**角色已配置**：三种角色绑好了，否则后面派发过不去。**GENESIS已审核**：骨架和测过的基线变成对照，不是又开一轮日常 POC。空仓和已有代码，中间问的话可能不一样，但都是先立项目再开题。
 
-## 每天怎么走
+**提交Idea**
 
-人对指挥面只说五句，不选 skill，不背 CLI。
+有一件要验证的事，先写成能审的提案。嘴上说一句，不能开工。
 
-| 你说 | 实际在干什么 |
-|------|----------------|
-| **初始化项目** | 绑角色，写出对照用的规范骨架和可复现基线，再冻结 |
-| **提交Idea** | 把论文点或 IDEA 写成开放提案。人说「已确认」才算收下，说「已审核」才许开工 |
-| **派发** | 人审过契约之后，才许 Agent 在写根里改代码 |
-| **继续** | 改装订器再派。契约变了才换 SHA |
-| **关闭** | 先看只读 close plan，再选 promote、partial 或 reject |
+分两下。**已确认**：提案写的就是要证的事，可以进 `spec/open/`（改流程进 `spec/meta/open/`）。**已审核**：可以按这份提案写装订器，主干代码还是不能动。没确认就不能开题，也不能改主干。产品问题和流程问题拆成两份提案。分不清就问人。产品上拿不准，默认走 poc。
 
-常见一条线：
+**派发**
 
-提交Idea，已确认，已审核。Control 写齐装订器。你审完说派发。Implementation 只动 `poc/<topic>/`，磁盘上出现 completion。数字不够就继续。该收了就关闭。
+刚看过的那一版契约，可以拿去跑。
 
-不确定的产品想法默认走 poc，不要一上来改主干。产品和流程混在一起就拆成两个提案。分不清就问人，不要默认开题。
+按 `poc/<topic>/ndf/` 里现在写的假设、能改哪些目录、怎么算测过，去改 `poc/<topic>/`。指挥面把这一版做成 SHA，记在 `GATES.md`。写代码的人只能动这个目录，不能碰主干的 `src/`、`include/`、`tests/`。做完只认磁盘上的 `ndf-agent-completion/v1`。聊天里回一句 OK、运输层 ACK、终端打出一段 JSON，都不算完。没说派发，就不能写实现。文件在，不等于人批过。
 
-角色三层：Command 听口令、造 pack、等人审；Control 写提案和装订器；Implementation 只在允许的写根里改代码。没绑角色派不出去。Cursor、OpenClaw、Claude Code、OpenCode 都能当宿主，成功不绑某个 IDE。
+**继续**
 
-## 装进仓库
+同一道题还没关，再跑一轮。这不是新 Idea。
 
-Python 3.10+，stdlib，不用 pip。在消费仓根目录：
+指挥面去改装订器，改完还要再说一次「派发」。只追加数字、日志、Rounds，SHA 不变，契约不用重审。假设、接口、怎么测、能改哪些目录变了，SHA 会变，得再看一遍再派发。还是同一个假设，就留在这个 topic。想法已经岔开了，回去「提交Idea」另开一题，别在旧目录里再叠一套。
+
+**关闭**
+
+这轮探索到头了。主干要么合入，要么明确不合。否定结果要留下。题目不能一直 exploring。
+
+指挥面先给一份只读的 close plan。再选怎么收。**promote**：跑通了，干净合进主干。**partial**：只合一部分，题还可以接着做。**reject**：证伪了，否定结果写进决策记录，装订器归档。这个 topic id 关了就不能再开。还想试，另开一题。
+
+## 第一次怎么进仓
+
+空仓或还没装过，在仓库根目录：
 
 ```bash
 python3 /path/to/ndf-harness/install.py install \
@@ -48,21 +52,12 @@ python3 /path/to/ndf-harness/install.py verify --repo . --profile dual-track \
   --runtime cursor,openclaw,claude-code
 ```
 
-已有 NDF 树先 `install.py adopt` 看冲突，再 install，不要加 `--force` 覆盖已定稿的 `spec/meta/`。从 0.2 升上来走 [`docs/MIGRATION-1.0.md`](docs/MIGRATION-1.0.md)。
+已有 NDF 树先跑 `install.py adopt` 看冲突，再 install，别加 `--force`。然后说「初始化项目」。装好以后听这个仓里的 `spec/meta/` 和 `AGENTS.md`，别听安装包里的旧稿。
 
-装完打开指挥 Agent（Cursor 会读 `.cursor/skills/ndf-workflow/`），说「初始化项目」或「提交Idea」。
+## 做完一次 POC
 
-## 手册
+立住之后按这个顺序说。看仓库里的文件，别看聊天摘要。
 
-人读这一页就够。下面几份是装包、排障、查命令时才翻的，不是第二套说明书。
+提交Idea，把要证的那句话说清楚。看提案，已确认，已审核。装订器写出来，看过再说派发。看磁盘回执和 `poc/` 里的证据。不够就继续。该停就关闭。
 
-| 文件 | 什么时候看 |
-|------|------------|
-| [`docs/INSTALL.md`](docs/INSTALL.md) | 三种 profile、runtime 装到哪、adopt |
-| [`docs/TROUBLESHOOTING.md`](docs/TROUBLESHOOTING.md) | SHA 漂了、OpenClaw 串 session、派发失败 |
-| [`docs/TOOLS.md`](docs/TOOLS.md) | `spec/meta/tools/` 每个脚本干什么 |
-| [`docs/SECURITY.md`](docs/SECURITY.md) | 过不了就停：写根、假 completion、凭证 |
-| [`docs/ADAPTERS.md`](docs/ADAPTERS.md) | 各 IDE 能挂什么 |
-| [`docs/MIGRATION-1.0.md`](docs/MIGRATION-1.0.md) | 0.2 仓怎么迁 |
-
-条款正文在装好之后的 `spec/meta/language.md` 和 `process.md`。口令路由在 [`skill/ndf-workflow/SKILL.md`](skill/ndf-workflow/SKILL.md)。
+要回到某一轮，翻 topic 目录、GATES 和 git。契约变了看切片 diff，别拿两个哈希对一下完事。

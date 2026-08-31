@@ -40,9 +40,22 @@ pack，等人「派发」；OpenClaw 不可用时走配置的 fallback，MUST NO
 
 ## Human cognitive contract
 
+五句是闸，不是语气词。对人说明时用这个口径：
+
+| 人说 | 这一句批准什么 | 没说则禁止 |
+|------|----------------|------------|
+| **初始化项目** | 本仓按 NDF 干活；绑三角色；冻结对照骨架和已测基线（内闸：`角色已配置` / `派发` / `GENESIS已审核`） | 未绑角色不得派发；无对照不得当日常 POC 起点 |
+| **提交Idea** | 意图写成可审提案。`已确认`=写入仓；`已审核`=可写装订器，仍禁改主干 | 未确认不得开题、不得动 Trunk / stable |
+| **派发** | 当前装订器这一版（bundle SHA）可执行；Implementation 只写允许的写根 | 未派发不得写实现；ACK / stdout ≠ 完成 |
+| **继续** | 同一 topic 再一轮：追加数字或改契约后再派发 | 不得当成新 Idea；分叉必须新 topic |
+| **关闭** | 探索结束：promote / partial / reject | 不得无限 exploring；关闭 id 不得重开 |
+| （健康） | 只读 topic-health / graphcheck | 不派发 |
+
+Command 动作与委派：
+
 | 人说 | Command 做 | 等人一句 | 委派谁 |
 |------|----------|----------|--------|
-| **初始化项目** | 角色向导 → 绑内核 → 一句「派发」（契约+基线）→ `GENESIS已审核` 骨架/基线 stable | `角色已配置` / `派发` / `GENESIS已审核` | Control + 同句测量；greenfield 另可 `genesis-pack` |
+| **初始化项目** | 角色向导，绑内核，一句「派发」（契约+基线），`GENESIS已审核` 骨架/基线 stable | `角色已配置` / `派发` / `GENESIS已审核` | Control + 同句测量；greenfield 另可 `genesis-pack` |
 | **提交Idea** | [intake.md](intake.md) 分流 → [proposal.md](proposal.md) | 「已确认」「已审核」 | Control |
 | **派发** | 写 `bundle_dispatch`（POC）+ 造 pack | 本聊天已确认「派发」 | Control 或 Implementation（按平面） |
 | **继续** | 修订装订器再造 pack | 「派发」 | Control（文档）→ Implementation（实现） |
@@ -103,6 +116,19 @@ python3 spec/meta/tools/ndf_workflow_status.py genesis-pack --mode greenfield|ad
 python3 spec/meta/tools/ndf_close.py plan --topic <topic> --mode promote|partial|reject
 python3 spec/meta/tools/ndf_workflow_status.py topic-health --topic <topic> --json
 ```
+
+## Package ops docs（Agent lookup, not the human README）
+
+Human story is repo-root `README.md`. Command reads these when installing, dispatching, or unblocking:
+
+| Doc | When |
+|-----|------|
+| [`docs/INSTALL.md`](../../docs/INSTALL.md) | profiles, runtime mounts, adopt |
+| [`docs/TROUBLESHOOTING.md`](../../docs/TROUBLESHOOTING.md) | SHA drift, OpenClaw session, dispatch failure |
+| [`docs/TOOLS.md`](../../docs/TOOLS.md) | `spec/meta/tools/` scripts |
+| [`docs/SECURITY.md`](../../docs/SECURITY.md) | write-root, fake completion, credentials |
+| [`docs/ADAPTERS.md`](../../docs/ADAPTERS.md) | runtime capability matrix |
+| [`docs/MIGRATION-1.0.md`](../../docs/MIGRATION-1.0.md) | 0.2 to current |
 
 ## Session startup
 
