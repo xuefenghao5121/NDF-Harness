@@ -39,7 +39,7 @@ python3 spec/meta/tools/ndf_role_binding.py bind --repo . \
   --implementation claude-code --implementation-fallback in-host
 ```
 
-See [`ARCHITECTURE.md`](ARCHITECTURE.md) three-layer roles and [`WORKFLOW.md`](WORKFLOW.md).
+Roles and five phrases: [`../README.md`](../README.md).
 
 ## Mount paths
 

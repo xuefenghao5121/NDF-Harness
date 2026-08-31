@@ -349,6 +349,6 @@ See [`../governance/docs/GOVERN.md`](../governance/docs/GOVERN.md) for governanc
 
 ## Related
 
-- [`WORKFLOW.md`](WORKFLOW.md)
+- [`../README.md`](../README.md)
 - [`TROUBLESHOOTING.md`](TROUBLESHOOTING.md)
 - [`../governance/tools/README.md`](../governance/tools/README.md)

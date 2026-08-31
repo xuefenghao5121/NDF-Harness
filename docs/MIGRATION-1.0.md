@@ -90,6 +90,6 @@ python3 spec/meta/tools/ndf_workflow_status.py topic-health --topic <topic> --js
 
 ## Related
 
+- [`../README.md`](../README.md)
 - [`../migration/README.md`](../migration/README.md)
 - [`INSTALL.md`](INSTALL.md)
-- [`WORKFLOW.md`](WORKFLOW.md)

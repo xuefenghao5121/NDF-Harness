@@ -90,7 +90,7 @@ historical rows; the hot path uses `bundle_dispatch` + `派发`.
 1. Delete or archive runtime skills that expose Commander, Episode, Replay, or ActionSpec menus.
 2. Remove references from `.cursor/skills/`, `skills/`, `.opencode/skills/` except tombstone notes.
 3. Confirm `ndf_replay.py` is present only as tombstone (exit 2).
-4. Update team docs to point to [`docs/WORKFLOW.md`](../docs/WORKFLOW.md) five phrases.
+4. Update team docs to point to [`README.md`](../README.md) five phrases.
 
 ## Phase 6 — Re-dispatch after human review
 

@@ -1,6 +1,6 @@
 # Security
 
-Fail-closed security model for NDF Harness 1.0 dispatch and governance.
+Fail-closed gates for dispatch and governance. Human entry: [`../README.md`](../README.md).
 
 ## Design principle
 
@@ -84,5 +84,4 @@ ambient trust in UI transport.
 ## Related
 
 - [`TROUBLESHOOTING.md`](TROUBLESHOOTING.md)
-- [`ARCHITECTURE.md`](ARCHITECTURE.md)
-- [`WORKFLOW.md`](WORKFLOW.md)
+- [`../README.md`](../README.md)

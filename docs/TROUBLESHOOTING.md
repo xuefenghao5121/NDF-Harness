@@ -1,6 +1,6 @@
 # Troubleshooting
 
-Operational fixes for NDF Harness 1.0 workflows. Reports belong in `tmp/` only.
+Operational fixes. Reports belong in `tmp/` only. Human entry: [`../README.md`](../README.md).
 
 ## SHA mismatch / gate drift
 

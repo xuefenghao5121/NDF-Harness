@@ -1,8 +1,8 @@
 {
   "schema": "ndf-harness-manifest/v1",
   "version": "1.2.2",
-  "source_commit": "59e591d4fd53daade229e102b5ea4d11eb9c5fa4",
-  "generated_at": "2026-08-31T08:06:50+00:00",
+  "source_commit": "42d3a26a385a1fb6ba796b7a8d46aff1399fe886",
+  "generated_at": "2026-08-31T14:45:41+00:00",
   "files": [
     {
       "path": ".gitignore",
@@ -16,8 +16,8 @@
     },
     {
       "path": "README.md",
-      "sha256": "efe9be28156f6ac45a9ba8ea2c53a5bdaa1d05665f0db841c871804cf290b42c",
-      "bytes": 7021
+      "sha256": "85a65db3f607255d487e7af218c4a646eff8288ee1ccc8e97ff5032788b0d69f",
+      "bytes": 4559
     },
     {
       "path": "VERSION",
@@ -101,68 +101,33 @@
     },
     {
       "path": "docs/ADAPTERS.md",
-      "sha256": "2d7eeb781d077c02d5843f76364723c6b1982ba192eebfaa31a55932db425644",
-      "bytes": 4885
-    },
-    {
-      "path": "docs/ARCHITECTURE.md",
-      "sha256": "2a927c075aa053866be9365e3ccaa5c9b620815a93e81947b3ae7fd6582f8fb8",
-      "bytes": 5134
-    },
-    {
-      "path": "docs/INIT.md",
-      "sha256": "36a44d55662a5c2796a5a0d62d8d226f34cd38f54581b17b670ec3d48ed7420a",
-      "bytes": 1998
+      "sha256": "966746e957e0804a031d677e9c2003a7d8a5bbdf4b6539fa46afc417b77d5f5a",
+      "bytes": 4848
     },
     {
       "path": "docs/INSTALL.md",
-      "sha256": "4c5b2429c09554362c3b7772fe92a7f9469b2ed4f6b156c908836c8289aa7352",
-      "bytes": 5029
-    },
-    {
-      "path": "docs/INTRO.md",
-      "sha256": "b2541c901de29e6d0dc225f915ca93bf04f086b2ca33fb1a20393231b7cd2482",
-      "bytes": 11889
+      "sha256": "14f35432c4ea3e66d79e9940f93e27af78013f1824ebc11035a474c6e382d255",
+      "bytes": 5004
     },
     {
       "path": "docs/MIGRATION-1.0.md",
-      "sha256": "0a3103aaa27911034a2eab04d8b28a62cc32e7982e78ec44efacd5fd8aaca89c",
-      "bytes": 3387
-    },
-    {
-      "path": "docs/QUICKSTART.md",
-      "sha256": "549404f87970aac27f6dd606e0c2d4bbb6ef445f0f470a5c8fd4f3b1256ef80c",
-      "bytes": 1523
+      "sha256": "be20ed2edcd1c313af612b9db6aa7aa47b3c2354aea2f3cbec96053ab62368d5",
+      "bytes": 3389
     },
     {
       "path": "docs/SECURITY.md",
-      "sha256": "fcc80e7c301637df58f867248c2d50cd5fb58cb2a107f6979f9d9a8ce3414b88",
-      "bytes": 3187
+      "sha256": "c1f4124b80b9e85d5a13b1e01a1279d186253bc8fdf9fa7c5a1175639dee8032",
+      "bytes": 3170
     },
     {
       "path": "docs/TOOLS.md",
-      "sha256": "dc7e5cc2fa293072b7db45e3e3817b5587427d19ccfe3567353ced508fe9c27c",
-      "bytes": 9912
+      "sha256": "b2b16ebf5b5b9e0ff8c6b6768729869b54633a754f6c481e988c6f049ec5d090",
+      "bytes": 9914
     },
     {
       "path": "docs/TROUBLESHOOTING.md",
-      "sha256": "c83da23bfb46c9a15e2aaf3ac04268dfd8e0ae5152c010b037e4a1d6d983625b",
-      "bytes": 7422
-    },
-    {
-      "path": "docs/WORKFLOW-FEATURES.md",
-      "sha256": "29fefb70e69afc136339d5567eb70628e6ae47ad732bf9dd1d8648a7650c0801",
-      "bytes": 4389
-    },
-    {
-      "path": "docs/WORKFLOW-OVERVIEW.md",
-      "sha256": "078bae14ded23e552954b0b8c0d1901405c8dd1edcb3994114b88c15d8c15a64",
-      "bytes": 4692
-    },
-    {
-      "path": "docs/WORKFLOW.md",
-      "sha256": "facb08154bbc1bddbed05a415a29a9b277f460b674746ccd3ad602d1797a60a8",
-      "bytes": 4970
+      "sha256": "43e02381974cc925e52add251fa889e544eacb19822ef1a7d0ab024411e26116",
+      "bytes": 7437
     },
     {
       "path": "governance/GOVERNANCE.md",
@@ -371,8 +336,8 @@
     },
     {
       "path": "migration/plan_1_0.md",
-      "sha256": "f02d3468ce5be276214928ec699728388b3da40dd92d2a8dcbdd2f92ecf3f1a1",
-      "bytes": 4648
+      "sha256": "4f755d894d413f1712cea2586c9c8163bc9d4435b0b9173be0e5b4adab595d5a",
+      "bytes": 4634
     },
     {
       "path": "ndf.profile.yaml",
@@ -551,8 +516,8 @@
     },
     {
       "path": "skill/ndf-workflow/adopt.md",
-      "sha256": "1e2072d4e95f34e11d55a5312b44a616edbc1da164b511f5173a86e0d453785b",
-      "bytes": 646
+      "sha256": "15839c58351fb4b7349e16188bb0932d869b7d2c8e05b70a7bece5ed8c9bfcd9",
+      "bytes": 693
     },
     {
       "path": "skill/ndf-workflow/close.md",
@@ -581,8 +546,8 @@
     },
     {
       "path": "skill/ndf-workflow/install.md",
-      "sha256": "6ebc59f96648a6f39c591759f78b52b5fc2cd6e1ec110d257e4d3798520819c1",
-      "bytes": 792
+      "sha256": "a013268d61cd90e3110f4af6ab5339990853584a555d36476b850113f2e60850",
+      "bytes": 781
     },
     {
       "path": "skill/ndf-workflow/intake.md",

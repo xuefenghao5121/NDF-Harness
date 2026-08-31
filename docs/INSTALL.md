@@ -1,6 +1,6 @@
 # Install
 
-Exact commands for installing NDF Harness 1.0 into a consumer repository.
+装包命令。人话入口是仓库根上的 [`README.md`](../README.md)。
 
 ## Prerequisites
 
@@ -13,7 +13,7 @@ Exact commands for installing NDF Harness 1.0 into a consumer repository.
 Either vendor the package:
 
 ```bash
-git subtree add …   # or copy packages/ndf-harness into consumer
+git subtree add …   # or copy this checkout into the consumer
 ```
 
 Or reference an external checkout:
@@ -178,6 +178,5 @@ Keep consumer-authored spec and POC content.
 
 ## Related
 
-- [`QUICKSTART.md`](QUICKSTART.md)
-- [`INIT.md`](INIT.md)
+- [`../README.md`](../README.md)
 - [`../ndf.profile.yaml`](../ndf.profile.yaml)
