@@ -28,7 +28,9 @@ if str(_TOOLS) not in sys.path:
 
 import ndf_index as ndx  # noqa: E402
 
-ROOT = Path(__file__).resolve().parents[3]
+from ndf_paths import detect_repo_root
+
+ROOT = detect_repo_root()
 POC = ROOT / "poc"
 TOOL = "spec/meta/tools/ndf_close.py"
 

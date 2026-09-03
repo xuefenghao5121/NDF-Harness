@@ -934,13 +934,11 @@ def resolve_pack_provider(
     repo: Path | str | None,
     pack: Mapping[str, Any],
 ) -> dict[str, Any]:
-    """Map pack → role (task first; META-021 / META-022)."""
+    """Map pack → role resolution (task first; META-021 / META-022)."""
     provider = str(pack.get("provider") or "")
     task = str(pack.get("task") or "")
     hop = str(pack.get("hop") or "")
-    # Task wins over provider→role table: OpenClaw MAY serve BOTH Control and
-    # Implementation. PACK_PROVIDER_ROLE maps openclaw→control and MUST NOT steal
-    # poc_implementation (META-021). Role sessions differ under META-022.
+    # Task / hop beat PACK_PROVIDER_ROLE so openclaw+poc_* maps Implementation.
     if task == "project_genesis" or hop.startswith("genesis_"):
         role = "implementation"
     elif task.startswith("poc_") or task in {
@@ -952,21 +950,14 @@ def resolve_pack_provider(
     elif (
         task.startswith("binder_")
         or task.startswith("gate_")
-        or "control" in task
         or "proposal" in task
         or task.startswith("ndf_improvement")
-        or task
-        in {
-            "product_proposal",
-            "ndf_improvement_proposal",
-            "ndf_improvement_land",
-        }
     ):
         role = "control"
     else:
         role = PACK_PROVIDER_ROLE.get(provider)
         if role is None:
-            if provider == "openclaw":
+            if provider == "openclaw" or "control" in task:
                 role = "control"
             else:
                 role = (

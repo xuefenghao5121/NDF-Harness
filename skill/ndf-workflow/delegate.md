@@ -20,12 +20,10 @@ prompt → `custom` command → `role_adapter_unsupported`。
 
 OpenClaw / Claude Code 是**默认** adapter，不是唯一路径。Command MUST NOT 塌缩为
 自己写 Control/Implementation 边界内的实现/测量，亦 MUST NOT 代写
-`poc/<topic>/ndf/` 装订器 facet 正文。产品提案「已审核」后只造 `binder_pipeline` pack；
-无 `TOPIC.md` 时仍可开题（已审提案钉死 seed）；主 adapter `runtime_unavailable` 且
+`poc/<topic>/ndf/` 装订器 facet 正文。产品提案「已确认」后只造 `binder_pipeline` pack；
+无 `TOPIC.md` 时仍可开题（已确认提案钉死 seed）；主 adapter `runtime_unavailable` 且
 已配 fallback 时 MUST 派 fallback（**Control**），不得手写装订器。Implementation +
-`provider=openclaw` 运输失败 MUST NOT 静默塌到 `in-host`（[[META-017]] / [[META-021]]）。
-OpenClaw 同时绑 Control+Implementation 时：按 `task` 定角色，reset 后钉
-`pack.model`（[[META-021]]）。
+`provider=openclaw` 运输失败 MUST NOT 静默塌到 `in-host`（[[META-017]]）。
 
 ## 委派 Control（Design agent）
 
@@ -35,7 +33,7 @@ OpenClaw 同时绑 Control+Implementation 时：按 `task` 定角色，reset 后
 | 流程 Idea / land | `project-control-pack --task ndf_improvement_proposal\|ndf_improvement_land … --json` |
 | 装订器 / 门禁文档 | `control-pack --topic <t> --task binder_pipeline\|gate_pipeline … --json` |
 | promote 收口 §4 | Control `binder_amend` + intent `close_finalize`（[[META-018]]） |
-| 送出 | 人回「派发」/「继续」→ `dispatch-send --pack-file tmp/ndf-dispatch-last-pack.json` |
+| 送出 | 人已读 pack-view 后回「派发」→ `dispatch-send --pack-file tmp/ndf-dispatch-last-pack.json` |
 
 **可写**：见 [roles/control.md](roles/control.md) 或 `ndf.workflow.yaml` `roles.control.writable`。  
 **禁止**：`src/`、`include/`、`tests/`；静默写 `GATES.md` 的 `approved_by`；未人审写 `spec/meta/` 稳定正文。
@@ -90,7 +88,8 @@ python3 spec/meta/tools/ndf_workflow_status.py poc-dispatch \
 ## 成功合同
 
 1. `roles_unbound=false` 且 pack `safe_to_dispatch=true`（否则取消，报告 blockers）
-2. 本聊天等人确认「派发」/「继续」（可写 pack 不自动送；POC「派发」另写 `GATES.md` `bundle_dispatch`）
+2. 本聊天等人确认「派发」（POC：须先「已审核」装订器 markdown 并展示 pack-view 散文）。
+   可写 pack 不自动送；POC「已审核」写 `GATES.md` `bundle_dispatch`，「派发」才开租约 + send（[[META-025]]）
 3. `dispatch-send` 或 `poc-dispatch --send` 送 worker + 心跳等待
 4. 读 `completion_receipt_path`：磁盘 `ndf-agent-completion/v1` 身份匹配即为成功。
    stdout `ndf-dispatch-notify/v1` 可选。notify 缺失或 `openclaw_stalled` MUST NOT

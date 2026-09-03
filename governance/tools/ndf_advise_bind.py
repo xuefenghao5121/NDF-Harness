@@ -17,7 +17,9 @@ import ndf_bindcheck as bc  # noqa: E402
 import ndf_close as ncl  # noqa: E402
 import ndf_index as ndx  # noqa: E402
 
-ROOT = Path(__file__).resolve().parents[3]
+from ndf_paths import detect_repo_root
+
+ROOT = detect_repo_root()
 TOOL = "spec/meta/tools/ndf_advise.py"
 
 # bind finding kind priority (lower = first)

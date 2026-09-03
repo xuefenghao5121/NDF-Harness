@@ -2,7 +2,7 @@
 
 按 [NDF](https://github.com/hengliao1972/normative_language/blob/main/normative_language_cn.md) 写规范的论文和预研 POC 工作流。架构师、开发者拿它把论文或 IDEA 做成能反复跑的原型。验证留在仓库里，过后还能翻回来。
 
-当前版本 **1.2.2**，见 [`VERSION`](VERSION)。
+当前版本 **1.3.0**，见 [`VERSION`](VERSION)。
 
 设计只写在聊天里，后一句会盖掉前一句，清掉会话就没了。试错直接写进 `src/`，过期实现会把主干撑满。所以每个验证主题占一个 `poc/<topic>/`，假设写在该目录的装订器里。你说「派发」，代码才许改。做完只看磁盘回执。题目有开有关，关了不许用同一个 id 再开。
 

@@ -26,7 +26,9 @@ from datetime import datetime, timezone
 from pathlib import Path
 
 # spec/meta/tools/ndf_index.py → repo root
-ROOT = Path(__file__).resolve().parents[3]
+from ndf_paths import detect_repo_root
+
+ROOT = detect_repo_root()
 SPEC = ROOT / "spec"
 TOOL = "spec/meta/tools/ndf_index.py"
 

@@ -2,33 +2,36 @@
 
 > **入口**：Command Agent + `skill/ndf-workflow/`（Cursor 见 [`../adapters/cursor/`](../adapters/cursor/)）  
 > **权威**：installed `AGENTS.md` + `spec/meta/`  
-> **日期**：2026-08-24  
+> **日期**：2026-08-31（META-024 分层人审散文）  
 > **非 SoT**：本文是人类可读总览；条款正文以 `spec/meta/process.md` 为准。
 
 ---
 
 ## 0. 一句话
 
-人只跟**指挥面**说话 → 内部模块分流 → **OpenClaw**（文档）/ **Claude Code**（代码）→ 磁盘 `ndf-agent-completion/v1`。  
-改契约靠 **SHA + slice diff** 识别；图/RAG 出问题走 **graphcheck → 提案改 SoT → 再检**。
+人维护 **树+图**（条款与 `depends-on`），指挥面编出 **分层散文给人审/改**，再委派
+OpenClaw（文档）/ Claude Code（代码）→ 磁盘 `ndf-agent-completion/v1`。  
+五句口令是快捷入口，不是唯一动词（[[META-023]] / [[META-024]]）。无 Commander / Episode / Replay 面板义务。
 
 | 层 | 谁 | 做什么 |
 |----|-----|--------|
-| 指挥面 | Command Agent + `ndf-workflow` | 五句口令、等人审、造 pack、报 blockers |
+| 定义面 | 人 + Markdown / graphcheck | 写条款、改 `depends-on` |
+| 观察面 | Command + `ndf_context pack-view` | **分层散文**（spec 章 + 装订切片）；overlay 再编 |
+| 指挥面 | Command Agent + `ndf-workflow` | 口令快捷、等人审、造 pack、报 blockers |
 | OpenClaw | Control | `spec/open/`、`spec/meta/open/`、`poc/<topic>/ndf/` |
 | Claude Code | Implementation | `poc-dispatch` / `genesis-pack` / close 合入 |
 
-成功 = 磁盘 completion；transport ACK ≠ success。无面板义务。
+成功 = 磁盘 completion；transport ACK ≠ success。
 
 ---
 
 ## 1. Skill / 模块调用图
 
-内部 `*.md` 是**模块**，不是让用户再选的第二套 skill。
+内部 `*.md` 是**模块**（Agent 操作路径），不是让用户再选的第二套 skill；人仍可读图与 pack-view。
 
 ```mermaid
 flowchart TB
-  Human[Human 五句口令] --> Skill["/ndf-workflow 指挥面"]
+  Human[Human 口令或自然语言] --> Skill["/ndf-workflow 指挥面"]
 
   Skill --> Init[初始化项目]
   Skill --> Idea[提交Idea]
@@ -36,6 +39,7 @@ flowchart TB
   Skill --> Cont[继续]
   Skill --> Close[关闭]
   Skill --> Health[健康]
+  Skill --> PackView[看闭包_改依赖]
 
   Init --> Genesis[genesis.md]
   Idea --> Intake[intake.md]
@@ -46,6 +50,7 @@ flowchart TB
   Cont --> Delegate
   Close --> CloseM[close.md]
   Health --> HealthM[health.md]
+  PackView --> CtxCLI[ndf_context pack-view]
   Genesis --> Delegate
   Proposal --> Delegate
   Poc --> Delegate
@@ -72,11 +77,13 @@ flowchart TB
 | 人说 | 内部模块 | 等人一句 | 委派谁 |
 |------|----------|----------|--------|
 | 初始化项目 | genesis → delegate | `角色已配置` / `派发` / `GENESIS已审核` | Control 写骨架 `00–50`；greenfield 先 `ndf_genesis_idea.py check`；另可 `genesis-pack` |
-| 提交Idea | intake → proposal → delegate | 「已确认」「已审核」 | OpenClaw |
-| 派发 | poc + delegate | 「派发」+ `GATES` bundle | POC→Claude；Control→OpenClaw |
-| 继续 | poc + delegate | 再「派发」 | OpenClaw 改装订器 → Claude |
+| 提交Idea | intake → proposal → delegate | 「已确认」（审提案 markdown） | OpenClaw |
+| 已审核（poc 装订器） | poc | 「派发」 | Command 造 pack-view；不 send |
+| 派发 | pack-view 已展示 → poc + delegate | 「派发」后开租约 | POC→Implementation |
+| 继续 | poc + delegate（可 overlay） | 再「派发」 | OpenClaw 改装订器 → Claude |
 | 关闭 | close → delegate | 选 promote/partial/reject | Claude 合入 ± OpenClaw 收口 |
 | 健康 | health | — | 只读；不派发 |
+| 看闭包 / 改依赖 | `ndf_context pack-view` / `overlay-apply` | 可选「派发」 | 不强制 |
 
 ### Idea 平面（intake）
 
@@ -91,7 +98,7 @@ flowchart TB
 
 | 文件 | 职责 |
 |------|------|
-| `SKILL.md` | 唯一入口：口令路由、三层合同、硬规则 |
+| `SKILL.md` | 入口：口令快捷 + 图/pack 观察、三层合同、硬规则 |
 | `intake.md` | Idea 平面分流 |
 | `proposal.md` | 写提案；等人确认/审核 |
 | `genesis.md` | bootstrap G0–G3 |
@@ -104,26 +111,31 @@ flowchart TB
 
 ---
 
-## 2. 闭环 A — Context：人如何检查
+## 2. 闭环 A — Context：人如何检查（[[META-023]] / [[META-024]]）
 
-人**不**打开可视化 Compiler。Context 在造 pack 时内嵌校验；人只看 blockers / SHA。
+人**不**依赖可视化 Compiler 面板，但 **MUST** 能打开人读**分层散文**（不是节点表）。
 
 ```mermaid
 flowchart LR
   Ask[人：健康/能派发吗] --> TH[topic-health]
   TH --> Pack[造 pack]
-  Pack --> CV[context-verify]
+  Pack --> View[pack-view 分层散文]
+  View --> Overlay{人改 overlay?}
+  Overlay -->|是| Re[overlay-apply 再编]
+  Re --> View
+  Overlay -->|否| CV[context-verify]
   CV -->|pass| OK[safe_to_dispatch]
-  CV -->|fail| Bl[blockers + SHA]
-  Bl --> Fix[人修装订器或重审派发]
+  CV -->|fail| Bl[blockers + 散文 + 附录]
+  Bl --> Fix[人修装订器或边或 overlay]
   Fix --> Pack
 ```
 
 | 对人可见 | 对人不可见 / 不要求 |
 |----------|---------------------|
-| `safe_to_dispatch` / blockers | 可视化 Compiler 面板、整份 context dump |
-| `context_verify_failed` + manifest/plan SHA | 两边 agent 各自拼不同上下文 |
-| topic-health findings（含闸漂移摘要） | Episode / Replay / Canvas 投影 |
+| `tmp/ndf-pack-view-*.md` **主文**：spec 章条款正文（标题下溯源行）+ POC 装订切片 | 节点/边表当主文 |
+| 附录：seed、边、SHA、截断（机器校对） | Commander / Episode / Replay / Canvas |
+| `safe_to_dispatch` / blockers | 两边 agent 各自拼不同上下文 |
+| 树内 `depends-on`（人直接改） | 把 `graph.json` 当 SoT；必须选 CLI 子命令 |
 
 OpenClaw 与 Claude 的 role plan MUST 引用同一 `manifest_sha`。
 

@@ -179,6 +179,8 @@ python3 ndf_perf_baseline.py check --topic <topic>
 
 **Purpose:** Compile task manifest + role-specific bounded contexts; verify manifest/plan SHA.
 Implement/measure hops accept SHA-aligned `bundle_dispatch` as the gate-3 license ([[META-019]]).
+Human review surfaces ([[META-023]] / [[META-024]]): layered prose `pack-view` /
+`overlay-apply` (`ndf-pack-view/v2`; graph tables appendix-only).
 
 **Commands:**
 
@@ -186,9 +188,13 @@ Implement/measure hops accept SHA-aligned `bundle_dispatch` as the gate-3 licens
 python3 ndf_context.py manifest --task <task> --topic <topic> [--json]
 python3 ndf_context.py role-plan --manifest-sha <sha> --role control|implementation
 python3 ndf_context.py verify --pack-file <pack.json>
+python3 ndf_context.py pack-view --task <task> [--topic <topic>] \
+  --report tmp/ndf-pack-view-<topic>.md --plan-report tmp/ndf-pack-view-<topic>-plan.json
+python3 ndf_context.py overlay-apply --overlay tmp/ndf-overlay.json \
+  --report tmp/ndf-pack-view-overlay.md
 ```
 
-**Output:** JSON to stdout; optional evidence under `tmp/`.
+**Output:** JSON to stdout; pack-view markdown under `tmp/` (not SoT).
 
 **Exit codes:** `0` ok; `1` compile/verify failure.
 

@@ -16,25 +16,27 @@
 
 mixed：两案互相 `depends-on` / 引用；勿混写根。
 
-## 人工闸
+## 人工闸（[[META-025]]）
+
+提案 MUST 先写入磁盘，再请人确认。人审对象是**该 markdown**，MUST NOT 甩 JSON
+或问「是否写入磁盘」。
 
 1. 生成后：
 
-> 提案已生成：`…`。请审阅，确认后回复「已确认」。
+> 提案已生成：`…`。请审阅该文件，确认后回复「已确认」。
 
-2. 「已确认」→ 校验引用 ID → 按 track 落地 → 提案顶追加 `Status: Implemented on YYYY-MM-DD`。
-3. 落地后：
+2. 「已确认」→ 校验引用 ID → 按 track 落地。process：落地即结束，MUST NOT
+   再要提案「已审核」。poc：立刻委派 Control 写齐装订器。
+3. poc 装订器写好后：
 
-> 提案已落地。变更摘要：…。请审核，回复「已审核」。
+> POC 装订器已写好：`poc/<topic>/ndf/`。请审阅这些 markdown；确认无误后回复「已审核」。
 
-4. 「已审核」后：
-   - **poc** → 写齐装订器 → 等人「派发」（[poc.md](poc.md)）
-   - **process** → 结束（validation/perf = n/a）
-   - **promote/bug/…** → [close.md](close.md) / Trunk 路径
-   - **bootstrap** → [genesis.md](genesis.md) 绑内核 → 一句「派发」→ `GENESIS已审核`
+4. 「已审核」（装订器）之后：写 `bundle_dispatch` + 造 pack + pack-view，等人
+   「派发」（[poc.md](poc.md)）。
 
 ## 禁止
 
 - 未「已确认」改 Trunk / stable 契约
 - process 长文写回 `20-behavior/`
 - 探索期写 `status=stable` 的 must SLA
+- 对人审 completion JSON / last-pack.json

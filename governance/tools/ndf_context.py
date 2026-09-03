@@ -4,6 +4,10 @@
 Compilation is read-only with respect to project truth. Reports may only be
 written below ``<repo>/tmp``; explicit ``--episode`` additionally records
 content-addressed Replay evidence.
+
+Human surfaces (META-023 / META-024): ``pack-view`` / ``overlay-apply`` dump a
+layered prose review under ``tmp/`` (clause bodies by spec chapter + binder
+slices); graph tables are appendix-only. Overlay is not clause SoT.
 """
 
 from __future__ import annotations
@@ -29,7 +33,9 @@ from ndf_workflow_evidence import (  # noqa: E402
     safe_tmp_report_path,
 )
 
-ROOT = Path(__file__).resolve().parents[3]
+from ndf_paths import detect_repo_root
+
+ROOT = detect_repo_root()
 ID_RE = re.compile(r"\b([A-Z][A-Z0-9]*(?:-[A-Z0-9]+)+)\b")
 WIKI_RE = re.compile(r"\[\[([A-Z][A-Z0-9]*(?:-[A-Z0-9]+)+)(?:\s*\|\s*[^\]]+)?\]\]")
 PATH_RE = re.compile(
@@ -44,6 +50,31 @@ BINDER_NAMES = (
     "INTERFACE.md",
     "GATES.md",
 )
+# Human prose binder stack (META-024): file → (slice_id, chapter label).
+BINDER_PROSE_SLICES = (
+    ("TOPIC.md", "topic_contract", "TOPIC"),
+    ("DESIGN.md", "design_contract", "DESIGN"),
+    ("PERF_BASELINE.md", "perf_bind", "PERF_BASELINE"),
+    ("DELTA.md", "delta_hypothesis", "DELTA"),
+    ("INTERFACE.md", "interface_contract", "INTERFACE"),
+)
+PRODUCT_CHAPTERS = (
+    ("00-charter", "Charter"),
+    ("10-architecture", "Architecture"),
+    ("20-behavior", "Behavior"),
+    ("30-interfaces", "Interfaces"),
+    ("40-constraints", "Constraints"),
+    ("50-verification", "Verification"),
+    ("decisions", "Decisions"),
+)
+PROCESS_CHAPTER_PRIORITY = (
+    ("meta/language.md", "Language"),
+    ("meta/process.md", "Process"),
+    ("meta/glossary.md", "Glossary"),
+    ("meta/architecture.md", "Meta architecture"),
+    ("meta/constraints.md", "Meta constraints"),
+)
+NDF_HTML_COMMENT_RE = re.compile(r"<!--\s*ndf:[^>]*-->\s*\n?", re.IGNORECASE)
 GATE_PHRASES = {
     "topic_review": "TOPIC已审核",
     "design_review": "DESIGN已审核",
@@ -332,8 +363,17 @@ def extract_seeds(
     topic: str | None,
     task: str,
     explicit: Iterable[str] = (),
+    *,
+    replace: bool = False,
 ) -> tuple[list[str], dict[str, list[str]]]:
-    """Extract traceable clause seeds from binder/proposals/ledger/defaults."""
+    """Extract traceable clause seeds from binder/proposals/ledger/defaults.
+
+    When ``replace`` is True (overlay recompile), only ``explicit`` seeds are
+    used — topic/defaults are not re-unioned (META-023 overlay ≠ SoT).
+    """
+    if replace:
+        seeds = _unique(explicit)
+        return seeds, {"explicit": list(seeds), "overlay_replace": list(seeds)}
     sources: dict[str, list[str]] = {
         "topic": [],
         "proposals": [],
@@ -881,12 +921,15 @@ def compile_plan(
     node_budget: int = 80,
     byte_budget: int = 256_000,
     include_bodies: bool = True,
+    seed_replace: bool = False,
 ) -> dict[str, Any]:
     root = root.resolve()
     repo_head = _git(root, "rev-parse", "HEAD")
     paths = binder_paths(root, topic)
     records = _file_records(paths, root)
-    seeds, seed_sources = extract_seeds(root, topic, task, seed_ids)
+    seeds, seed_sources = extract_seeds(
+        root, topic, task, seed_ids, replace=seed_replace
+    )
     meta_only = role == "project-control" or task in PROCESS_TASKS or track == "process"
     graph = _load_graph(root, meta_only)
     closure = graph_closure(
@@ -1862,6 +1905,709 @@ def _record_replay(
     return {"episode_id": episode_id, "blob_sha": blob_sha, "event_sha": event["event_sha"]}
 
 
+def _load_overlay(path: str | Path, *, root: Path) -> dict[str, Any]:
+    data = _load_json(str(path), root=root)
+    if not isinstance(data, dict):
+        raise ValueError("overlay must be a JSON object")
+    return data
+
+
+def apply_overlay_to_seeds(
+    base_seeds: Iterable[str],
+    overlay: Mapping[str, Any],
+) -> list[str]:
+    """Merge overlay seed edits. Overlay is NOT clause SoT."""
+    seeds = list(_unique(base_seeds))
+    remove = set(overlay.get("remove_seeds") or [])
+    seeds = [s for s in seeds if s not in remove]
+    for sid in overlay.get("add_seeds") or []:
+        if sid and sid not in seeds:
+            seeds.append(str(sid))
+    # Temporary depends-on targets become extra seeds so they enter closure.
+    temp = overlay.get("temp_depends_on") or {}
+    if isinstance(temp, Mapping):
+        for src, targets in temp.items():
+            if src and src not in seeds and src not in remove:
+                seeds.append(str(src))
+            for t in targets or []:
+                if t and t not in seeds and t not in remove:
+                    seeds.append(str(t))
+    exclude = set(overlay.get("exclude_nodes") or [])
+    return [s for s in seeds if s not in exclude]
+
+
+def filter_plan_excluded_nodes(
+    plan: Mapping[str, Any],
+    exclude: Iterable[str],
+) -> dict[str, Any]:
+    """Drop excluded nodes from a plan copy (view / post-overlay)."""
+    ban = set(exclude)
+    if not ban:
+        return dict(plan)
+    out = json.loads(json.dumps(plan))
+    graph = out.get("graph") or {}
+    nodes = [n for n in (graph.get("nodes") or []) if n.get("id") not in ban]
+    kept = {n["id"] for n in nodes}
+    for node in nodes:
+        edges = node.get("edges") or {}
+        node["edges"] = {
+            k: [t for t in (v or []) if t in kept]
+            for k, v in edges.items()
+        }
+    graph["nodes"] = nodes
+    graph["blockers"] = [
+        b
+        for b in (graph.get("blockers") or [])
+        if not (
+            isinstance(b, Mapping)
+            and (b.get("id") in ban or b.get("from") in ban or b.get("to") in ban)
+        )
+    ]
+    out["graph"] = graph
+    out["seed_ids"] = [s for s in (out.get("seed_ids") or []) if s not in ban]
+    out["plan_sha"] = canonical_json_sha(
+        {k: v for k, v in out.items() if k != "plan_sha"}
+    )
+    return out
+
+
+def strip_ndf_html_comments(text: str) -> str:
+    """Drop ``<!-- ndf: … -->`` metadata; keep human prose and {#ID} titles."""
+    cleaned = NDF_HTML_COMMENT_RE.sub("\n", text)
+    cleaned = re.sub(r"\n{3,}", "\n\n", cleaned)
+    return cleaned.strip() + ("\n" if cleaned.strip() else "")
+
+
+def classify_spec_path(rel_file: str) -> tuple[str, str] | None:
+    """Map ``spec/...`` relative path to (chapter_key, human title) or None."""
+    path = rel_file.replace("\\", "/")
+    if path.startswith("spec/"):
+        path = path[len("spec/") :]
+    for key, title in PRODUCT_CHAPTERS:
+        if path.startswith(key + "/") or path == key:
+            return key, title
+    for key, title in PROCESS_CHAPTER_PRIORITY:
+        if path == key:
+            return key, title
+    if path.startswith("meta/open/"):
+        return "meta/open", "Process proposal"
+    if path.startswith("meta/decisions/"):
+        return "meta/decisions", "Meta decisions"
+    if path.startswith("meta/"):
+        first = path[len("meta/") :].split("/", 1)[0]
+        return f"meta/{first}", "Meta"
+    return None
+
+
+def _is_process_track(plan: Mapping[str, Any]) -> bool:
+    track = str(plan.get("track") or "")
+    task = str(plan.get("task") or "")
+    role = str(plan.get("role") or "")
+    return (
+        track == "process"
+        or task in PROCESS_TASKS
+        or role == "project-control"
+    )
+
+
+def _node_plane(file_path: str) -> str:
+    """Return ``product`` | ``process`` | ``other`` for a node file path."""
+    path = file_path.replace("\\", "/")
+    if path.startswith("spec/"):
+        path = path[len("spec/") :]
+    if path.startswith("meta/"):
+        return "process"
+    if any(
+        path.startswith(k + "/") or path == k
+        for k, _ in PRODUCT_CHAPTERS
+    ):
+        return "product"
+    return "other"
+
+
+def _fallback_from_first_heading(text: str) -> str:
+    match = re.search(r"(?m)^##\s+", text)
+    if not match:
+        return text.strip() + "\n"
+    return text[match.start() :].rstrip() + "\n"
+
+
+def binder_slice_text(
+    path: Path,
+    *,
+    root: Path,
+    slice_id: str,
+) -> tuple[str, bool]:
+    """Return (prose, used_gate_slice). Fallback = first ## to EOF."""
+    if not path.is_file():
+        return "", False
+    parsed = ndf_gate_slices.parse_review_slices(path, root=root)
+    rec = (parsed.get("slices") or {}).get(slice_id)
+    if isinstance(rec, Mapping) and rec.get("content_bytes") is not None:
+        raw = rec["content_bytes"]
+        text = raw.decode("utf-8") if isinstance(raw, (bytes, bytearray)) else str(raw)
+        return text.rstrip() + "\n", True
+    return _fallback_from_first_heading(_read(path)), False
+
+
+def _human_truncation_notes(
+    nodes: list[Mapping[str, Any]],
+    truncated: Iterable[str],
+    *,
+    process_mode: bool,
+) -> list[str]:
+    reasons = list(truncated)
+    if not reasons:
+        return []
+    notes: list[str] = []
+    reason_set = set(reasons)
+    if "depth" in reason_set:
+        notes.append(
+            "部分依赖因遍历 depth 预算未编入主文（见附录 truncated）。"
+        )
+    if "node_budget" in reason_set:
+        notes.append("闭包触及节点数预算，部分条款未编入。")
+    if "byte_budget" in reason_set:
+        notes.append("闭包触及字节预算，部分条款正文未展开。")
+    # Hint chapters that look thin relative to product tree.
+    by_chapter: dict[str, int] = {}
+    for node in nodes:
+        plane = _node_plane(str(node.get("file") or ""))
+        if process_mode and plane != "process":
+            continue
+        if not process_mode and plane != "product":
+            continue
+        classified = classify_spec_path(str(node.get("file") or ""))
+        if classified:
+            by_chapter[classified[1]] = by_chapter.get(classified[1], 0) + 1
+    if "depth" in reason_set and by_chapter:
+        thin = [title for title, n in by_chapter.items() if n <= 2]
+        if thin:
+            notes.append(
+                "可能因 depth 截断而偏短的章：" + "、".join(thin) + "。"
+            )
+    return notes
+
+
+SEED_SOURCE_LABEL = {
+    "topic": "主题装订",
+    "proposals": "提案",
+    "commits": "ledger",
+    "task_defaults": "任务默认",
+    "explicit": "点名",
+    "overlay_replace": "overlay",
+}
+
+
+def invert_seed_sources(sources: Mapping[str, Any] | None) -> dict[str, list[str]]:
+    out: dict[str, list[str]] = {}
+    if not isinstance(sources, Mapping):
+        return out
+    for cat, ids in sources.items():
+        if not isinstance(ids, (list, tuple)):
+            continue
+        for sid in ids:
+            out.setdefault(str(sid), []).append(str(cat))
+    return out
+
+
+def why_in_pack(
+    cid: str,
+    *,
+    seeds: Iterable[str],
+    seed_sources: Mapping[str, list[str]],
+    nodes: Iterable[Mapping[str, Any]],
+) -> str:
+    """One human phrase: seed vs pulled-by which edge."""
+    seed_set = set(seeds)
+    if cid in seed_set:
+        cats = seed_sources.get(cid) or []
+        labels = [SEED_SOURCE_LABEL.get(c, c) for c in cats]
+        if labels:
+            return "种子（" + "、".join(labels) + "）"
+        return "种子"
+    pullers: list[str] = []
+    for node in nodes:
+        nid = str(node.get("id") or "")
+        if not nid or nid == cid:
+            continue
+        edges = node.get("edges") or {}
+        for rel in ("depends-on", "refines", "verifies"):
+            if cid in (edges.get(rel) or []):
+                pullers.append(f"`{nid}` 的 {rel}")
+    if pullers:
+        shown = pullers[:3]
+        extra = f" 等{len(pullers)}处" if len(pullers) > 3 else ""
+        return "因 " + "；".join(shown) + extra
+    return "闭包"
+
+
+def clause_provenance_line(
+    node: Mapping[str, Any],
+    *,
+    seeds: Iterable[str],
+    seed_sources: Mapping[str, list[str]],
+    nodes: Iterable[Mapping[str, Any]],
+) -> str:
+    cid = str(node.get("id") or "")
+    path = str(node.get("file") or "").replace("\\", "/")
+    line_no = node.get("line")
+    loc = (
+        f"`{path}:{line_no}`"
+        if path and line_no
+        else (f"`{path}`" if path else "（路径未知）")
+    )
+    status = str(node.get("status") or "").strip()
+    status_bit = f" · {status}" if status else ""
+    why = why_in_pack(
+        cid, seeds=seeds, seed_sources=seed_sources, nodes=nodes
+    )
+    return f"> 源：{loc}{status_bit} · {why}"
+
+
+def attach_provenance(body: str, cite: str) -> str:
+    """Insert citation immediately after the clause heading."""
+    lines = body.splitlines()
+    if not lines:
+        return cite + "\n"
+    head = lines[0]
+    rest = "\n".join(lines[1:]).lstrip("\n")
+    if rest:
+        return f"{head}\n\n{cite}\n\n{rest}\n"
+    return f"{head}\n\n{cite}\n"
+
+
+def _emit_clause_block(
+    node: Mapping[str, Any],
+    body: str | None,
+    *,
+    seeds: Iterable[str],
+    seed_sources: Mapping[str, list[str]],
+    nodes: Iterable[Mapping[str, Any]],
+) -> list[str]:
+    cid = str(node.get("id") or "")
+    cite = clause_provenance_line(
+        node, seeds=seeds, seed_sources=seed_sources, nodes=nodes
+    )
+    if not body:
+        title = node.get("title") or cid
+        return [
+            f"### {title} {{#{cid}}}",
+            "",
+            cite,
+            "",
+            "_(条款正文不可用)_",
+            "",
+        ]
+    return [attach_provenance(body.rstrip() + "\n", cite).rstrip(), ""]
+
+
+def _chapter_sort_key_process(file_path: str) -> tuple[int, str, int]:
+    path = file_path.replace("\\", "/")
+    if path.startswith("spec/"):
+        path = path[len("spec/") :]
+    for index, (key, _) in enumerate(PROCESS_CHAPTER_PRIORITY):
+        if path == key:
+            return (index, path, 0)
+    if path.startswith("meta/decisions/"):
+        return (50, path, 0)
+    if path.startswith("meta/open/"):
+        return (90, path, 0)
+    if path.startswith("meta/"):
+        return (40, path, 0)
+    return (99, path, 0)
+
+
+def render_layered_prose(
+    plan: Mapping[str, Any],
+    *,
+    root: Path,
+) -> tuple[list[str], list[dict[str, str]]]:
+    """Build main-body chapter lines + cross-plane appendix rows."""
+    process_mode = _is_process_track(plan)
+    graph = plan.get("graph") or {}
+    nodes = list(graph.get("nodes") or [])
+    seeds = list(plan.get("seed_ids") or [])
+    seed_sources = invert_seed_sources(plan.get("seed_sources"))
+    # Always load full graph for bodies; plane filter decides what enters main text.
+    full_graph = _load_graph(root, False)
+    bodies: dict[str, str] = {}
+    for node in nodes:
+        cid = str(node.get("id") or "")
+        clause = full_graph.get(cid)
+        if clause is None:
+            continue
+        bodies[cid] = strip_ndf_html_comments(_clause_text(clause, root))
+
+    cross_plane: list[dict[str, str]] = []
+    main_nodes: list[Mapping[str, Any]] = []
+    for node in nodes:
+        file_path = str(node.get("file") or "")
+        plane = _node_plane(file_path)
+        if process_mode:
+            if plane != "process":
+                cross_plane.append(
+                    {
+                        "id": str(node.get("id") or ""),
+                        "title": str(node.get("title") or ""),
+                        "file": file_path,
+                        "why": "cross-plane product",
+                    }
+                )
+                continue
+        else:
+            if plane != "product":
+                cross_plane.append(
+                    {
+                        "id": str(node.get("id") or ""),
+                        "title": str(node.get("title") or ""),
+                        "file": file_path,
+                        "why": "cross-plane process",
+                    }
+                )
+                continue
+        main_nodes.append(node)
+
+    lines: list[str] = []
+    if process_mode:
+        # Group by file, ordered by process priority.
+        by_file: dict[str, list[Mapping[str, Any]]] = {}
+        for node in main_nodes:
+            rel = str(node.get("file") or "").replace("\\", "/")
+            if rel.startswith("spec/"):
+                rel = rel[len("spec/") :]
+            by_file.setdefault(rel, []).append(node)
+        ordered_files = sorted(by_file.keys(), key=_chapter_sort_key_process)
+        for rel in ordered_files:
+            classified = classify_spec_path("spec/" + rel)
+            title = classified[1] if classified else rel
+            lines.extend([f"## {title}", ""])
+            file_nodes = sorted(
+                by_file[rel],
+                key=lambda n: (int(n.get("line") or 0), str(n.get("id") or "")),
+            )
+            for node in file_nodes:
+                cid = str(node.get("id") or "")
+                lines.extend(
+                    _emit_clause_block(
+                        node,
+                        bodies.get(cid),
+                        seeds=seeds,
+                        seed_sources=seed_sources,
+                        nodes=nodes,
+                    )
+                )
+    else:
+        for key, title in PRODUCT_CHAPTERS:
+            chapter_nodes = [
+                n
+                for n in main_nodes
+                if (classify_spec_path(str(n.get("file") or "")) or ("", ""))[0] == key
+            ]
+            if not chapter_nodes:
+                continue
+            chapter_nodes.sort(
+                key=lambda n: (
+                    str(n.get("file") or ""),
+                    int(n.get("line") or 0),
+                    str(n.get("id") or ""),
+                )
+            )
+            lines.extend([f"## {title}", ""])
+            for node in chapter_nodes:
+                cid = str(node.get("id") or "")
+                lines.extend(
+                    _emit_clause_block(
+                        node,
+                        bodies.get(cid),
+                        seeds=seeds,
+                        seed_sources=seed_sources,
+                        nodes=nodes,
+                    )
+                )
+
+    # POC binder stack
+    topic = plan.get("topic")
+    if topic and not process_mode:
+        ndf_dir = root / "poc" / str(topic) / "ndf"
+        measurement = str(plan.get("task") or "") in MEASUREMENT_TASKS
+        binder_blocks: list[str] = []
+        for filename, slice_id, label in BINDER_PROSE_SLICES:
+            path = ndf_dir / filename
+            if not path.is_file():
+                continue
+            text, used_slice = binder_slice_text(path, root=root, slice_id=slice_id)
+            if filename == "PERF_BASELINE.md" and not measurement:
+                text = _sanitize_perf(text)
+            text = strip_ndf_html_comments(text)
+            rel = _rel(path, root)
+            slice_note = (
+                f"切片 `{slice_id}`"
+                if used_slice
+                else "无 gate-slice，已用全文（自第一个 `##`）"
+            )
+            cite = f"> 源：`{rel}` · {slice_note}"
+            binder_blocks.append(
+                f"### {label}\n\n{cite}\n\n{text.rstrip()}\n"
+            )
+        if binder_blocks:
+            lines.extend(
+                [
+                    f"## 本主题装订（`poc/{topic}/ndf`）",
+                    "",
+                    *binder_blocks,
+                ]
+            )
+    elif topic and process_mode:
+        # process with topic: still MAY show binder as secondary — plan says no POC
+        # chapter without product track. Skip.
+        pass
+
+    return lines, cross_plane
+
+
+def render_pack_view_markdown(
+    plan: Mapping[str, Any],
+    *,
+    root: Path | None = None,
+    hop: str | None = None,
+    overlay: Mapping[str, Any] | None = None,
+    promote: Mapping[str, Any] | None = None,
+) -> str:
+    """Human-readable layered prose (META-024). Graph tables are appendix-only."""
+    repo = (
+        root
+        or Path((plan.get("workspace") or {}).get("repo_root") or ROOT)
+    ).resolve()
+    process_mode = _is_process_track(plan)
+    graph = plan.get("graph") or {}
+    nodes = list(graph.get("nodes") or [])
+    seeds = list(plan.get("seed_ids") or [])
+    seed_set = set(seeds)
+    title_by_id = {
+        str(n.get("id")): str(n.get("title") or n.get("id") or "")
+        for n in nodes
+        if n.get("id")
+    }
+    priv = plan.get("privileges") or {}
+    writes = priv.get("allowed_write_roots") or []
+    forb = priv.get("forbidden_write_paths") or []
+    hop_s = hop or (overlay or {}).get("hop") or ""
+    topic = plan.get("topic") or ""
+    track = plan.get("track") or ""
+    task = plan.get("task") or ""
+
+    seed_titles = [
+        f"{title_by_id.get(sid, sid)}（`{sid}`）" if title_by_id.get(sid) else f"`{sid}`"
+        for sid in seeds
+    ]
+    trunc_notes = _human_truncation_notes(
+        nodes,
+        graph.get("truncated") or [],
+        process_mode=process_mode,
+    )
+
+    lines: list[str] = [
+        "# NDF pack view（人审）",
+        "",
+        "> schema: ndf-pack-view/v2 · [[META-024]] · 主文=分层散文；附录=机器校对 · 非 SoT",
+        "",
+        "## 前言",
+        "",
+        f"这次任务：track=`{track}`，task=`{task}`"
+        + (f"，hop=`{hop_s}`" if hop_s else "")
+        + (f"，topic=`{topic}`" if topic else "")
+        + ("（process 平面）" if process_mode else "（产品平面）")
+        + "。",
+        "",
+        f"允许写：{', '.join(f'`{w}`' for w in writes) or '（无）'}。"
+        f" 禁止写：{', '.join(f'`{w}`' for w in forb) or '（无）'}。",
+        "",
+        "闭包种子："
+        + ("；".join(seed_titles) if seed_titles else "（无）")
+        + "。",
+        "",
+    ]
+    if trunc_notes:
+        for note in trunc_notes:
+            lines.append(note)
+        lines.append("")
+
+    promo = promote or (overlay or {}).get("promote")
+    if track in {"promote", "partial"} or promo or (hop_s and "promote" in str(hop_s)):
+        lines.append("### Promote")
+        lines.append("")
+        if isinstance(promo, Mapping):
+            d2s = promo.get("draft_to_stable") or []
+            roots = promo.get("trunk_write_roots") or writes
+            promotes = promo.get("promotes") or topic or ""
+            lines.append(
+                f"拟 draft→stable：{', '.join(f'`{x}`' for x in d2s) or '（见提案）'}。"
+            )
+            lines.append(
+                f"Trunk 写根：{', '.join(f'`{r}`' for r in roots) or '（无）'}。"
+            )
+            lines.append(f"Promotes：`{promotes}`。")
+        else:
+            lines.append("（可在 overlay.promote 中声明 draft→stable / Promotes）")
+        lines.append("")
+
+    prose_lines, cross_plane = render_layered_prose(plan, root=repo)
+    lines.extend(prose_lines)
+
+    # ----- Appendix (machine) -----
+    lines.extend(
+        [
+            "---",
+            "",
+            "## 附录（机器校对，非人审主文）",
+            "",
+            f"- plan_sha: `{(plan.get('plan_sha') or '')}`",
+            f"- repo_head: `{(plan.get('workspace') or {}).get('repo_head') or ''}`",
+            f"- role: `{plan.get('role') or ''}`",
+            "",
+            "### Seeds",
+            "",
+        ]
+    )
+    sources = plan.get("seed_sources") or {}
+    id_sources: dict[str, list[str]] = {}
+    if isinstance(sources, Mapping):
+        for cat, ids in sources.items():
+            if not isinstance(ids, (list, tuple)):
+                continue
+            for sid in ids:
+                id_sources.setdefault(str(sid), []).append(str(cat))
+    if not seeds:
+        lines.append("_(empty)_")
+    else:
+        lines.append("| id | source |")
+        lines.append("|----|--------|")
+        for sid in seeds:
+            lines.append(f"| `{sid}` | {','.join(id_sources.get(sid, []))} |")
+    lines.extend(["", "### Graph closure", ""])
+    if not nodes:
+        lines.append("_(no nodes)_")
+    else:
+        lines.append("| id | depends-on | refines | why |")
+        lines.append("|----|------------|---------|-----|")
+        for node in nodes:
+            cid = node.get("id") or ""
+            edges = node.get("edges") or {}
+            dep = ", ".join(f"`{t}`" for t in (edges.get("depends-on") or [])[:8])
+            ref = ", ".join(f"`{t}`" for t in (edges.get("refines") or [])[:4])
+            why = "seed" if cid in seed_set else "closure"
+            lines.append(f"| `{cid}` | {dep} | {ref} | {why} |")
+    trunc = graph.get("truncated") or []
+    blockers = graph.get("blockers") or []
+    lines.extend(
+        [
+            "",
+            f"- truncated: {', '.join(trunc) if trunc else '(none)'}",
+            f"- graph blockers: {len(blockers)}",
+            "",
+            "### Cross-plane (titles only)",
+            "",
+        ]
+    )
+    if not cross_plane:
+        lines.append("_(none)_")
+    else:
+        lines.append("| id | title | why |")
+        lines.append("|----|-------|-----|")
+        for row in cross_plane:
+            lines.append(
+                f"| `{row['id']}` | {row.get('title') or ''} | {row.get('why') or ''} |"
+            )
+    lines.extend(["", "### Ordered reads", ""])
+    reads = plan.get("ordered_reads") or []
+    if not reads:
+        lines.append("_(none)_")
+    else:
+        for item in reads[:40]:
+            if isinstance(item, Mapping):
+                lines.append(f"- `{item.get('path')}`")
+            else:
+                lines.append(f"- `{item}`")
+    if overlay:
+        lines.extend(
+            [
+                "",
+                "### Overlay (not SoT)",
+                "",
+                "```json",
+                json.dumps(dict(overlay), ensure_ascii=False, indent=2),
+                "```",
+            ]
+        )
+        temp = overlay.get("temp_depends_on") or {}
+        if temp:
+            lines.extend(["", "#### Temporary depends-on (overlay only)", ""])
+            for src, targets in temp.items():
+                lines.append(
+                    f"- `{src}` → {', '.join(f'`{t}`' for t in (targets or []))}"
+                )
+    lines.append("")
+    return "\n".join(lines)
+
+
+def build_pack_view(
+    *,
+    root: Path = ROOT,
+    topic: str | None,
+    role: str,
+    task: str,
+    track: str,
+    seed_ids: Iterable[str] = (),
+    hop: str | None = None,
+    overlay: Mapping[str, Any] | None = None,
+    depth: int = 2,
+    node_budget: int = 80,
+    byte_budget: int = 256_000,
+) -> tuple[dict[str, Any], str]:
+    """Compile plan (optional overlay) and return (plan, layered prose markdown)."""
+    overlay = dict(overlay or {})
+    base_seeds = list(seed_ids)
+    plan = compile_plan(
+        root=root,
+        topic=topic,
+        role=role,
+        task=task,
+        track=track,
+        seed_ids=base_seeds,
+        depth=depth,
+        node_budget=node_budget,
+        byte_budget=byte_budget,
+        include_bodies=False,
+    )
+    if overlay:
+        seeds = apply_overlay_to_seeds(plan.get("seed_ids") or [], overlay)
+        plan = compile_plan(
+            root=root,
+            topic=topic,
+            role=role,
+            task=task,
+            track=track,
+            seed_ids=seeds,
+            depth=depth,
+            node_budget=node_budget,
+            byte_budget=byte_budget,
+            include_bodies=False,
+            seed_replace=True,
+        )
+        exclude = overlay.get("exclude_nodes") or []
+        if exclude:
+            plan = filter_plan_excluded_nodes(plan, exclude)
+    md = render_pack_view_markdown(
+        plan,
+        root=root,
+        hop=hop or overlay.get("hop"),
+        overlay=overlay or None,
+        promote=overlay.get("promote") if isinstance(overlay.get("promote"), Mapping) else None,
+    )
+    return plan, md
+
+
 def _emit(value: Any, report: str | None, root: Path) -> None:
     text = value if isinstance(value, str) else json.dumps(value, ensure_ascii=False, indent=2) + "\n"
     if report:
@@ -1919,6 +2665,48 @@ def main(argv: list[str] | None = None) -> int:
     verify_parser.add_argument("--strict", action="store_true")
     verify_parser.add_argument("--episode")
     verify_parser.add_argument("--json", action="store_true")
+    view_parser = sub.add_parser(
+        "pack-view",
+        help="Human-readable packed context dump (META-023); writes Markdown under tmp/",
+    )
+    view_parser.add_argument("--topic")
+    view_parser.add_argument("--role", required=True, choices=tuple(PRIVILEGES))
+    view_parser.add_argument("--task", required=True)
+    view_parser.add_argument("--track", required=True)
+    view_parser.add_argument("--hop", default="")
+    view_parser.add_argument("--seed-ids", nargs="*", default=[])
+    view_parser.add_argument("--overlay", help="Optional overlay JSON path")
+    view_parser.add_argument("--depth", type=int, default=2)
+    view_parser.add_argument("--node-budget", type=int, default=80)
+    view_parser.add_argument("--byte-budget", type=int, default=256_000)
+    view_parser.add_argument(
+        "--report",
+        default="tmp/ndf-pack-view.md",
+        help="Markdown report path (must be under tmp/)",
+    )
+    view_parser.add_argument(
+        "--plan-report",
+        default="",
+        help="Optional JSON plan dump path under tmp/",
+    )
+    view_parser.add_argument("--json", action="store_true", help="Also print plan JSON to stdout")
+    overlay_parser = sub.add_parser(
+        "overlay-apply",
+        help="Apply overlay (add/remove seeds, exclude, temp depends-on), recompile, dump view",
+    )
+    overlay_parser.add_argument("--overlay", required=True, help="Overlay JSON path")
+    overlay_parser.add_argument("--topic")
+    overlay_parser.add_argument("--role", required=True, choices=tuple(PRIVILEGES))
+    overlay_parser.add_argument("--task", required=True)
+    overlay_parser.add_argument("--track", required=True)
+    overlay_parser.add_argument("--hop", default="")
+    overlay_parser.add_argument("--seed-ids", nargs="*", default=[])
+    overlay_parser.add_argument("--depth", type=int, default=2)
+    overlay_parser.add_argument("--node-budget", type=int, default=80)
+    overlay_parser.add_argument("--byte-budget", type=int, default=256_000)
+    overlay_parser.add_argument("--report", default="tmp/ndf-pack-view-overlay.md")
+    overlay_parser.add_argument("--plan-report", default="tmp/ndf-pack-view-overlay-plan.json")
+    overlay_parser.add_argument("--json", action="store_true")
     args = parser.parse_args(argv)
     root = Path(args.root).resolve()
     try:
@@ -1977,6 +2765,32 @@ def main(argv: list[str] | None = None) -> int:
                 payload=payload,
             )
             _emit(payload, args.report, root)
+            return 0
+        if args.command in {"pack-view", "overlay-apply"}:
+            overlay: dict[str, Any] = {}
+            if getattr(args, "overlay", None):
+                overlay = _load_overlay(args.overlay, root=root)
+            if args.command == "overlay-apply" and not overlay:
+                raise ValueError("overlay-apply requires a non-empty overlay JSON object")
+            hop = args.hop or overlay.get("hop") or None
+            plan, md = build_pack_view(
+                root=root,
+                topic=args.topic,
+                role=args.role,
+                task=args.task,
+                track=args.track,
+                seed_ids=args.seed_ids,
+                hop=hop,
+                overlay=overlay or None,
+                depth=args.depth,
+                node_budget=args.node_budget,
+                byte_budget=args.byte_budget,
+            )
+            _emit(md, args.report, root)
+            if args.plan_report:
+                _emit(plan, args.plan_report, root)
+            if args.json:
+                print(json.dumps(plan, ensure_ascii=False, indent=2))
             return 0
         plan = _load_json(args.plan, root=root)
         if args.command == "context-expand":

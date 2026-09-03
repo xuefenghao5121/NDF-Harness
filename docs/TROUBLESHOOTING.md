@@ -83,6 +83,22 @@ Implementation session so Control sticky context cannot pollute implement hops.
 **Prevent:** keep `ndf_context.py` receipts including `bundle_dispatch`; do not add
 `episode_id` back to `isolated_lease_missing_fields`.
 
+## `human_pack_view_missing` on POC `--send`
+
+**Symptoms:** `dispatch-send` / `poc-dispatch --send` blocked after binder 「已审核」;
+blocker `human_pack_view_missing`.
+
+**Fix:**
+
+1. Command MUST run `ndf_context.py pack-view` (or `build_pack_view`) and write
+   `tmp/ndf-pack-view-<topic>.md` with schema `ndf-pack-view/v2` ([[META-024]])
+2. Pack MUST set `pack_view_path` and align `plan_sha` before send ([[META-025]])
+3. Human MUST read the layered prose and say 「派发」; chat alone does not substitute
+   pack-view on disk
+
+**Prevent:** do not `--send` at pack-build time; lease opens only on human 「派发」
+after pack-view exists.
+
 ## Live completion false success
 
 **Symptoms:** `dispatch-send` returns succeeded immediately; receipt hop/task mismatches

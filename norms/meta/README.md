@@ -22,7 +22,7 @@
 | 读什么 | 路径 |
 |--------|------|
 | **NDF 语言 SoT** | [`language.md`](language.md)（[[META-001]]…[[META-005]]、[[META-008]] 工作空间视角；性能 SLA↔旋钮图依赖 / `trunk-ref` 见 [[META-005]]） |
-| 流程纪律 | [`process.md`](process.md)（[[CHR-008]]、[[BEH-018]]…[[BEH-020]]、[[BEH-025]]、[[META-006]]、[[META-007]]、[[META-009]]…[[META-012]]、[[META-014]]、[[META-016]]…[[META-022]]；[[META-013]]/[[META-015]] deprecated） |
+| 流程纪律 | [`process.md`](process.md)（[[CHR-008]]、[[BEH-018]]…[[BEH-020]]、[[BEH-025]]、[[META-006]]、[[META-007]]、[[META-009]]…[[META-012]]、[[META-014]]、[[META-016]]…[[META-020]]、[[META-022]]…[[META-024]]；[[META-013]]/[[META-015]] deprecated） |
 | 目录边界 | [`architecture.md`](architecture.md)（[[ARCH-008]]） |
 | POC↔SLA | [`constraints.md`](constraints.md)（[[CON-POC-001]]） |
 | 术语 | [`glossary.md`](glossary.md)（[[DEF-020]]…[[DEF-023]]、[[DEF-META-ID-NS]]、DEF-NDF-*） |
@@ -31,7 +31,7 @@
 | 卫生 ADR | [`decisions/`](decisions/)（[[ADR-META-001]]、[[ADR-META-002]]、[[ADR-META-003]]、[[ADR-META-004]]…） |
 | 流程提案 | [`open/proposal-meta-*.md`](open/)（及迁入的装订器提案） |
 | 审核 harness 命令 | [`tools/README.md`](tools/README.md) |
-| **文字优先工作流 / Genesis** | [`.cursor/skills/ndf-workflow/`](../../.cursor/skills/ndf-workflow/)（初始化 / Idea / 派发 / 继续 / 关闭）+ [[META-009]] Genesis；工具 [`tools/ndf_workflow_status.py`](tools/ndf_workflow_status.py)（`poc-dispatch` 等） |
+| **文字优先工作流 / Genesis** | [`.cursor/skills/ndf-workflow/`](../../.cursor/skills/ndf-workflow/)（口令快捷 + 分层人审散文 [[META-024]]）+ [[META-009]] Genesis；工具 [`tools/ndf_workflow_status.py`](tools/ndf_workflow_status.py)（`poc-dispatch` 等）· [`tools/ndf_context.py`](tools/ndf_context.py)（`pack-view` / `overlay-apply`） |
 | 卫生收口 r2 | [`open/proposal-meta-trunk-hygiene-r2.md`](open/proposal-meta-trunk-hygiene-r2.md) |
 
 ## 条款 ID 命名空间（[[ADR-META-002]]）

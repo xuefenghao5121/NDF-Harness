@@ -1,5 +1,29 @@
 # Changelog
 
+## 1.3.0 — 2026-09-03
+
+Distill **META-023**–**META-026** from consumer `megakernel-fft` (human NDF surfaces,
+layered pack-view, three-hop send gate, optional OpenEvolve POC search). **Retains**
+Harness **META-021** (OpenClaw task-first role map + session model pin).
+
+- **META-023**: Human-maintainable NDF surfaces — graph/pack observation, overlay
+  revise-deps; five gate phrases remain SHOULD shortcuts, not the only verbs.
+- **META-024**: Compiler layered prose `pack-view` / `overlay-apply` (`ndf-pack-view/v2`);
+  clause bodies + binder slices as main text; graph tables appendix-only.
+- **META-025**: POC text-first three-hop gate — 已确认 → 已审核 + pack-view → 派发;
+  `pack_view_send_blocker`; isolated lease deferred to `--send` (not pack build).
+- **META-026**: Optional OpenEvolve in POC binder contract (`openevolve.enabled`);
+  host config via `$XDG_CONFIG_HOME/openevolve/config.yaml`; no fourth role.
+- **Tools**: `ndf_context.py` (+pack-view/overlay), `ndf_poc_dispatch.py`,
+  `ndf_workflow_status.py`, `ndf_dispatch_send.py` (META-025 + retained META-021 pin),
+  `ndf_paths.py` (harness + installed consumer root detection).
+- **Tests**: `test_meta023_pack_view.py`, `test_meta025_dispatch.py`;
+  `tests/fixtures/pack-view-consumer/` minimal consumer tree; neutrality skips `tmp/`.
+- **Skill / AGENTS**: synced `skill/ndf-workflow/` + `workflow/AGENTS.md` (META-023–026
+  cognitive contract, 已审核 + pack-view before 派发).
+- **Norms**: `norms/meta/process.md` (META-023–026 + retained META-021); archived
+  landed process proposals under `norms/meta/open/`.
+
 ## 1.2.2 — 2026-08-30
 
 Distill **META-022** from consumer `megakernel-fft` (OpenClaw Control +

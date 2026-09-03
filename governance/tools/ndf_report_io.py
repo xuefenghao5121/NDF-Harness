@@ -9,7 +9,9 @@ from __future__ import annotations
 
 from pathlib import Path
 
-ROOT = Path(__file__).resolve().parents[3]
+from ndf_paths import detect_repo_root
+
+ROOT = detect_repo_root()
 SPEC = (ROOT / "spec").resolve()
 
 

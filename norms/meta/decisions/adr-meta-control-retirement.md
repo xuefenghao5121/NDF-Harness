@@ -17,10 +17,16 @@
    mixed 拆双案；ambiguous 先问人。
 3. **完整退役** Commander、ActionSpec、snapshot freshness、serve/SSE、Episode 运行链、
    Replay/Guest/button-action。历史 `.ndf/replay/` 只读考古，不参与成功合同。
-4. **唯一文字入口 skill** 编排初始化（Genesis G0–G3）、Idea、派发、继续、关闭；
-   内部模块对人类不可见。
+4. **唯一文字入口 skill** 编排初始化（Genesis G0–G3）、Idea、派发、继续、关闭，
+   以及图/pack 观察面（[[META-023]]）。内部 CLI **模块文件名**不必让人选 skill；
+   **图闭包与 packed 上下文对人可见、可修订**。「对人类不可见」仅指不必选
+   skill/CLI 子命令，不指依赖路径。五句口令是 SHOULD 快捷入口，MUST NOT 限制
+   人为只能说那五句。
 5. **supersedes** ADR-META-003 中「保留 Episode/Replay 为审计工具」的运行义务；
    ADR-META-003 的文字优先 POC 热路径与硬安全门仍然有效。
+
+**Amend (2026-08-31).** [[META-023]] / `proposal-meta-human-ndf-surfaces`：纠正第 4
+点过冲——减法不等于把 NDF 定义面藏进 Agent pack。
 
 **Alternatives rejected.**
 
@@ -29,8 +35,10 @@
 | 继续只读 Commander + 降级 Replay | 仍强迫人理解投影与回放状态 |
 | 取消全部人工门禁 | 会回到「文件存在=已批准」 |
 | 保留 ActionSpec 作文字路由表 | 与按钮目录同源，继续制造假依赖 |
+| 把 Compiler/图完全藏进 Agent | 违反三栖纪律；人无法维护 depends-on 或理解依赖路径 |
 
 **Source.** `spec/meta/open/proposal-meta-idea-routing-control-retirement.md`；
-人工确认实现指令 2026-08-24。
+人工确认实现指令 2026-08-24；薄订 `proposal-meta-human-ndf-surfaces` 2026-08-31。
 
-> rationale: 大道至简。控制面不得反客为主；分流写根，删除仪式，保留安全内核。
+> rationale: 大道至简。控制面不得反客为主；分流写根，删除仪式，保留安全内核；
+> 人仍能看见并修订 NDF 图与 packed 闭包。

@@ -7,7 +7,22 @@ import unittest
 from pathlib import Path
 
 TOOLS = Path(__file__).resolve().parent
-ROOT = Path(__file__).resolve().parents[2]
+
+
+def _repo_root() -> Path:
+    from ndf_paths import detect_repo_root
+
+    return detect_repo_root(TOOLS)
+
+
+ROOT = _repo_root()
+
+
+def _process_md() -> Path:
+    for cand in (ROOT / "norms" / "meta" / "process.md", ROOT / "spec" / "meta" / "process.md"):
+        if cand.is_file():
+            return cand
+    raise FileNotFoundError("process.md not found under norms/meta or spec/meta")
 
 
 def _load(name: str):
@@ -39,7 +54,7 @@ def _bundle_receipt(**extra) -> dict:
 
 class Meta019Dispatch(unittest.TestCase):
     def test_process_md_defines_clause(self) -> None:
-        text = (ROOT / "norms" / "meta" / "process.md").read_text(encoding="utf-8")
+        text = _process_md().read_text(encoding="utf-8")
         self.assertIn("{#META-019}", text)
         self.assertIn("lease_pack_incomplete", text)
         self.assertIn("{#META-017}", text)

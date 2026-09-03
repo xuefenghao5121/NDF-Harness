@@ -14,8 +14,9 @@ import re
 from pathlib import Path
 from typing import Any, Iterable, Mapping
 
-ROOT = Path(__file__).resolve().parents[3]
+from ndf_paths import detect_repo_root
 
+ROOT = detect_repo_root()
 GATE_SNAPSHOT_SCHEMA = "ndf-gate-slice-snapshot/v1"
 GATE_DRIFT_SCHEMA = "ndf-gate-drift-explain/v1"
 

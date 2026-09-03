@@ -26,7 +26,12 @@ from pathlib import Path
 from typing import Any, Mapping
 
 TOOLS = Path(__file__).resolve().parent
-ROOT = TOOLS.parents[2]
+
+
+from ndf_paths import detect_repo_root as _detect_repo_root
+
+
+ROOT = _detect_repo_root(TOOLS)
 DISPATCH_LAST = ROOT / "tmp" / "ndf-dispatch-last.json"
 DEFAULT_TIMEOUT_SEC = 900
 DEFAULT_OPENCLAW_PING_SEC = 60
@@ -216,7 +221,49 @@ def _pack_preflight_blockers(
         if budget.get("over_budget"):
             if "acp_context_over_budget" not in blockers:
                 blockers.append("acp_context_over_budget")
+    view_blocker = pack_view_send_blocker(pack)
+    if view_blocker and view_blocker not in blockers:
+        blockers.append(view_blocker)
     return blockers
+
+
+PACK_VIEW_REQUIRED_TASKS = frozenset(
+    {
+        "poc_implementation",
+        "poc_measurement",
+        "implement",
+        "poc_prepare_baseline",
+    }
+)
+
+
+def pack_view_send_blocker(pack: Mapping[str, Any]) -> str | None:
+    """META-025: POC Implementation send requires a v2 pack-view on disk."""
+    track = str(pack.get("track") or "")
+    task = str(pack.get("task") or "")
+    if track != "poc" and task not in PACK_VIEW_REQUIRED_TASKS:
+        return None
+    topic = str(pack.get("topic") or "").strip()
+    declared = _normalize_relpath(str(pack.get("pack_view_path") or ""))
+    candidates: list[Path] = []
+    if declared:
+        candidates.append(ROOT / declared)
+    if topic:
+        candidates.append(ROOT / "tmp" / f"ndf-pack-view-{topic}.md")
+    plan_sha = str(pack.get("plan_sha") or "").strip()
+    for path in candidates:
+        try:
+            if not path.is_file():
+                continue
+            text = path.read_text(encoding="utf-8")
+        except OSError:
+            continue
+        if "ndf-pack-view/v2" not in text:
+            continue
+        if plan_sha and plan_sha not in text:
+            continue
+        return None
+    return "human_pack_view_missing"
 
 
 def _command_flag(command: str, name: str) -> str:
@@ -330,6 +377,13 @@ def _slim_pack_for_acp_worker(pack: Mapping[str, Any]) -> dict[str, Any]:
         "plan_sha",
         "allowed_write_root",
         "completion_receipt_path",
+        "worktree",
+        "branch",
+        "run_id",
+        "session_id",
+        "inline_lease",
+        "agent_id",
+        "session_key",
         "approved_bundle_sha",
         "active_isolated_lease",
         "runtime_dispatch_ready",
@@ -615,7 +669,6 @@ def _pin_openclaw_session_model(
         "path": str(path),
     }
 
-
 def _openclaw_session_exists(
     session_key: str,
     *,
@@ -696,6 +749,9 @@ def _build_worker_message(pack: Mapping[str, Any]) -> str:
         f"context_plan_sha={plan}",
         f"allowed_write_root={pack.get('allowed_write_root') or pack.get('allowed_write_roots')}",
         f"completion_receipt_path={pack.get('completion_receipt_path') or ''}",
+        f"worktree={pack.get('worktree') or ''}",
+        f"run_id={pack.get('run_id') or ''}",
+        f"branch={pack.get('branch') or ''}",
         f"next_human_phrase={pack.get('next_human_phrase') or ''}",
         "Follow request.intent and the pack JSON binding.",
         "Write the full ndf-agent-completion/v1 to pack.completion_receipt_path "
@@ -709,6 +765,21 @@ def _build_worker_message(pack: Mapping[str, Any]) -> str:
         "Bash permission prompt. MUST NOT treat execution_binding_stale as a blocker. "
         "Host sudo is passwordless.",
     ]
+    worktree = str(pack.get("worktree") or "").strip()
+    if not worktree:
+        inline = pack.get("inline_lease") if isinstance(pack.get("inline_lease"), Mapping) else {}
+        worktree = str(inline.get("worktree") or "").strip()
+    if worktree:
+        lines.extend(
+            [
+                f"Isolated lease worktree: {worktree}",
+                "MUST implement and write ndf-agent-completion/v1 inside this worktree "
+                "(file = worktree / completion_receipt_path). "
+                "MUST NOT use the main checkout as the write root when worktree is set. "
+                "MUST NOT reuse an existing receipt whose base_sha/topic/task/hop "
+                "do not match this pack.",
+            ]
+        )
     hop = str(pack.get("hop") or "")
     if hop.startswith("genesis"):
         lines.append(
@@ -996,10 +1067,10 @@ def completion_receipt_path_for_pack(pack: Mapping[str, Any]) -> str:
     return tmp_candidate
 
 
-def _resolve_disk_receipt_path(
+def _validated_receipt_rel(
     pack: Mapping[str, Any],
     receipt_path: str,
-) -> tuple[Path | None, list[str]]:
+) -> tuple[str | None, list[str]]:
     expected = completion_receipt_path_for_pack(pack)
     rel = _normalize_relpath(receipt_path)
     if not _is_safe_relpath(rel):
@@ -1009,6 +1080,14 @@ def _resolve_disk_receipt_path(
     write_root = _first_write_root(pack)
     if write_root and not _under_write_root(rel, write_root):
         return None, ["receipt_path_outside_write_root"]
+    return rel, []
+
+
+def _iter_disk_receipt_files(
+    pack: Mapping[str, Any],
+    rel: str,
+) -> list[Path]:
+    found: list[Path] = []
     for root in _pack_evidence_roots(pack):
         full = root / rel
         try:
@@ -1016,8 +1095,21 @@ def _resolve_disk_receipt_path(
         except (ValueError, OSError):
             continue
         if full.is_file():
-            return full, []
-    return None, ["missing_disk_receipt"]
+            found.append(full)
+    return found
+
+
+def _resolve_disk_receipt_path(
+    pack: Mapping[str, Any],
+    receipt_path: str,
+) -> tuple[Path | None, list[str]]:
+    rel, errors = _validated_receipt_rel(pack, receipt_path)
+    if rel is None:
+        return None, errors
+    found = _iter_disk_receipt_files(pack, rel)
+    if not found:
+        return None, ["missing_disk_receipt"]
+    return found[0], []
 
 
 def _mirror_disk_receipt_to_repo_root(
@@ -1080,28 +1172,49 @@ def load_disk_agent_completion(
     pack: Mapping[str, Any],
     notify: Mapping[str, Any],
 ) -> tuple[dict[str, Any] | None, list[str]]:
-    """Read ndf-agent-completion/v1 from notify.receipt_path under the write root."""
+    """Read ndf-agent-completion/v1 from notify.receipt_path under the write root.
+
+    Identity-mismatched JSON (topic/task/base_sha/hop) is skipped so a git-committed
+    prior hop cannot impersonate this pack. Aligns with ``_disk_completion_present``.
+    """
     receipt_path = str(notify.get("receipt_path") or "")
-    path, errors = _resolve_disk_receipt_path(pack, receipt_path)
-    if path is None:
+    rel, errors = _validated_receipt_rel(pack, receipt_path)
+    if rel is None:
         return None, errors or ["illegal_receipt_path"]
-    rel = _normalize_relpath(receipt_path)
-    try:
-        data = json.loads(path.read_text(encoding="utf-8"))
-    except (OSError, json.JSONDecodeError):
-        return None, ["invalid_disk_receipt_json"]
-    if not isinstance(data, dict) or data.get("schema") != "ndf-agent-completion/v1":
-        return None, ["invalid_disk_receipt_schema"]
-    result = str(data.get("result") or data.get("status") or "").lower()
-    extra: list[str] = list(errors)
-    for item in _completion_identity_errors(pack, data):
+    stale: list[str] = []
+    found_any = False
+    for path in _iter_disk_receipt_files(pack, rel):
+        found_any = True
+        try:
+            data = json.loads(path.read_text(encoding="utf-8"))
+        except (OSError, json.JSONDecodeError):
+            if "invalid_disk_receipt_json" not in stale:
+                stale.append("invalid_disk_receipt_json")
+            continue
+        if not isinstance(data, dict) or data.get("schema") != "ndf-agent-completion/v1":
+            if "invalid_disk_receipt_schema" not in stale:
+                stale.append("invalid_disk_receipt_schema")
+            continue
+        ident = _completion_identity_errors(pack, data)
+        if ident:
+            for item in ident:
+                if item not in stale:
+                    stale.append(item)
+            continue
+        extra: list[str] = []
+        result = str(data.get("result") or data.get("status") or "").lower()
+        if result not in {"success", "succeeded", "failed", "cancelled", "blocked"}:
+            extra.append("invalid_agent_completion_result")
+        if not extra:
+            _mirror_disk_receipt_to_repo_root(pack, path, rel)
+        return data, extra
+    if not found_any:
+        return None, ["missing_disk_receipt"]
+    extra = ["stale_disk_receipt"]
+    for item in stale:
         if item not in extra:
             extra.append(item)
-    if result not in {"success", "succeeded", "failed", "cancelled", "blocked"}:
-        extra.append("invalid_agent_completion_result")
-    if not extra:
-        _mirror_disk_receipt_to_repo_root(pack, path, rel)
-    return data, extra
+    return None, extra
 
 
 def _notify_identity_errors(pack: Mapping[str, Any], notify: Mapping[str, Any]) -> list[str]:
@@ -1818,13 +1931,6 @@ def _send_openclaw(
                 except Exception:
                     return _openclaw_reset_failed(detail="session_reresolve_failed")
         agent_id = _openclaw_agent_id(pack)
-        model = str(pack.get("model") or "").strip()
-        if model and session_key:
-            # Gateway agent params reject caller model overrides; pin session
-            # model after reset from role-bound pack.model (META-021).
-            _pin_openclaw_session_model(
-                session_key=session_key, model=model, agent_id=agent_id
-            )
         if transport == "session_id":
             session_id = resolved or session_key
             cmd = [executable, "agent", "--agent", agent_id, "--message", message]
@@ -1838,6 +1944,7 @@ def _send_openclaw(
 
             ping_sec, stall_sec, max_sec = _openclaw_wait_budgets(timeout_sec, pack)
             timeout_ms = int(max_sec * 1000) + 60_000
+            # Do NOT put model in gateway params — unauthorized for this caller.
             params = {
                 "message": message,
                 "agentId": agent_id,
@@ -1845,7 +1952,6 @@ def _send_openclaw(
                 "timeout": int(max_sec),
                 "idempotencyKey": str(_uuid.uuid4()),
             }
-            # Do NOT put model in gateway params — unauthorized for this caller.
             cmd = [
                 executable,
                 "gateway",
@@ -2172,6 +2278,34 @@ def _symlink_lease_path(src: Path, dst: Path) -> str | None:
     return str(dst)
 
 
+def _quarantine_checkout_completion(
+    worktree: Path,
+    pack: Mapping[str, Any],
+) -> str | None:
+    """MOVE a checkout-restored canonical receipt so it cannot impersonate this hop.
+
+    ``git worktree add <sha>`` restores a committed ``completion_receipt_path``.
+    META-018 requires MOVE (not copy) of live receipts that would fake-succeed.
+    """
+    rel = completion_receipt_path_for_pack(pack)
+    if not rel or not _is_safe_relpath(rel):
+        return None
+    path = worktree / rel
+    if not path.is_file():
+        return None
+    stamp = time.strftime("%Y%m%dT%H%M%SZ", time.gmtime())
+    dest = path.with_name(f"{path.stem}-checkout-moved-{stamp}{path.suffix}")
+    n = 0
+    while dest.exists():
+        n += 1
+        dest = path.with_name(f"{path.stem}-checkout-moved-{stamp}-{n}{path.suffix}")
+    path.rename(dest)
+    try:
+        return str(dest.relative_to(worktree))
+    except ValueError:
+        return str(dest)
+
+
 def link_lease_worktree_local_deps(
     repo_root: Path,
     worktree: Path,
@@ -2309,6 +2443,7 @@ def _prepare_isolated_lease(
         ).strip()
         if after != command_branch:
             raise RuntimeError(f"command_branch_replaced:{after}")
+        _quarantine_checkout_completion(worktree, pack)
         local_links = link_lease_worktree_local_deps(repo_root, worktree)
         if not episode_id:
             episode_id = f"lease-{topic}-{stamp}"
@@ -2982,10 +3117,17 @@ def dispatch_send(
         pack = stamped
         working = stamped
 
+    if provider == "openclaw":
         # META-022: refuse Implementation packs that reuse Control session_key.
         try:
             import ndf_role_binding as role_binding
 
+            mapped = str(
+                role_resolution.get("mapped_role")
+                or role_resolution.get("role")
+                or pack.get("openclaw_role")
+                or ""
+            )
             if mapped == "implementation":
                 collapse = role_binding.openclaw_role_session_collapse(ROOT)
                 if collapse.get("collapsed"):

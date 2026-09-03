@@ -10,7 +10,6 @@ from __future__ import annotations
 
 import json
 import os
-from pathlib import Path
 from typing import Any, Mapping
 
 POC_DISPATCH_SOFT_REASONS = frozenset(
@@ -180,9 +179,9 @@ def poc_dispatch(
     episode_id: str | None = None,
     dry_run: bool = False,
 ) -> tuple[dict[str, Any], int]:
-    """Text-first single-entry POC dispatch (ADR-META-004).
+    """Text-first single-entry POC dispatch (ADR-META-004 / META-025).
 
-    Hard gates only. Inline lease. Soft-audit reasons become warnings.
+    Hard gates only. Lease only on --send. Soft-audit reasons become warnings.
     Does not require Episode, ActionSpec, or projection freshness.
     """
     import ndf_gate_slices
@@ -371,41 +370,73 @@ def poc_dispatch(
         payload["poc_dispatch_hard_passed"] = False
         hard_ok = False
 
-    lease_info: dict[str, Any] | None = None
-    if hard_ok:
-        # Optional Episode bind only; never require Replay DAG (ADR-META-004 / META-019).
-        payload = wf.bind_pack_to_episode(
-            payload, episode_id=episode_id, require_episode=False
+    try:
+        import ndf_context as ndf_ctx
+
+        _plan, md = ndf_ctx.build_pack_view(
+            root=wf.ROOT,
+            topic=topic,
+            role="claude-code",
+            task=task,
+            track="poc",
         )
-        lease_info = ensure_inline_isolated_lease(payload)
-        if not lease_info.get("ok"):
-            hard.append("inline_lease_failed")
-            soft_detail = lease_info.get("error") or "lease_prepare_failed"
-            payload["blockers"] = [*hard]
-            payload["lease_error"] = soft_detail
+        view_rel = f"tmp/ndf-pack-view-{topic}.md"
+        view_path = wf.ROOT / view_rel
+        view_path.parent.mkdir(parents=True, exist_ok=True)
+        view_path.write_text(md, encoding="utf-8")
+        payload["pack_view_path"] = view_rel
+        # META-025 matches pack.plan_sha against the written prose. The
+        # context-binding compile and pack-view compile can diverge; stamp
+        # the SHA that is actually in the file the human reads.
+        if _plan.get("plan_sha"):
+            payload["plan_sha"] = _plan["plan_sha"]
+    except Exception:
+        payload["pack_view_path"] = payload.get("pack_view_path")
+
+    lease_info: dict[str, Any] | None = None
+    payload = wf.bind_pack_to_episode(
+        payload, episode_id=episode_id, require_episode=False
+    )
+    if hard_ok and send:
+        import ndf_dispatch_send as dispatch
+
+        view_blocker = dispatch.pack_view_send_blocker(payload)
+        if view_blocker:
+            hard.append(view_blocker)
+            payload["blockers"] = list(dict.fromkeys([*hard, *(payload.get("blockers") or [])]))
             payload["safe_to_dispatch"] = False
             payload["safe_to_delegate"] = False
             payload["poc_dispatch_hard_passed"] = False
             hard_ok = False
         else:
-            payload["active_isolated_lease"] = True
-            payload["inline_lease"] = {
-                "reused": lease_info.get("reused"),
-                "run_id": lease_info.get("run_id"),
-                "worktree": lease_info.get("worktree"),
-                "branch": lease_info.get("branch"),
-                "session_id": lease_info.get("session_id"),
-            }
-            if lease_info.get("run_id"):
-                payload["run_id"] = lease_info["run_id"]
-            if lease_info.get("session_id"):
-                payload["session_id"] = lease_info["session_id"]
-            # Refresh completion path after run_id known.
-            payload = wf._with_completion_receipt_path(payload)
-    else:
-        payload = wf.bind_pack_to_episode(
-            payload, episode_id=episode_id, require_episode=False
-        )
+            lease_info = ensure_inline_isolated_lease(payload)
+            if not lease_info.get("ok"):
+                hard.append("inline_lease_failed")
+                soft_detail = lease_info.get("error") or "lease_prepare_failed"
+                payload["blockers"] = [*hard]
+                payload["lease_error"] = soft_detail
+                payload["safe_to_dispatch"] = False
+                payload["safe_to_delegate"] = False
+                payload["poc_dispatch_hard_passed"] = False
+                hard_ok = False
+            else:
+                payload["active_isolated_lease"] = True
+                payload["inline_lease"] = {
+                    "reused": lease_info.get("reused"),
+                    "run_id": lease_info.get("run_id"),
+                    "worktree": lease_info.get("worktree"),
+                    "branch": lease_info.get("branch"),
+                    "session_id": lease_info.get("session_id"),
+                }
+                if lease_info.get("run_id"):
+                    payload["run_id"] = lease_info["run_id"]
+                if lease_info.get("session_id"):
+                    payload["session_id"] = lease_info["session_id"]
+                if lease_info.get("worktree"):
+                    payload["worktree"] = lease_info["worktree"]
+                if lease_info.get("branch"):
+                    payload["branch"] = lease_info["branch"]
+                payload = wf._with_completion_receipt_path(payload)
 
     wf.persist_dispatch_pack(payload)
     result: dict[str, Any] = {
@@ -439,18 +470,13 @@ def poc_dispatch(
     )
     result["sent"] = True
     result["dispatch"] = dispatch_payload
-    # Prefer disk completion when present; do not fail on Episode soft fields.
+    # Prefer identity-matching disk completion; skip git-restored prior hops.
     completion = None
     receipt_path = payload.get("completion_receipt_path")
     if receipt_path:
-        path = Path(str(receipt_path))
-        if not path.is_absolute():
-            path = wf.ROOT / path
-        if path.is_file():
-            try:
-                completion = json.loads(path.read_text(encoding="utf-8"))
-            except (OSError, json.JSONDecodeError):
-                completion = None
+        completion, _disk_errors = dispatch.load_disk_agent_completion(
+            payload, {"receipt_path": receipt_path}
+        )
     if completion is None and isinstance(dispatch_payload, Mapping):
         maybe = dispatch_payload.get("completion") or dispatch_payload.get(
             "validated_completion"

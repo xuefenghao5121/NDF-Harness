@@ -28,7 +28,9 @@ if str(_TOOLS) not in sys.path:
 
 import ndf_report_io as rio  # noqa: E402
 
-ROOT = Path(__file__).resolve().parents[3]
+from ndf_paths import detect_repo_root
+
+ROOT = detect_repo_root()
 POC = ROOT / "poc"
 TOOL = "spec/meta/tools/ndf_poc_isolation.py"
 DEFAULT_REPORT = "tmp/ndf-poc-isolation.md"

@@ -1,6 +1,6 @@
 # Install（internal）
 
-Greenfield checklist. Human entry: [`../../README.md`](../../README.md).
+Greenfield checklist — full detail in [`../../docs/INIT.md`](../../docs/INIT.md).
 
 1. Confirm profile in `ndf.profile.yaml`（default `dual-track`）.
 2. Copy `norms/` → consumer `spec/meta/`（merge; do not overwrite finalized clauses）.
@@ -10,4 +10,4 @@ Greenfield checklist. Human entry: [`../../README.md`](../../README.md).
 6. Smoke: `ndf_index index` + `ndf_graphcheck --meta`.
 7. Wait for human confirm before filling ⟨TBD⟩ product tree slots.
 
-Human entry remains [SKILL.md](SKILL.md). Do not expose this file to end users.
+Human entry remains [SKILL.md](SKILL.md) — do not expose this file to end users.

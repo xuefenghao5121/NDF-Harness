@@ -23,7 +23,9 @@ import sys
 from dataclasses import dataclass, field
 from pathlib import Path
 
-ROOT = Path(__file__).resolve().parents[3]
+from ndf_paths import detect_repo_root
+
+ROOT = detect_repo_root()
 POC = ROOT / "poc"
 CFG_DIR = ROOT / "spec" / "50-verification" / "configs"
 BL_DIR = ROOT / "spec" / "50-verification" / "baselines"

@@ -10,8 +10,9 @@ import sys
 from pathlib import Path
 
 TOOLS = Path(__file__).resolve().parent
-ROOT = TOOLS.parents[3]
+from ndf_paths import detect_repo_root
 
+ROOT = detect_repo_root(TOOLS)
 if str(TOOLS) not in sys.path:
     sys.path.insert(0, str(TOOLS))
 

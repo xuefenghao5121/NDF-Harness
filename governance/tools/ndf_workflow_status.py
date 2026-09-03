@@ -27,7 +27,9 @@ from pathlib import Path
 from typing import Any, Iterable, Mapping, Sequence
 from urllib.parse import urlparse, urlunparse
 
-ROOT = Path(__file__).resolve().parents[3]
+from ndf_paths import detect_repo_root
+
+ROOT = detect_repo_root()
 SPEC = ROOT / "spec"
 META = SPEC / "meta"
 POC = ROOT / "poc"
@@ -1417,7 +1419,7 @@ PROJECT_CHECK_ROUTES = {
         "repair_owner": "openclaw",
         "repair_task": "process_proposal",
         "allowed_write_root": "spec/meta/open/",
-        "human_gate": "已确认 → 已审核",
+        "human_gate": "已确认",
     },
     "product_graph": {
         "plane": "Product",
@@ -2376,6 +2378,29 @@ def active_runtime_leases() -> list[dict[str, Any]]:
             if semantic["valid"]:
                 latest[str(run_id)] = record
             continue
+        episode_id = str(record.get("episode_id") or "")
+        # Text-first leases (META-019 / ADR-META-004): jsonl row is identity;
+        # MUST NOT require ReplayStore / Episode DAG.
+        text_first = episode_id.startswith("lease-") or not hasattr(
+            ndf_replay, "ReplayStore"
+        )
+        if text_first:
+            semantic = validate_runtime_lease_binding(
+                record,
+                root=ROOT,
+                expected={
+                    "topic": record.get("topic"),
+                    "task": record.get("task"),
+                    "base_sha": record.get("base_sha") or record.get("repo_head"),
+                    "episode_id": episode_id,
+                    "branch": record.get("branch"),
+                    "repo_root": str(ROOT),
+                    "allowed_write_root": record.get("allowed_write_root"),
+                },
+            )
+            if semantic["valid"]:
+                latest[str(run_id)] = record
+            continue
         context = context_binding(
             topic=record.get("topic"),
             role="claude-code",
@@ -2384,12 +2409,12 @@ def active_runtime_leases() -> list[dict[str, Any]]:
         )
         try:
             pack_sha, pack = replay_pack_binding(
-                str(record.get("episode_id") or ""),
+                episode_id,
                 task=str(record.get("task") or "implement"),
                 manifest_sha=context.get("manifest_sha"),
                 context_plan_sha=context.get("plan_sha"),
             )
-        except (FileNotFoundError, ValueError):
+        except (FileNotFoundError, ValueError, AttributeError):
             continue
         semantic = validate_runtime_lease_binding(
             record,
@@ -4656,21 +4681,16 @@ def managed_process_lifecycle(
     confirmed = valid_receipt(
         "proposal.confirmed", "已确认", "confirm_land"
     )
+    # META-025: 已确认 + land (Implemented) closes process; 已审核 is not required.
+    if confirmed and "implemented" in normalized:
+        return "reviewed", None, None, False, receipts
     if reviewed and confirmed and "implemented" in normalized:
         return "reviewed", None, None, False, receipts
-    if confirmed and "implemented" in normalized:
-        return (
-            "implemented_pending_review",
-            PROCESS_HOP_MANAGED_REVIEW,
-            "已审核",
-            False,
-            receipts,
-        )
     if confirmed:
         return (
             "confirmed_pending_land",
             PROCESS_HOP_CONFIRM_LAND,
-            "已审核",
+            None,
             True,
             receipts,
         )
@@ -7623,7 +7643,7 @@ def project_check_findings(checks: dict[str, dict[str, Any]]) -> list[dict[str, 
                 "repair_owner": "openclaw",
                 "repair_task": "process_proposal",
                 "allowed_write_root": "spec/meta/open/",
-                "human_gate": "已确认 → 已审核",
+                "human_gate": "已确认",
             },
         )
         findings.append(
@@ -7666,7 +7686,7 @@ def project_check_findings(checks: dict[str, dict[str, Any]]) -> list[dict[str, 
                 repair_owner="openclaw",
                 repair_task="ndf_improvement_proposal",
                 allowed_write_root="spec/meta/open/",
-                human_gate="已确认 → 已审核",
+                human_gate="已确认",
             )
         )
     return findings
@@ -10033,7 +10053,7 @@ def project_control_land_pack(
             "product or POC documents",
             "human approval fabrication",
         ]
-        next_phrase = "已审核"
+        next_phrase = None
     elif hop == PROCESS_HOP_MANAGED_REVIEW:
         allowed_write_roots = [record["path"]] if record else ["spec/meta/open/"]
         forbidden = [

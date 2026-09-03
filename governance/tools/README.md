@@ -33,7 +33,7 @@
 | [`ndf_close.py`](ndf_close.py) | POC **回合计划面**：往 Trunk 追加清单 + 溯源模板 + post-check（只读 `plan`） |
 | [`ndf_report_io.py`](ndf_report_io.py) | 报告路径门禁：默认 `tmp/`；禁写 `spec/` |
 | [`ndf_gate_slices.py`](ndf_gate_slices.py) | 门禁切片 / bundle 片段辅助 |
-| [`ndf_context.py`](ndf_context.py) | Pack **Context Compiler**（manifest / role-plan / verify） |
+| [`ndf_context.py`](ndf_context.py) | Pack **Context Compiler**；人审 `pack-view` / `overlay-apply` 分层散文（[[META-024]]） |
 | [`ndf_workflow_evidence.py`](ndf_workflow_evidence.py) | 工作流证据读写（completion / dispatch 回执） |
 | [`ndf_poc_dispatch.py`](ndf_poc_dispatch.py) | POC dispatch pack 组装（由 `ndf_workflow_status` 调用） |
 | [`ndf_workflow_status.py`](ndf_workflow_status.py) | **工作流指挥 CLI**：`poc-dispatch`、`control-pack`、`genesis-*`、`topic-health` |
@@ -75,6 +75,42 @@ python3 spec/meta/tools/ndf_index.py poc-topics
 ```
 
 生成物：`spec/INDEX.md`、`spec/graph.json`（**不是** NDF must 正文）。
+
+## 人读 packed 上下文（pack-view / overlay-apply）
+
+对齐 [[META-023]] / [[META-024]]：派发前给人看**分层散文**（按 `spec/00–50` 目录编章，
+再叠 `poc/<topic>/ndf` gate-slice）；节点表只在附录。每条编入主文的条款紧接标题
+一行 `> 源：path:line · status · 因…`（种子或哪条边拉入）；装订器切片标
+路径与 slice id。overlay 增删 seed / 排除节点 / 临时 `depends-on` 后再 compile。
+报告只写 `tmp/`。**Overlay 不是条款 SoT**。**禁止**用模型改写条款正文。
+
+```bash
+# 人审散文（默认 tmp/ndf-pack-view.md；schema ndf-pack-view/v2）
+python3 spec/meta/tools/ndf_context.py pack-view \
+  --role claude-code --task implement --track promote \
+  --topic jit-n1024-xbyak --hop promote_land \
+  --report tmp/ndf-pack-view-promote.md \
+  --plan-report tmp/ndf-pack-view-promote-plan.json
+
+# overlay 后再编（示例 JSON）
+# {
+#   "remove_seeds": ["ARCH-FFT-009"],
+#   "exclude_nodes": ["BEH-025"],
+#   "add_seeds": ["META-024"],
+#   "temp_depends_on": {"META-024": ["META-012"]},
+#   "hop": "promote_land",
+#   "promote": {
+#     "draft_to_stable": ["ARCH-FFT-008"],
+#     "trunk_write_roots": ["src/", "include/", "tests/"],
+#     "promotes": "jit-n1024-xbyak"
+#   }
+# }
+python3 spec/meta/tools/ndf_context.py overlay-apply \
+  --overlay tmp/ndf-overlay.json \
+  --role claude-code --task implement --track promote \
+  --topic jit-n1024-xbyak \
+  --report tmp/ndf-pack-view-overlay.md
+```
 
 ## 图逻辑检查（错误 + 子图）
 

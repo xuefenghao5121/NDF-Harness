@@ -34,7 +34,9 @@ import ndf_advise_bind as bindadv  # noqa: E402
 import ndf_graphcheck as gc  # noqa: E402
 import ndf_index as ndx  # noqa: E402
 
-ROOT = Path(__file__).resolve().parents[3]
+from ndf_paths import detect_repo_root
+
+ROOT = detect_repo_root()
 TOOL = "spec/meta/tools/ndf_advise.py"
 ALLOWED_RELS = (
     "refines",

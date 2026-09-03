@@ -35,7 +35,7 @@ DEPRECATED_CONTEXT = re.compile(
 
 
 def _iter_text_files(root: Path) -> list[Path]:
-    skip_dirs = {"__pycache__", ".git", "tests"}
+    skip_dirs = {"__pycache__", ".git", "tests", "tmp"}
     out: list[Path] = []
     for path in root.rglob("*"):
         if not path.is_file():

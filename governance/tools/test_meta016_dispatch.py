@@ -129,8 +129,155 @@ class Meta016Dispatch(unittest.TestCase):
             hidden.mkdir(parents=True)
             (hidden / "attempt.json").write_text("{}", encoding="utf-8")
             self.assertFalse(workflow.trunk_src_present(root))
-            (root / "src" / "kernel.c").write_text("int n;\n", encoding="utf-8")
+            (root / "src" / "fft.c").write_text("int n;\n", encoding="utf-8")
             self.assertTrue(workflow.trunk_src_present(root))
+
+    def test_stale_worktree_receipt_does_not_impersonate_hop(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            rel = "poc/jit-twiddle-imm-lut/ndf/evidence/poc_implementation-completion.json"
+            pack = _pack(
+                root,
+                topic="jit-twiddle-imm-lut",
+                task="poc_implementation",
+                hop="implement",
+                track="poc",
+                base_sha="b" * 40,
+                allowed_write_root="poc/jit-twiddle-imm-lut/",
+                completion_receipt_path=rel,
+            )
+            stale_body = {
+                "schema": "ndf-agent-completion/v1",
+                "result": "success",
+                "topic": pack["topic"],
+                "task": pack["task"],
+                "hop": pack["hop"],
+                "attempt_id": pack["attempt_id"],
+                "base_sha": "a" * 40,
+                "summary": "R1 winner",
+            }
+            wt_path = root / ".worktrees" / "lease-old" / rel
+            wt_path.parent.mkdir(parents=True)
+            wt_path.write_text(json.dumps(stale_body), encoding="utf-8")
+            completion, errors = dispatch.load_disk_agent_completion(
+                pack, {"receipt_path": rel}
+            )
+            self.assertIsNone(completion)
+            self.assertIn("stale_disk_receipt", errors)
+            self.assertIn("completion_base_sha_mismatch", errors)
+
+            match_body = {**stale_body, "base_sha": pack["base_sha"], "summary": "this hop"}
+            main_path = root / rel
+            main_path.parent.mkdir(parents=True, exist_ok=True)
+            main_path.write_text(json.dumps(match_body), encoding="utf-8")
+            completion, errors = dispatch.load_disk_agent_completion(
+                pack, {"receipt_path": rel}
+            )
+            self.assertIsNotNone(completion)
+            self.assertEqual(errors, [])
+            self.assertEqual(completion["summary"], "this hop")
+
+    def test_stale_receipt_transport_ok_does_not_attach_body(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            rel = "poc/t/ndf/evidence/poc_implementation-completion.json"
+            pack = _pack(
+                root,
+                topic="t",
+                task="poc_implementation",
+                hop="implement",
+                track="poc",
+                base_sha="b" * 40,
+                allowed_write_root="poc/t/",
+                completion_receipt_path=rel,
+            )
+            path = root / rel
+            path.parent.mkdir(parents=True)
+            path.write_text(
+                json.dumps(
+                    {
+                        "schema": "ndf-agent-completion/v1",
+                        "result": "success",
+                        "topic": "t",
+                        "task": "poc_implementation",
+                        "hop": "implement",
+                        "attempt_id": pack["attempt_id"],
+                        "base_sha": "a" * 40,
+                        "summary": "prior hop",
+                    }
+                ),
+                encoding="utf-8",
+            )
+            state, blockers, _, completion = dispatch._task_outcome_from_transport(
+                {
+                    "ok": True,
+                    "transport_ok": True,
+                    "response_text": None,
+                    "state": "succeeded",
+                },
+                pack=pack,
+                lease_only=False,
+            )
+            self.assertEqual(state, "failed")
+            self.assertIsNone(completion)
+            self.assertIn("stale_disk_receipt", blockers)
+            self.assertIn("completion_base_sha_mismatch", blockers)
+
+    def test_slim_pack_keeps_lease_identity(self) -> None:
+        slim = dispatch._slim_pack_for_acp_worker(
+            {
+                "topic": "t",
+                "worktree": "/wt",
+                "branch": "poc/t-lease",
+                "run_id": "run-1",
+                "session_id": "sess",
+                "inline_lease": {"worktree": "/wt"},
+                "agent_id": "impl",
+                "session_key": "agent:impl:main",
+            }
+        )
+        for key in (
+            "worktree",
+            "branch",
+            "run_id",
+            "session_id",
+            "inline_lease",
+            "agent_id",
+            "session_key",
+        ):
+            self.assertIn(key, slim)
+
+    def test_openclaw_worker_message_names_worktree(self) -> None:
+        msg = dispatch._build_worker_message(
+            {
+                "provider": "openclaw",
+                "worktree": "/tmp/lease-wt",
+                "completion_receipt_path": (
+                    "poc/t/ndf/evidence/poc_implementation-completion.json"
+                ),
+                "topic": "t",
+                "task": "poc_implementation",
+            }
+        )
+        self.assertIn("/tmp/lease-wt", msg)
+        self.assertIn("MUST NOT use the main checkout", msg)
+        self.assertIn("MUST NOT reuse an existing receipt", msg)
+
+    def test_quarantine_checkout_completion_moves_canonical_path(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            wt = Path(tmp)
+            rel = "poc/t/ndf/evidence/poc_implementation-completion.json"
+            path = wt / rel
+            path.parent.mkdir(parents=True)
+            path.write_text("{}", encoding="utf-8")
+            dest = dispatch._quarantine_checkout_completion(
+                wt, {"completion_receipt_path": rel}
+            )
+            self.assertIsNotNone(dest)
+            self.assertFalse(path.is_file())
+            moved = wt / dest
+            self.assertTrue(moved.is_file())
+            self.assertIn("checkout-moved-", moved.name)
 
 
 if __name__ == "__main__":

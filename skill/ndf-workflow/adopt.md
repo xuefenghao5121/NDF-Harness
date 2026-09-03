@@ -1,6 +1,6 @@
 # Adopt（internal）
 
-Brownfield checklist. Human entry: [`../../README.md`](../../README.md). 不要静默覆盖已定稿的 `AGENTS.md` / `spec/meta/`。
+Brownfield checklist — see [`../../docs/INIT.md`](../../docs/INIT.md) § Brownfield.
 
 1. Scan existing `spec/`, `AGENTS.md`, misplaced root `tools/`.
 2. Diff against package `norms/` + `workflow/AGENTS.md`; emit **gap report only**.

@@ -11,7 +11,8 @@
 1. 本文件 `AGENTS.md`
 2. **流程 SoT**：`spec/meta/README.md`、`spec/meta/language.md`、`spec/meta/process.md`
    （[[CHR-008]]、[[BEH-018]]…[[BEH-020]]、[[BEH-025]]、[[META-006]]、[[META-007]]、
-   [[META-009]]…[[META-012]]、[[META-014]]、[[META-016]]…[[META-022]]；[[META-013]]/[[META-015]] 已 deprecated）
+   [[META-009]]…[[META-012]]、[[META-014]]、[[META-016]]…[[META-026]]；
+   [[META-013]]/[[META-015]] 已 deprecated）
 3. 当前相关**产品**契约：`spec/00–50` 与 `spec/open/` 提案
 
 若存在 `SOUL.md` / `MEMORY.md`，一并重读；不存在则跳过。
@@ -55,8 +56,20 @@
 | 同时影响两面（mixed） | 拆成两个互相引用的提案 |
 | 无法判断（ambiguous） | **先问人**；MUST NOT 默认 poc |
 
-人类日常入口：运行时 skill（如 `.cursor/skills/ndf-workflow/`）— 初始化 / 提交 Idea /
-派发 / 继续 / 关闭。内部模块对人类不可见。
+## 人读定义 vs Agent 操作
+
+| 层 | 读什么 | 不是什么 |
+|----|--------|----------|
+| **人读定义（SoT）** | `spec/meta/language.md`（条款/图）、`process.md` 双轨与门禁、产品 `00–50` | 口令路由表 |
+| **Agent 操作手册** | 本文件口令表、pack CLI、委派细节 | 流程 SoT 正文 |
+
+人类日常入口：运行时 skill（如 `.cursor/skills/ndf-workflow/`）— 口令快捷
+（初始化 / Idea / 派发 / 继续 / 关闭）**以及**图/pack 观察（[[META-023]] /
+[[META-024]]）。人审对象是 Compiler 编出的**分层散文**（spec 目录章 + POC 装订
+切片），不是节点/边表。每条条款标题下 MUST 有溯源行（`path:line` · status ·
+进包原因）；装订器切片同标路径与 slice id。内部 CLI **模块文件名**不必让人选；
+图闭包为人选句 IR。
+五句口令是 SHOULD 快捷入口，MUST NOT 限制人为只能说那五句。
 
 ### 三工作空间（文档视角）
 
@@ -64,14 +77,18 @@ Design（契约）、Implementation（代码）、Test（绑定/证据）是**�
 组装上下文 MUST：主题装订器读序 → NDF 图 `depends-on` → 当前 git/evidence；
 MUST NOT 从 SLA/NOTES 叙述偷取观测数字。
 
-**日常路径是纯文字指挥**（[[ADR-META-003]] / [[ADR-META-004]]）：**无 Commander、无 Episode、无 Replay**；
-不依赖面板。成功仅以磁盘 **`ndf-agent-completion/v1`** 为准。
+**日常路径是纯文字指挥**（[[ADR-META-003]] / [[ADR-META-004]] / [[META-023]] /
+[[META-024]]）：
+**无 Commander、无 Episode、无 Replay**；不依赖面板。人 MUST 能看见并修订条款图；
+派发前 MUST 能读分层人审散文。成功仅以磁盘 **`ndf-agent-completion/v1`** 为准。
 
 ```text
-Idea → 提案「已确认」/「已审核」
-→ Control 写齐 POC 装订器（文字优先）
-→ Human「派发」（绑定 bundle SHA）
-→ Implementation 实现/测量（poc-dispatch）
+Idea → 提案「已确认」（审提案 markdown）
+→ Control 写齐 POC 装订器
+→ Human「已审核」（审 poc/<topic>/ndf/*.md）
+→ bundle_dispatch + pack-view 分层散文
+→ Human「派发」（开租约 + send）
+→ Implementation 实现/测量（poc-dispatch --send）
 → Human「继续」或 close 模式
 ```
 
@@ -79,9 +96,9 @@ Idea → 提案「已确认」/「已审核」
 
 | 闸门 | 触发 | 编排 |
 |------|------|------|
-| POC（文字优先） | 产品提案审核 → 整包装订器 → 「派发」 | 契约→实现/测量 |
+| POC（文字优先） | 产品提案「已确认」→ 装订器 →「已审核」→ pack-view →「派发」 | 契约→实现/测量 |
 | Genesis | 绑内核 → 一句「派发」→ `GENESIS已审核` | 契约+基线；greenfield 可加 `genesis-pack` |
-| 产品/process 提案 | `已确认` → `已审核` | 契约/流程落地 |
+| 产品/process 提案 | `已确认`（审提案 markdown；process 落地即结束） | 契约/流程落地 |
 | promote | R0 Numbers + `ndf_close plan` | 测试空间收敛 |
 
 口令 MUST 追加到 `GATES.md`，绑定人、时间与内容 SHA（[[META-010]]）。
@@ -144,19 +161,19 @@ Command MUST NOT 直接调用外部 chat 发送 API 绕过 pack 纪律。
 
 ### 步骤3–5：确认 → 落地 → 审核
 
-> 提案已生成：…。请审阅，确认后回复「已确认」。  
-> （落地后）请审核，回复「已审核」。
+> 提案已生成：…。请审阅该 markdown，确认后回复「已确认」。  
+> poc 装订器写好后：请审阅 `poc/<topic>/ndf/`，回复「已审核」。process 确认后落地即结束。
 
 落地前 MUST 校验 `refines`/`deprecates`/`depends-on` 引用存在。
 
 ### 步骤6+：按 track 继续
 
-| track | 已审核之后 |
+| track | 已确认之后 |
 |-------|------------|
 | **bootstrap** | 绑内核 → 一句「派发」（契约+基线）→ [`genesis-pack` if greenfield] → `GENESIS已审核`（骨架+已测基线 stable） |
-| **poc** | 文字优先装订器 → Human「派发」→ `poc-dispatch`；多轮继续/关闭；**不**跑 Trunk SLA |
+| **poc** | 写齐装订器 → Human「已审核」→ pack-view →「派发」才 `--send`；多轮继续/关闭；**不**跑 Trunk SLA |
 | **promote** | `ndf_close plan` → 干净合入 Trunk → 编译 → 性能/金标 |
-| **process** | 仅 meta + thin + AGENTS；跳过实现委派 |
+| **process** | 仅 meta + thin + AGENTS；落地即结束；跳过实现委派 |
 | **bug / refactor / rollback** | 通常同 promote |
 
 ---
@@ -219,9 +236,14 @@ Command MUST NOT 直接调用外部 chat 发送 API 绕过 pack 纪律。
 
 ### 6.2a poc（文字优先）
 
-- 产品提案审核后由 **Control** 一次写齐 TOPIC/DESIGN/PERF_BASELINE/DELTA/INTERFACE
+- 产品提案「已确认」后由 **Control** 一次写齐 TOPIC/DESIGN/PERF_BASELINE/DELTA/INTERFACE
   （Command 只造 `binder_pipeline` pack；MUST NOT 代写装订器正文；无 `TOPIC.md` 亦可开题）
-- 收到「派发」：写 `GATES.md` `bundle_dispatch`（绑定 bundle SHA）→ `poc-dispatch --send`（[[META-019]]：该回执可替闸 3；租约不以 Episode 为成功条件）
+- 收到装订器「已审核」：写 `GATES.md` `bundle_dispatch`（绑定 bundle SHA）+ pack-view 散文；停下
+- 收到「派发」：`poc-dispatch --send`（此时才开租约；[[META-025]]；[[META-019]]：`bundle_dispatch` 可替闸 3）
+- 若 hop 用 OpenEvolve：装订器 MUST `openevolve.enabled: true` 并写明搜索空间
+  （演化文件/细节 vs 冻结政策）；缺省关闭。LLM 配置读宿主
+  `$XDG_CONFIG_HOME/openevolve/config.yaml`（[[META-026]]）；MUST NOT 把
+  key/端点写进 `poc/<topic>/`
 - 开题填 `explore_surface`；禁写 Trunk；MUST NOT stable SLA
 - R0 后：`baseline_trunk_sha` + `PERF_BASELINE.md` Numbers（[[META-007]]）
 - 比性能 MUST 只读 TOPIC→PERF_BASELINE 与 DELTA；MUST NOT 抄 SLA 观测表
@@ -292,7 +314,7 @@ Command MUST NOT 直接调用外部 chat 发送 API 绕过 pack 纪律。
 ### 核心原则
 
 1. **先提案，后行动**（Trunk 或 stable 契约变更前）
-2. **确认后落地**；「已审核」后再委派 Implementation
+2. **确认后落地**；POC 装订器「已审核」并展示 pack-view 后再委派 Implementation
 3. **双轨**：探索在 `poc/` + draft；晋升才 stable + Trunk（[[CHR-008]]）
 4. **先收口，再 POC**；open/ 不堆 Implemented
 5. **验证闭环**：仅 Trunk 代码路径必须编译/性能验证

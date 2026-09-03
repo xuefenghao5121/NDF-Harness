@@ -36,3 +36,6 @@ promote 提案 MUST：引用 TOPIC + draft→stable ID 清单 + **语义核**（
 发 hop 前 MOVE 会假成功的活回执；同审查切片再派发须 invalidate + 同 SHA 新批（[[META-010]] / [[META-018]]）。
 
 探索中发现的 Trunk bug：默认本主题修测；合入另开 `bug` 或挂 promote 切片。
+
+POC 若经 OpenEvolve 搜索：promote 只收复核后的 **winner diff**，MUST NOT 把种群
+DB 或 OpenEvolve 临时目录合入 Trunk（[[META-026]]）。
